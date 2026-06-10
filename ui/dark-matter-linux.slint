@@ -143,6 +143,11 @@ export component DarkMatterLinux inherits Window {
     // the bottom. Plain integer counter — content doesn't matter, only the
     // edge — picked up via a Slint `changed` handler.
     in property <int> messages-scroll-tick: 0;
+    // True when the active chat has history beyond the loaded window; the
+    // messages view shows a "load earlier messages" pill that fires
+    // messages-request-older.
+    in property <bool> messages-has-older: false;
+    callback messages-request-older();
 
     // Emoji picker (full-window modal).
     in property <[EmojiEntry]> emoji-list;
@@ -494,6 +499,8 @@ export component DarkMatterLinux inherits Window {
                             my-has-picture: root.my-av-has-picture;
                             messages: root.chats-messages[root.active-chat];
                             scroll-tick: root.messages-scroll-tick;
+                            has-older: root.messages-has-older;
+                            request-older => { root.messages-request-older(); }
                             draft <=> root.composer-draft;
                             reply-target-id: root.reply-target-id;
                             reply-target-author: root.reply-target-author;

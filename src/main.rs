@@ -392,16 +392,83 @@ fn main() -> Result<(), slint::PlatformError> {
                 let relays = backend::load_relays();
                 // marmot's per-account secret store reads/writes the same vault.
                 let secret_store = Arc::new(vault::VaultSecretStore::new(vault));
-                let result = Backend::boot(&nsec, relays, secret_store);
+                // Fires when boot's background network phase (directory sync,
+                // KP bootstrap, inbox catch-up) completes — possibly tens of
+                // seconds after the UI is already interactive, e.g. when a
+                // relay eats its full connection timeout. One non-destructive
+                // refresh picks up whatever the sync pulled in without
+                // yanking an already-open chat out from under the user.
+                // Set once the background sync's refresh has run; stops the
+                // early upgrade polls scheduled below.
+                let sync_done = Arc::new(std::sync::atomic::AtomicBool::new(false));
+                let weak_for_sync = weak_for_worker.clone();
+                let backend_cell_for_sync = backend_cell.clone();
+                let group_ids_for_sync = group_ids.clone();
+                let archived_for_sync = archived_group_ids.clone();
+                let sync_done_for_sync = sync_done.clone();
+                let on_synced = move |sync_result: anyhow::Result<()>| {
+                    let _ = slint::invoke_from_event_loop(move || {
+                        sync_done_for_sync.store(true, std::sync::atomic::Ordering::Relaxed);
+                        let Some(ui) = weak_for_sync.upgrade() else { return };
+                        if let Err(e) = sync_result {
+                            eprintln!("[backend] background sync failed: {e:#}");
+                            ui.set_backend_error(format!("sync: {e:#}").into());
+                            return;
+                        }
+                        let guard = backend_cell_for_sync.lock().unwrap();
+                        let Some(b) = guard.as_ref() else { return };
+                        // The directory sync just finished — re-pull every
+                        // cached name/picture so changes made while we were
+                        // offline converge (async; next rebuilds pick them up).
+                        b.refresh_all_profiles_async();
+                        let chats = ui.get_chats();
+                        let chats_messages = ui.get_chats_messages();
+                        merge_chat_list_rows(b, &chats, &chats_messages, &group_ids_for_sync);
+                        set_rail_badges(&ui, &chats);
+                        refresh_contacts(b, &ui.get_contacts(), &Settings::load().nicknames);
+                        refresh_archived(b, &ui.get_archived_chats(), &archived_for_sync);
+                        spawn_chat_list_avatar_fetches(&ui, b);
+                        populate_profile(b, &ui);
+                        refresh_kp_local(b, &ui);
+                        refresh_network_post_boot(b, &ui);
+                        drop(guard);
+                        // The profile refreshes queued above land asynchronously
+                        // AFTER this merge — one delayed, change-only merge picks
+                        // them up (no-op rows stay untouched, so this is
+                        // visually free).
+                        let weak2 = weak_for_sync.clone();
+                        let backend_cell2 = backend_cell_for_sync.clone();
+                        let group_ids2 = group_ids_for_sync.clone();
+                        slint::Timer::single_shot(
+                            std::time::Duration::from_millis(1_500),
+                            move || {
+                                let Some(ui) = weak2.upgrade() else { return };
+                                let guard = backend_cell2.lock().unwrap();
+                                let Some(b) = guard.as_ref() else { return };
+                                let chats = ui.get_chats();
+                                merge_chat_list_rows(
+                                    b,
+                                    &chats,
+                                    &ui.get_chats_messages(),
+                                    &group_ids2,
+                                );
+                                set_rail_badges(&ui, &chats);
+                            },
+                        );
+                    });
+                };
+                let result = Backend::boot(&nsec, relays, secret_store, on_synced);
                 let _ = slint::invoke_from_event_loop(move || {
                     let Some(ui) = weak_for_worker.upgrade() else { return };
                     match result {
                         Ok(b) => {
+                            let t_ui = std::time::Instant::now();
                             let chats = ui.get_chats();
                             let chats_messages = ui.get_chats_messages();
                             let contacts = ui.get_contacts();
                             let archived = ui.get_archived_chats();
                             refresh_chats(&b, &chats, &chats_messages, &group_ids);
+                            eprintln!("[boot-timing] ui refresh_chats done at {:?}", t_ui.elapsed());
                             set_rail_badges(&ui, &chats);
                             // This closure crosses a thread boundary (must be
                             // Send), so it can't capture the Rc settings cell —
@@ -409,13 +476,18 @@ fn main() -> Result<(), slint::PlatformError> {
                             refresh_contacts(&b, &contacts, &Settings::load().nicknames);
                             refresh_archived(&b, &archived, &archived_group_ids);
                             spawn_chat_list_avatar_fetches(&ui, &b);
+                            eprintln!("[boot-timing] ui contacts/archived done at {:?}", t_ui.elapsed());
                             if let Some(hex) = group_ids.lock().unwrap().first().cloned() {
                                 push_group_members_to_ui(&ui, &b, &hex);
-                                spawn_message_avatar_fetches(&ui, &b, &hex);
+                                let msgs = b.messages(&hex, Some(msg_window_for(&hex))).unwrap_or_default();
+                                ui.set_messages_has_older(msgs.len() >= MESSAGE_WINDOW);
+                                spawn_message_avatar_fetches(&ui, &b, &msgs);
                             }
+                            eprintln!("[boot-timing] ui first-chat done at {:?}", t_ui.elapsed());
                             populate_profile(&b, &ui);
                             refresh_kp_local(&b, &ui);
                             refresh_network_post_boot(&b, &ui);
+                            eprintln!("[boot-timing] ui post-boot done at {:?}", t_ui.elapsed());
                             // Security & privacy settings live in marmot storage;
                             // surface their current state once the backend is up.
                             ui.set_telemetry_enabled(b.telemetry_enabled());
@@ -424,6 +496,45 @@ fn main() -> Result<(), slint::PlatformError> {
                             *backend_cell.lock().unwrap() = Some(b);
                             ui.set_backend_ready(true);
                             ui.set_booting(false);
+                            // The background sync can take a relay's full
+                            // connection timeout (~35s on a misbehaving
+                            // relay) to *complete*, but the healthy relays
+                            // deliver directory data within a couple of
+                            // seconds. Poll a few light in-place merges so
+                            // names/pictures/previews upgrade as soon as the
+                            // cache warms instead of when the sync ends.
+                            for delay_ms in [2_000u64, 6_000, 15_000] {
+                                let weak = ui.as_weak();
+                                let backend_cell = backend_cell.clone();
+                                let group_ids = group_ids.clone();
+                                let sync_done = sync_done.clone();
+                                slint::Timer::single_shot(
+                                    std::time::Duration::from_millis(delay_ms),
+                                    move || {
+                                        if sync_done.load(std::sync::atomic::Ordering::Relaxed) {
+                                            return;
+                                        }
+                                        let Some(ui) = weak.upgrade() else { return };
+                                        let guard = backend_cell.lock().unwrap();
+                                        let Some(b) = guard.as_ref() else { return };
+                                        let chats = ui.get_chats();
+                                        merge_chat_list_rows(
+                                            b,
+                                            &chats,
+                                            &ui.get_chats_messages(),
+                                            &group_ids,
+                                        );
+                                        set_rail_badges(&ui, &chats);
+                                        refresh_contacts(
+                                            b,
+                                            &ui.get_contacts(),
+                                            &Settings::load().nicknames,
+                                        );
+                                        spawn_chat_list_avatar_fetches(&ui, b);
+                                        populate_profile(b, &ui);
+                                    },
+                                );
+                            }
                         }
                         Err(e) => {
                             eprintln!("[backend] boot failed: {e:#}");
@@ -1712,12 +1823,16 @@ fn main() -> Result<(), slint::PlatformError> {
                 if let Some(backend) = guard.as_ref() {
                     let group_hex = group_ids.lock().unwrap().get(idx as usize).cloned();
                     if let Some(group_hex) = group_hex {
+                        let t_switch = std::time::Instant::now();
+                        // Re-entering a chat always starts from the default
+                        // window — expanded history is per-visit.
+                        msg_window_reset(&group_hex);
                         // Snapshot first (merged with any pending overlay for
                         // this chat — chat switching shouldn't drop pending
                         // bubbles).
                         let my_id = backend.account().account_id_hex.clone();
                         let overlay = pending_state.lock().unwrap();
-                        rebuild_chat_messages(
+                        let msgs = rebuild_chat_messages(
                             backend,
                             &overlay,
                             &chats_messages,
@@ -1725,7 +1840,13 @@ fn main() -> Result<(), slint::PlatformError> {
                             &group_hex,
                         );
                         drop(overlay);
-                        spawn_message_avatar_fetches(&ui, backend, &group_hex);
+                        ui.set_messages_has_older(msgs.len() >= MESSAGE_WINDOW);
+                        spawn_message_avatar_fetches(&ui, backend, &msgs);
+                        eprintln!(
+                            "[switch-timing] chat {idx}: {} records rebuilt in {:?}",
+                            msgs.len(),
+                            t_switch.elapsed()
+                        );
                         ui.set_show_chat_members(false);
                         push_group_members_to_ui(&ui, backend, &group_hex);
                         // Opening a chat should land you at the most recent
@@ -1749,6 +1870,34 @@ fn main() -> Result<(), slint::PlatformError> {
                     }
                 }
             }
+        }
+    });
+    // "Load earlier messages" at the top of the messages view: grow the
+    // active chat's record window one MESSAGE_WINDOW step and rebuild. The
+    // Slint side anchors the scroll so the content the user was reading
+    // stays put under the newly-prepended history.
+    ui.on_messages_request_older({
+        let weak = ui.as_weak();
+        let backend_cell = backend_cell.clone();
+        let group_ids = group_ids.clone();
+        let chats_messages = chats_messages.clone();
+        let pending_state = pending_state.clone();
+        move || {
+            let Some(ui) = weak.upgrade() else { return };
+            let idx = ui.get_active_chat() as usize;
+            let Some(group_hex) = group_ids.lock().unwrap().get(idx).cloned() else {
+                return;
+            };
+            let guard = backend_cell.lock().unwrap();
+            let Some(backend) = guard.as_ref() else { return };
+            let new_window = msg_window_expand(&group_hex);
+            let overlay = pending_state.lock().unwrap();
+            let msgs =
+                rebuild_chat_messages(backend, &overlay, &chats_messages, idx, &group_hex);
+            drop(overlay);
+            // Fewer records than asked for → the full history is loaded.
+            ui.set_messages_has_older(msgs.len() >= new_window);
+            spawn_message_avatar_fetches(&ui, backend, &msgs);
         }
     });
     ui.on_contact_selected({
@@ -2788,8 +2937,8 @@ fn main() -> Result<(), slint::PlatformError> {
             }
             // Already decoded → tapping expands it into the full-window
             // lightbox instead of re-downloading.
-            if let Some(pixels) = attachment_image_cache_get(&mid) {
-                ui.set_image_viewer_image(image_from_pixels(&pixels));
+            if let Some(img) = cached_attachment_image(&mid) {
+                ui.set_image_viewer_image(img);
                 ui.set_image_viewer_open(true);
                 return;
             }
@@ -2814,7 +2963,7 @@ fn main() -> Result<(), slint::PlatformError> {
                 attachment_in_flight().lock().ok().map(|mut s| s.remove(&mid));
                 return;
             };
-            let all = backend.messages(&group_hex, Some(200)).unwrap_or_default();
+            let all = backend.messages(&group_hex, Some(msg_window_for(&group_hex))).unwrap_or_default();
             let Some(rec) = all.iter().find(|m| m.message_id_hex == mid).cloned() else {
                 attachment_in_flight().lock().ok().map(|mut s| s.remove(&mid));
                 return;
@@ -3135,7 +3284,7 @@ fn main() -> Result<(), slint::PlatformError> {
             };
             let guard = backend_cell.lock().unwrap();
             let Some(backend) = guard.as_ref() else { return };
-            let all = backend.messages(&group_hex, Some(200)).unwrap_or_default();
+            let all = backend.messages(&group_hex, Some(msg_window_for(&group_hex))).unwrap_or_default();
             let versions = build_edit_history(&all, message_id.as_str());
             if versions.is_empty() {
                 return;
@@ -3681,10 +3830,14 @@ fn populate_profile(backend: &Backend, ui: &DarkMatterLinux) {
     };
     set_my_avatar(ui, backend);
     // If the URL is empty (or fetch fails), the Avatar falls back to the
-    // initials/gradient — no further work needed here.
+    // initials/gradient — no further work needed here. Only clear when a
+    // picture is currently bound: redundant writes to `my-av-picture`
+    // re-render every outgoing bubble.
     if picture_url.trim().is_empty() {
-        ui.set_my_av_has_picture(false);
-        ui.set_my_av_picture(slint::Image::default());
+        if ui.get_my_av_has_picture() {
+            ui.set_my_av_has_picture(false);
+            ui.set_my_av_picture(slint::Image::default());
+        }
     } else {
         fetch_profile_picture(ui, backend, &picture_url);
     }
@@ -3696,8 +3849,8 @@ fn populate_profile(backend: &Backend, ui: &DarkMatterLinux) {
 /// constructed on the UI thread. Cache mirrors that shape.
 fn fetch_profile_picture(ui: &DarkMatterLinux, backend: &Backend, url: &str) {
     let url = url.trim().to_string();
-    if let Some(pixels) = picture_cache_get(&url) {
-        apply_picture(ui, &pixels);
+    if picture_cache_has(&url) {
+        apply_picture(ui, &url);
         return;
     }
     let weak = ui.as_weak();
@@ -3716,19 +3869,17 @@ fn fetch_profile_picture(ui: &DarkMatterLinux, backend: &Backend, url: &str) {
                 return;
             }
         };
-        let img = match image::load_from_memory(&bytes) {
-            Ok(i) => i.to_rgba8(),
+        let pixels = match decode_avatar_pixels(&bytes) {
+            Ok(p) => p,
             Err(e) => {
                 eprintln!("[avatar] decode failed for {url_for_task}: {e}");
                 return;
             }
         };
-        let (w, h) = img.dimensions();
-        let pixels = PicturePixels { w, h, rgba: img.into_raw() };
-        picture_cache_put(url_for_task.clone(), pixels.clone());
+        picture_cache_put(url_for_task.clone(), pixels);
         let _ = slint::invoke_from_event_loop(move || {
             if let Some(ui) = weak.upgrade() {
-                apply_picture(&ui, &pixels);
+                apply_picture(&ui, &url_for_task);
             }
         });
     });
@@ -3900,13 +4051,20 @@ struct PicturePixels {
     rgba: Vec<u8>,
 }
 
-fn apply_picture(ui: &DarkMatterLinux, pixels: &PicturePixels) {
-    let buffer = slint::SharedPixelBuffer::<slint::Rgba8Pixel>::clone_from_slice(
-        &pixels.rgba,
-        pixels.w,
-        pixels.h,
-    );
-    ui.set_my_av_picture(slint::Image::from_rgba8(buffer));
+/// Bind the user's own avatar picture by cache key (URL). Uses the shared
+/// thread-local `Image` handle and SKIPS the property writes when the handle
+/// is already bound: `my-av-picture` feeds the left-rail avatar AND every
+/// outgoing bubble, so a fresh handle (or even a redundant set) re-renders
+/// the whole conversation — the visible blink reported after background
+/// syncs.
+fn apply_picture(ui: &DarkMatterLinux, url: &str) {
+    let Some(img) = cached_picture_image(url) else {
+        return;
+    };
+    if ui.get_my_av_has_picture() && ui.get_my_av_picture() == img {
+        return;
+    }
+    ui.set_my_av_picture(img);
     ui.set_my_av_has_picture(true);
 }
 
@@ -3920,6 +4078,47 @@ fn picture_cache_get(url: &str) -> Option<PicturePixels> {
     picture_cache().lock().ok()?.get(url).cloned()
 }
 
+// UI-thread caches of ready `slint::Image` handles. `slint::Image` is `!Send`
+// (it wraps a `VRc`), so these mirror the `Send` pixel caches above as
+// thread-locals: the first bind converts pixels → image once, and every later
+// row build clones the cheap shared handle instead of re-copying the whole
+// RGBA buffer. Sharing one handle across rows also means the renderer sees
+// one texture per picture instead of one per bubble. Entries never go stale:
+// the underlying pixel caches are write-once per key (URLs are
+// content-addressed; attachment pixels are keyed by message id).
+thread_local! {
+    static PICTURE_IMAGES: RefCell<HashMap<String, slint::Image>> = RefCell::new(HashMap::new());
+    static ATTACHMENT_IMAGES: RefCell<HashMap<String, slint::Image>> = RefCell::new(HashMap::new());
+}
+
+/// Resolve a picture-cache key (URL or `group-image:` key) to a shared
+/// `slint::Image`, converting from cached pixels on first use. UI thread only.
+fn cached_picture_image(url: &str) -> Option<slint::Image> {
+    PICTURE_IMAGES.with(|cache| {
+        if let Some(img) = cache.borrow().get(url) {
+            return Some(img.clone());
+        }
+        let pixels = picture_cache_get(url)?;
+        let img = rgba_to_slint_image(&pixels);
+        cache.borrow_mut().insert(url.to_string(), img.clone());
+        Some(img)
+    })
+}
+
+/// Same as [`cached_picture_image`] but for decrypted image attachments,
+/// keyed by message id. UI thread only.
+fn cached_attachment_image(id: &str) -> Option<slint::Image> {
+    ATTACHMENT_IMAGES.with(|cache| {
+        if let Some(img) = cache.borrow().get(id) {
+            return Some(img.clone());
+        }
+        let pixels = attachment_image_cache_get(id)?;
+        let img = image_from_pixels(&pixels);
+        cache.borrow_mut().insert(id.to_string(), img.clone());
+        Some(img)
+    })
+}
+
 /// Resolve an optional picture URL against the process-wide picture cache,
 /// returning a ready-to-render `(Image, has-picture)` pair. A miss yields the
 /// default image; callers spawn an async fetch that repopulates the cache and
@@ -3927,8 +4126,8 @@ fn picture_cache_get(url: &str) -> Option<PicturePixels> {
 fn bind_cached_picture(url: Option<&str>) -> (slint::Image, bool) {
     url.map(str::trim)
         .filter(|u| !u.is_empty())
-        .and_then(picture_cache_get)
-        .map(|p| (rgba_to_slint_image(&p), true))
+        .and_then(cached_picture_image)
+        .map(|img| (img, true))
         .unwrap_or((slint::Image::default(), false))
 }
 
@@ -3954,10 +4153,65 @@ fn build_sender_profiles(
     map
 }
 
+/// How many recent records (all kinds — chat, reactions, edits) are loaded
+/// per chat by default. The messages view instantiates a full bubble
+/// component tree per visible row (the Slint `for` is eager, not
+/// virtualized), so this window is the main lever on chat-switch latency.
+/// "Load earlier messages" grows it per chat via [`msg_window_expand`].
+const MESSAGE_WINDOW: usize = 80;
+
+/// Per-chat message-window overrides (group_id_hex → record limit). Only
+/// chats expanded via "Load earlier messages" have an entry; everything else
+/// uses [`MESSAGE_WINDOW`]. Process-wide like the picture caches so the many
+/// callback closures don't all need another captured handle.
+fn msg_windows() -> &'static Mutex<HashMap<String, usize>> {
+    use std::sync::OnceLock;
+    static MAP: OnceLock<Mutex<HashMap<String, usize>>> = OnceLock::new();
+    MAP.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// Current record limit for a chat (default [`MESSAGE_WINDOW`]).
+fn msg_window_for(group_hex: &str) -> usize {
+    msg_windows()
+        .lock()
+        .ok()
+        .and_then(|m| m.get(group_hex).copied())
+        .unwrap_or(MESSAGE_WINDOW)
+}
+
+/// Grow a chat's window by one [`MESSAGE_WINDOW`] step; returns the new limit.
+fn msg_window_expand(group_hex: &str) -> usize {
+    let mut map = match msg_windows().lock() {
+        Ok(m) => m,
+        Err(_) => return MESSAGE_WINDOW,
+    };
+    let w = map.entry(group_hex.to_string()).or_insert(MESSAGE_WINDOW);
+    *w += MESSAGE_WINDOW;
+    *w
+}
+
+/// Drop a chat's expanded window (back to the default). Called on chat
+/// select so re-entering a chat is always the fast path.
+fn msg_window_reset(group_hex: &str) {
+    if let Ok(mut m) = msg_windows().lock() {
+        m.remove(group_hex);
+    }
+}
+
 fn picture_cache_put(url: String, pixels: PicturePixels) {
     if let Ok(mut c) = picture_cache().lock() {
         c.insert(url, pixels);
     }
+}
+
+/// Presence check that doesn't clone the pixel buffer out of the cache —
+/// `picture_cache_get(url).is_some()` copies the whole RGBA blob just to
+/// throw it away.
+fn picture_cache_has(url: &str) -> bool {
+    picture_cache()
+        .lock()
+        .map(|c| c.contains_key(url))
+        .unwrap_or(false)
 }
 
 /// Cache for decrypted+decoded image attachments. Keyed by the inner-event
@@ -4209,7 +4463,7 @@ fn refresh_chats(
         // many groups.
         let msgs = if messages_outer.is_empty() {
             backend
-                .messages(&record.group_id_hex, Some(200))
+                .messages(&record.group_id_hex, Some(msg_window_for(&record.group_id_hex)))
                 .unwrap_or_default()
         } else {
             Vec::new()
@@ -4218,6 +4472,10 @@ fn refresh_chats(
         let edits = aggregate_edits(&msgs);
         let profiles = build_sender_profiles(backend, &msgs, &my_id);
         let is_group = backend.group_member_count(&record.group_id_hex) > 2;
+        let by_id: HashMap<&str, &AppMessageRecord> = msgs
+            .iter()
+            .map(|m| (m.message_id_hex.as_str(), m))
+            .collect();
         let row: Vec<ChatMessage> = msgs
             .iter()
             .filter(|m| is_visible_chat_message(m))
@@ -4227,7 +4485,7 @@ fn refresh_chats(
                     .cloned()
                     .unwrap_or_default();
                 let e = edits.get(&m.message_id_hex).cloned();
-                chat_message_from_with_reactions(m, &msgs, &my_id, &my_label, r, e, &profiles, is_group)
+                chat_message_from_with_reactions(m, &by_id, &my_id, &my_label, r, e, &profiles, is_group)
             })
             .collect();
         messages_outer.push(ModelRc::new(VecModel::from(row)));
@@ -4243,6 +4501,62 @@ fn refresh_chats(
         vm.set_vec(messages_outer);
     }
     *group_ids.lock().unwrap() = ids;
+}
+
+/// Non-destructive chat-list refresh: update existing rows in place (keyed by
+/// group id), append rows for groups we haven't seen, and leave the per-chat
+/// message models alone. Used when boot's background relay sync completes —
+/// a full [`refresh_chats`] would `set_vec` over the models, reorder
+/// `group_ids`, and yank an already-open chat out from under the user.
+/// Per-message updates are the live watchers' job; this only upgrades list
+/// metadata (names/pictures resolved by the directory sync, previews from
+/// caught-up messages).
+fn merge_chat_list_rows(
+    backend: &Backend,
+    chats: &ModelRc<ChatMeta>,
+    chats_messages: &ModelRc<ModelRc<ChatMessage>>,
+    group_ids: &Arc<Mutex<Vec<String>>>,
+) {
+    let records = match backend.chats() {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("[backend] chats snapshot failed: {e:#}");
+            return;
+        }
+    };
+    let my_id = backend.account().account_id_hex.clone();
+    let Some(vm) = chats.as_any().downcast_ref::<VecModel<ChatMeta>>() else {
+        return;
+    };
+    let mut ids = group_ids.lock().unwrap();
+    for r in &records {
+        let meta = chat_meta_from(
+            r,
+            backend.latest_message(&r.group_id_hex).as_ref(),
+            &my_id,
+            backend,
+        );
+        if let Some(pos) = ids.iter().position(|g| g == &r.group_id_hex) {
+            // Change-only: set_row_data dirties the row even when the data
+            // is identical, and the post-sync merge touches EVERY row — the
+            // all-rows flash was the visible glitch when a background sync
+            // finished. Image handles are stable (thread-local cache), so
+            // struct equality is meaningful here.
+            let changed = vm.row_data(pos).map(|old| old != meta).unwrap_or(true);
+            if changed {
+                vm.set_row_data(pos, meta);
+            }
+        } else {
+            ids.push(r.group_id_hex.clone());
+            vm.push(meta);
+            if let Some(mm) = chats_messages
+                .as_any()
+                .downcast_ref::<VecModel<ModelRc<ChatMessage>>>()
+            {
+                mm.push(ModelRc::new(VecModel::from(Vec::<ChatMessage>::new())));
+            }
+        }
+    }
 }
 
 /// Spawn the chat-list watcher. New groups (welcomes, invites) get appended
@@ -4270,6 +4584,13 @@ fn install_chat_watcher(
             let chats = ui.get_chats();
             let chats_messages = ui.get_chats_messages();
             let id = record.group_id_hex.clone();
+            // Group events (welcomes, evolutions) can change membership —
+            // refresh this group's cached member list in the background so
+            // cache-served reads (names, member panel, is-group flag) stay
+            // current.
+            if let Some(b) = guard.as_ref() {
+                b.refresh_members_async(&id);
+            }
             let my_id = guard
                 .as_ref()
                 .map(|b| b.account().account_id_hex.clone())
@@ -4414,7 +4735,7 @@ fn is_visible_chat_message(record: &AppMessageRecord) -> bool {
 
 fn chat_message_from_with_reactions(
     record: &AppMessageRecord,
-    all_records: &[AppMessageRecord],
+    records_by_id: &HashMap<&str, &AppMessageRecord>,
     my_account_id_hex: &str,
     my_label: &str,
     reactions: Vec<Reaction>,
@@ -4450,7 +4771,7 @@ fn chat_message_from_with_reactions(
     let (a, b, init) = avatar_for(key);
     let (picture, has_picture) = bind_cached_picture(picture_url.as_deref());
     let (reply_id, reply_author, reply_text) =
-        reply_preview_for(record, all_records, my_account_id_hex);
+        reply_preview_for(record, records_by_id, my_account_id_hex);
     let bubble_max = if outgoing { 440.0 } else { 560.0 };
     let lines = build_message_lines(display_text, bubble_max);
 
@@ -4470,12 +4791,12 @@ fn chat_message_from_with_reactions(
         Some(refp) => {
             let is_image = mime_is_image(&refp.media_type);
             let cached = if is_image {
-                attachment_image_cache_get(&record.message_id_hex)
+                cached_attachment_image(&record.message_id_hex)
             } else {
                 None
             };
             let (image, has_image) = match cached {
-                Some(p) => (image_from_pixels(&p), true),
+                Some(img) => (img, true),
                 None => (slint::Image::default(), false),
             };
             let in_flight = attachment_in_flight()
@@ -4551,7 +4872,7 @@ fn chat_message_from_with_reactions(
 /// matches what the bubble's quoted-block expects to render.
 fn reply_preview_for(
     record: &AppMessageRecord,
-    all_records: &[AppMessageRecord],
+    records_by_id: &HashMap<&str, &AppMessageRecord>,
     my_account_id_hex: &str,
 ) -> (String, String, String) {
     // Marmot replies carry both `q` (quote-ref) and `e` (event-ref). Prefer
@@ -4567,7 +4888,7 @@ fn reply_preview_for(
     };
     // Parent might be out of the loaded slice — show a graceful placeholder
     // rather than nothing, since the row itself still reads as a reply.
-    let parent = all_records.iter().find(|m| m.message_id_hex == parent_id);
+    let parent = records_by_id.get(parent_id.as_str()).copied();
     let (author, preview) = match parent {
         Some(p) => {
             let author = if p.sender.eq_ignore_ascii_case(my_account_id_hex) {
@@ -4872,7 +5193,7 @@ fn refresh_one_message_row(
 ) {
     let my_id = backend.account().account_id_hex.clone();
     let my_label = my_avatar_label(backend, &my_id);
-    let all = backend.messages(group_hex, Some(200)).unwrap_or_default();
+    let all = backend.messages(group_hex, Some(msg_window_for(group_hex))).unwrap_or_default();
     let Some(rec) = all.iter().find(|m| m.message_id_hex == target_id).cloned() else {
         return;
     };
@@ -4932,7 +5253,11 @@ fn build_one_message_row(
     // Resolve just this record's sender (single-row refresh path).
     let profiles = build_sender_profiles(backend, std::slice::from_ref(record), my_id);
     let is_group = backend.group_member_count(group_hex) > 2;
-    chat_message_from_with_reactions(record, all_records, my_id, my_label, r, e, &profiles, is_group)
+    let by_id: HashMap<&str, &AppMessageRecord> = all_records
+        .iter()
+        .map(|m| (m.message_id_hex.as_str(), m))
+        .collect();
+    chat_message_from_with_reactions(record, &by_id, my_id, my_label, r, e, &profiles, is_group)
 }
 
 /// Rebuild one chat's message row from `(backend snapshot ∪ pending overlay)`.
@@ -5042,16 +5367,24 @@ fn rebuild_chat_messages(
     chats_messages: &ModelRc<ModelRc<ChatMessage>>,
     idx: usize,
     group_hex: &str,
-) {
+) -> Vec<AppMessageRecord> {
+    let t0 = std::time::Instant::now();
     let my_id = backend.account().account_id_hex.clone();
     let my_label = my_avatar_label(backend, &my_id);
-    let msgs = backend.messages(group_hex, Some(200)).unwrap_or_default();
+    let t_label = t0.elapsed();
+    let msgs = backend.messages(group_hex, Some(msg_window_for(group_hex))).unwrap_or_default();
+    let t_msgs = t0.elapsed();
     let mut reactions = aggregate_reactions(&msgs, &my_id);
     apply_reaction_overlay(&mut reactions, group_hex, pending);
     let mut edits = aggregate_edits(&msgs);
     apply_edit_overlay(&mut edits, group_hex, pending);
     let profiles = build_sender_profiles(backend, &msgs, &my_id);
+    let t_profiles = t0.elapsed();
     let is_group = backend.group_member_count(group_hex) > 2;
+    let by_id: HashMap<&str, &AppMessageRecord> = msgs
+        .iter()
+        .map(|m| (m.message_id_hex.as_str(), m))
+        .collect();
 
     let mut rows: Vec<ChatMessage> = msgs
         .iter()
@@ -5062,7 +5395,7 @@ fn rebuild_chat_messages(
                 .cloned()
                 .unwrap_or_default();
             let e = edits.get(&m.message_id_hex).cloned();
-            chat_message_from_with_reactions(m, &msgs, &my_id, &my_label, r, e, &profiles, is_group)
+            chat_message_from_with_reactions(m, &by_id, &my_id, &my_label, r, e, &profiles, is_group)
         })
         .collect();
 
@@ -5075,8 +5408,20 @@ fn rebuild_chat_messages(
 
     let keys = grouping_keys(&msgs, &my_id, pending_count);
     apply_grouping(&mut rows, &keys);
+    let t_rows = t0.elapsed();
 
     replace_message_row(chats_messages, idx, rows);
+    eprintln!(
+        "[switch-timing]   detail: label={t_label:?} msgs={:?} profiles={:?} rows={:?} replace={:?}",
+        t_msgs - t_label,
+        t_profiles - t_msgs,
+        t_rows - t_profiles,
+        t0.elapsed() - t_rows,
+    );
+    // Hand the snapshot back so the caller can reuse it (avatar fetches on
+    // chat open) instead of paying for a second backend read of the same
+    // window of records.
+    msgs
 }
 
 /// Walk all message records and group kind-7 reactions by target id.
@@ -6028,12 +6373,38 @@ fn commit_mention(
     ui.set_composer_caret_tick(ui.get_composer_caret_tick().wrapping_add(1));
 }
 
+// Memoized markdown line models, keyed by (body, wrap-width). Rebuilding a
+// chat re-parses every visible body through the full markdown → wrap pipeline;
+// bodies are immutable (edits arrive as new text → new key), so the flattened
+// model can be shared across rows and rebuilds. UI-thread only (the line
+// models hold `ModelRc`s, which are not `Send`). Bounded: wholesale-cleared
+// at the cap rather than LRU-tracked — a full re-parse of one chat is cheap
+// compared to bookkeeping on every hit.
+thread_local! {
+    static MESSAGE_LINES_CACHE: RefCell<HashMap<(String, u32), ModelRc<MessageLine>>> =
+        RefCell::new(HashMap::new());
+}
+const MESSAGE_LINES_CACHE_CAP: usize = 4096;
+
 /// Build the `lines` model for `ChatMessage` from the message body.
 fn build_message_lines(text: &str, bubble_max: f32) -> ModelRc<MessageLine> {
     // Chat-body chrome: 2*pad-h (14) + gap (12) + meta col (~70). Conservative
     // so wrapping kicks in before the dynamic `available-w` clips the bubble.
     let budget = (bubble_max - 110.0).max(60.0);
-    ModelRc::new(VecModel::from(tokenize_message_lines(text, budget, 13.0)))
+    MESSAGE_LINES_CACHE.with(|cache| {
+        let key = (text.to_string(), budget.to_bits());
+        if let Some(model) = cache.borrow().get(&key) {
+            return model.clone();
+        }
+        let model: ModelRc<MessageLine> =
+            ModelRc::new(VecModel::from(tokenize_message_lines(text, budget, 13.0)));
+        let mut cache = cache.borrow_mut();
+        if cache.len() >= MESSAGE_LINES_CACHE_CAP {
+            cache.clear();
+        }
+        cache.insert(key, model.clone());
+        model
+    })
 }
 
 /// Filter the full emoji catalog by `query` (matches name + shortcodes,
@@ -6456,8 +6827,8 @@ fn push_group_settings_to_ui(ui: &DarkMatterLinux, backend: &Backend, group_hex:
     match image_hash {
         Some(hash) => {
             let key = format!("group-image:{hash}");
-            if let Some(pixels) = picture_cache_get(&key) {
-                ui.set_chat_group_picture(rgba_to_slint_image(&pixels));
+            if let Some(img) = cached_picture_image(&key) {
+                ui.set_chat_group_picture(img);
                 ui.set_chat_group_has_picture(true);
             } else {
                 ui.set_chat_group_has_picture(false);
@@ -6491,18 +6862,12 @@ fn spawn_group_image_fetch(
                 return;
             }
         };
-        let img = match image::load_from_memory(&bytes) {
-            Ok(i) => i.to_rgba8(),
+        let pixels = match decode_avatar_pixels(&bytes) {
+            Ok(p) => p,
             Err(e) => {
                 eprintln!("[group-avatar] decode failed: {e}");
                 return;
             }
-        };
-        let (w, h) = img.dimensions();
-        let pixels = PicturePixels {
-            w,
-            h,
-            rgba: img.into_raw(),
         };
         picture_cache_put(cache_key, pixels.clone());
         let _ = slint::invoke_from_event_loop(move || {
@@ -6576,16 +6941,15 @@ fn push_group_members_to_ui(ui: &DarkMatterLinux, backend: &Backend, group_hex: 
 /// Spawn async avatar fetches for the open chat's incoming senders. When a
 /// picture decodes, every bubble from that sender (keyed by `sender-id`) gets
 /// the image bound in place — no full rebuild. Mirrors the members pipeline.
-fn spawn_message_avatar_fetches(ui: &DarkMatterLinux, backend: &Backend, group_hex: &str) {
+fn spawn_message_avatar_fetches(ui: &DarkMatterLinux, backend: &Backend, msgs: &[AppMessageRecord]) {
     let my_id = backend.account().account_id_hex.clone();
-    let msgs = backend.messages(group_hex, Some(200)).unwrap_or_default();
-    let profiles = build_sender_profiles(backend, &msgs, &my_id);
+    let profiles = build_sender_profiles(backend, msgs, &my_id);
     let mut seen = std::collections::HashSet::new();
     let targets: Vec<(String, String)> = profiles
         .iter()
         .filter_map(|(sender, (_, url))| {
             let url = url.as_deref().map(str::trim).filter(|u| !u.is_empty())?;
-            if picture_cache_get(url).is_some() || !seen.insert(sender.clone()) {
+            if picture_cache_has(url) || !seen.insert(sender.clone()) {
                 return None;
             }
             Some((sender.clone(), url.to_string()))
@@ -6653,7 +7017,7 @@ fn spawn_chat_list_avatar_fetches(ui: &DarkMatterLinux, backend: &Backend) {
         else {
             continue;
         };
-        if picture_cache_get(&url).is_some() {
+        if picture_cache_has(&url) {
             continue;
         }
         let npub = format!("mls:0x{}", short_hex(&record.group_id_hex));
@@ -6752,15 +7116,13 @@ async fn fetch_picture_pixels(url: &str) -> Option<PicturePixels> {
             return None;
         }
     };
-    let img = match image::load_from_memory(&bytes) {
-        Ok(i) => i.to_rgba8(),
+    let pixels = match decode_avatar_pixels(&bytes) {
+        Ok(p) => p,
         Err(e) => {
             eprintln!("[avatar] decode failed for {url}: {e}");
             return None;
         }
     };
-    let (w, h) = img.dimensions();
-    let pixels = PicturePixels { w, h, rgba: img.into_raw() };
     picture_cache_put(url.to_string(), pixels.clone());
     Some(pixels)
 }
@@ -6797,11 +7159,7 @@ fn group_member_from(
         .filter(|u| !u.is_empty());
     // If the cache already has pixels for this URL, bind them now so the
     // row paints with the image on the first frame (no flash-of-initials).
-    let (picture_img, has_picture) = picture_url
-        .as_deref()
-        .and_then(picture_cache_get)
-        .map(|p| (rgba_to_slint_image(&p), true))
-        .unwrap_or((slint::Image::default(), false));
+    let (picture_img, has_picture) = bind_cached_picture(picture_url.as_deref());
     let row = GroupMember {
         name: s(&name),
         npub_short: s(&shorten_npub(&npub)),
@@ -6818,6 +7176,26 @@ fn group_member_from(
         can_self_demote,
     };
     (row, picture_url)
+}
+
+/// Largest edge we keep for decoded avatar/group pictures. They render at
+/// ≤160px logical (profile page), so 512px covers hidpi with headroom while
+/// turning a multi-megapixel upload into a ≤1MB RGBA buffer — smaller memcpys
+/// on every cache read and a far smaller GPU texture. Chat *attachments* are
+/// not capped (the lightbox shows them full size).
+const MAX_AVATAR_DECODE_PX: u32 = 512;
+
+/// Decode image bytes to RGBA, downscaling to [`MAX_AVATAR_DECODE_PX`].
+fn decode_avatar_pixels(bytes: &[u8]) -> Result<PicturePixels, image::ImageError> {
+    let img = image::load_from_memory(bytes)?;
+    let img = if img.width() > MAX_AVATAR_DECODE_PX || img.height() > MAX_AVATAR_DECODE_PX {
+        img.thumbnail(MAX_AVATAR_DECODE_PX, MAX_AVATAR_DECODE_PX)
+    } else {
+        img
+    };
+    let img = img.to_rgba8();
+    let (w, h) = img.dimensions();
+    Ok(PicturePixels { w, h, rgba: img.into_raw() })
 }
 
 fn rgba_to_slint_image(pixels: &PicturePixels) -> slint::Image {
@@ -6950,7 +7328,7 @@ fn install_message_watcher(
                     // append it surgically — no full rebuild.
                     let my_id = b.account().account_id_hex.clone();
                     let my_label = my_avatar_label(b, &my_id);
-                    let all = b.messages(&group_hex_inner, Some(200)).unwrap_or_default();
+                    let all = b.messages(&group_hex_inner, Some(msg_window_for(&group_hex_inner))).unwrap_or_default();
                     let Some(rec) = all
                         .iter()
                         .find(|m| m.message_id_hex == msg_id)
@@ -6972,7 +7350,7 @@ fn install_message_watcher(
                     // it so the freshly-appended bubble fills in.
                     if pushed && !rec.sender.eq_ignore_ascii_case(&my_id) {
                         drop(overlay);
-                        spawn_message_avatar_fetches(&ui, b, &group_hex_inner);
+                        spawn_message_avatar_fetches(&ui, b, &all);
                     }
                 }
                 7 | 5 | 1010 => {

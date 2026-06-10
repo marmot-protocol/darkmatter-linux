@@ -14,6 +14,10 @@ export component MessagesArea inherits Rectangle {
     // handler below jumps the viewport to the bottom — with animation — so
     // the user always sees the message they just sent.
     in property <int> scroll-tick: 0;
+    // True when older history exists beyond the loaded window; shows the
+    // "load earlier messages" pill at the top of the list.
+    in property <bool> has-older: false;
+    callback request-older();
     callback react(string, string);
     callback unreact(string);
     callback request-picker(string, length, length);
@@ -38,6 +42,14 @@ export component MessagesArea inherits Rectangle {
     // they've explicitly paged up to read history.
     property <bool> at-bottom: (-cs.viewport-y) >= (-root.bottom-y) - 40px;
 
+    // Scroll anchoring for "load earlier messages": content grows at the
+    // TOP, so without correction the viewport would suddenly show the middle
+    // of the newly-loaded history. Armed by the pill's click; the
+    // preferred-height change handler below shifts viewport-y by exactly the
+    // added height so what the user was reading stays put.
+    property <length> anchor-h: 0px;
+    property <bool> anchor-armed: false;
+
     // Send-driven scroll: any tick bump (from Rust) snaps to bottom even if
     // the user had paged up. This is "I just hit send, take me there."
     changed scroll-tick => {
@@ -57,10 +69,12 @@ export component MessagesArea inherits Rectangle {
         height: parent.height;
         viewport-width: self.width;
         viewport-height: inner.preferred-height;
-        // Smooth scroll when we snap programmatically. Wheel/scrollbar
-        // interaction sets viewport-y directly and bypasses the animation,
-        // which is exactly what we want (manual scrolling stays crisp).
-        animate viewport-y { duration: 220ms; easing: ease-in-out; }
+        // NO `animate viewport-y` here: viewport-y is a two-way alias of the
+        // Flickable's property, so a declared animation applies to EVERY
+        // write — including wheel ticks and scrollbar thumb drags, which
+        // then rubber-band through the easing curve and make scrolling feel
+        // laggy. Programmatic snaps (send, chat open, load-older anchor) are
+        // instant, which is what a chat wants anyway.
 
         inner := VerticalLayout {
             width: parent.width;
@@ -68,6 +82,44 @@ export component MessagesArea inherits Rectangle {
             padding-top: 18px; padding-bottom: 18px;
             // Tight within a group; Rust adds `gap-before` between groups.
             spacing: 3px;
+
+            changed preferred-height => {
+                if (root.anchor-armed) {
+                    root.anchor-armed = false;
+                    cs.viewport-y = cs.viewport-y - (self.preferred-height - root.anchor-h);
+                }
+            }
+
+            // Always mounted, gated by height/visible — an `if`-mounted
+            // TouchArea swallows its first click when it (re)mounts.
+            Rectangle {
+                height: root.has-older ? 36px : 0px;
+                visible: root.has-older;
+                pill := Rectangle {
+                    width: pill-label.preferred-width + 28px;
+                    height: 26px;
+                    border-radius: 13px * Theme.r-scale;
+                    background: pill-touch.has-hover ? Palette.hover : Palette.panel-2;
+                    border-width: Theme.retro ? 2px : 1px;
+                    border-color: Palette.border;
+                    pill-label := Text {
+                        text: @tr("Load earlier messages");
+                        color: pill-touch.has-hover ? Palette.text-hi : Palette.text-lo;
+                        font-size: 10px * Theme.fs-scale;
+                        font-weight: 600;
+                        letter-spacing: 1.1px;
+                        vertical-alignment: center;
+                        horizontal-alignment: center;
+                    }
+                    pill-touch := TouchArea {
+                        clicked => {
+                            root.anchor-h = inner.preferred-height;
+                            root.anchor-armed = true;
+                            root.request-older();
+                        }
+                    }
+                }
+            }
 
             for msg in root.messages : VerticalLayout {
                 spacing: 0;

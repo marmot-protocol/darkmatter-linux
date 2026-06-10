@@ -60,3 +60,23 @@ twemoji-assets = { version = "1.5", default-features = false, features = [
 ] }
 image = { version = "0.25", default-features = false, features = ["png"] }
 emojis = "0.6"
+
+# Dev builds keep our own crate at opt-level 0 (fast incremental compiles) but
+# optimize every dependency. All the heavy lifting — SQLCipher page decryption,
+# MLS/AEAD crypto, Argon2id key derivation, image decoding, markdown parsing —
+# happens in deps; at opt-level 0 they make unlock, boot, and chat switching
+# take seconds. Deps are compiled once and cached, so only the first build
+# after this change is slow.
+[profile.dev.package."*"]
+opt-level = 3
+
+# Our own crate gets light optimization too: the chat-row pipeline (markdown
+# flattening, line wrapping, 80+ Slint structs per chat switch) is hot enough
+# that opt-level 0 is visibly slow. Level 1 keeps incremental compiles quick.
+[profile.dev]
+opt-level = 1
+
+# build.rs composes the Twemoji sprite sheet with the `image` crate; optimize
+# build scripts and their deps so that first build doesn't crawl either.
+[profile.dev.build-override]
+opt-level = 3

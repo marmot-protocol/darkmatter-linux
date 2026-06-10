@@ -41,6 +41,8 @@ export component MainPane inherits Rectangle {
     in property <bool> my-has-picture: false;
     in property <[ChatMessage]> messages;
     in property <int> scroll-tick: 0;
+    in property <bool> has-older: false;
+    callback request-older();
     in-out property <string> draft <=> composer.draft;
     in property <string> reply-target-id;
     in property <string> reply-target-author;
@@ -116,6 +118,8 @@ export component MainPane inherits Rectangle {
                 vertical-stretch: 1;
                 messages: root.messages;
                 scroll-tick: root.scroll-tick;
+                has-older: root.has-older;
+                request-older => { root.request-older(); }
                 available-w: parent.width;
                 outgoing-on-right: root.outgoing-on-right;
                 my-picture: root.my-picture;

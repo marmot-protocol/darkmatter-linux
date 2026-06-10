@@ -77,7 +77,7 @@ All UI mutations (send, react, unreact) go through a `PendingState` overlay in `
 4. On failure: mark the overlay entry failed (red bubble, tap to retry).
 
 Three entry points share the same model→row pipeline; **changing the avatar/text/etc. for a row means touching all three**:
-- `chat_message_from_with_reactions(record, all_records, my_id, my_label, reactions)` — confirmed rows.
+- `chat_message_from_with_reactions(record, records_by_id, my_id, my_label, reactions)` — confirmed rows (`records_by_id` is a prebuilt message-id → record map for reply-preview lookups).
 - `pending_chat_message(pending, my_id, my_label)` — pending/failed rows.
 - `build_one_message_row(...)` / `rebuild_chat_messages(...)` / `refresh_one_message_row(...)` — orchestrators that call the two above.
 

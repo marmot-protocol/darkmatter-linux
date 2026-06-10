@@ -9,8 +9,9 @@
 // No daemon, no socket — we link marmot-app directly and play the same role
 // `dmd` does in the upstream stack.
 
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use anyhow::{Context, Result, anyhow};
 use cgka_traits::GroupId;
@@ -116,6 +117,22 @@ pub struct Backend {
     account: AccountSummary,
     home: PathBuf,
     relays: Vec<String>,
+    /// Per-group member lists, refreshed asynchronously. UI-thread reads MUST
+    /// come from here, never from the account worker queue: worker commands
+    /// are FIFO behind long-running catch-up/reconcile, and one misbehaving
+    /// relay holds the worker for its full connection timeout (~35s observed)
+    /// — which used to freeze every chat switch and the chat-list build.
+    members_cache: Arc<Mutex<HashMap<String, Vec<AppGroupMemberRecord>>>>,
+    /// Groups with a member refresh currently in flight (dedupe).
+    members_inflight: Arc<Mutex<HashSet<String>>>,
+    /// account_id (lowercase) → (display name, picture URL). Same rationale
+    /// as `members_cache`: directory lookups read marmot's shared storage,
+    /// which the always-running background sync writes to — UI-thread reads
+    /// were observed blocking 0.1–5s per chat switch under contention.
+    /// Warmed at boot, refreshed asynchronously.
+    profile_cache: Arc<Mutex<HashMap<String, (String, Option<String>)>>>,
+    /// Accounts with a profile refresh currently in flight (dedupe).
+    profile_inflight: Arc<Mutex<HashSet<String>>>,
 }
 
 impl Backend {
@@ -124,11 +141,19 @@ impl Backend {
     /// `relays` may be empty — operations that need a relay will fail, but the
     /// runtime still starts so the UI can render an empty state until the user
     /// configures relays.
+    /// `on_synced` fires (on a background thread) when the network phase of
+    /// boot — directory sync, key-package bootstrap, inbox catch-up —
+    /// completes. For an account that already exists locally, `boot` returns
+    /// as soon as local storage is open; the network phase can lag by tens of
+    /// seconds when a relay misbehaves (auth failure → full connection
+    /// timeout), and the UI must not wait on it.
     pub fn boot(
         nsec: &str,
         relays: Vec<String>,
         secret_store: Arc<dyn AccountSecretStore>,
+        on_synced: impl FnOnce(Result<()>) + Send + 'static,
     ) -> Result<Self> {
+        let t_boot = std::time::Instant::now();
         let home = default_home();
         std::fs::create_dir_all(&home).context("create dm home")?;
 
@@ -147,22 +172,33 @@ impl Backend {
             MarmotApp::with_relays_and_account_home(&home, relays.clone(), account_home.clone());
         let runtime = app.runtime();
 
-        // Start the runtime. If any existing account record is malformed
-        // (e.g. an old account created without the marmot LeafNode identity
-        // proof — which earlier versions of this client wrote), start() will
-        // fail. We wipe and retry once, then re-import via the proper path.
-        Self::start_with_self_heal(&tokio, &runtime, &account_home)?;
-
-        // Ensure our account is in the home, set up via the runtime's
-        // identity-aware import path. If it's already there from a prior
-        // successful boot, we skip this step.
+        // Whether this identity already exists locally decides the boot
+        // shape. An existing account renders from local storage immediately —
+        // `runtime.start()` (whose directory sync blocks on relay round-trips
+        // and eats any misbehaving relay's full connection timeout) moves to
+        // the background; the lifecycle gate only rejects calls while
+        // *stopping*, so local snapshot reads work without it. A first run
+        // has nothing local to show and must block on the identity-aware
+        // import path, which needs a started runtime.
         let already_present = account_home
             .accounts()
             .context("list accounts")?
             .into_iter()
             .any(|a| a.account_id_hex == target_id);
+        eprintln!(
+            "[boot-timing] local setup done at {:?} (already_present={already_present})",
+            t_boot.elapsed()
+        );
         if !already_present {
-            Self::login_account(&tokio, &runtime, nsec, &relays)?;
+            // Start the runtime. If any existing account record is malformed
+            // (e.g. an old account created without the marmot LeafNode
+            // identity proof — which earlier versions of this client wrote),
+            // start() will fail. We wipe and retry once, then re-import via
+            // the proper path.
+            Self::start_with_self_heal(&tokio, &runtime, &account_home)?;
+            eprintln!("[boot-timing] first-run start done at {:?}", t_boot.elapsed());
+            Self::login_account(tokio.handle(), &runtime, nsec, &relays)?;
+            eprintln!("[boot-timing] first-run login done at {:?}", t_boot.elapsed());
         }
 
         // Resolve the account we'll talk to from this point forward.
@@ -173,20 +209,7 @@ impl Backend {
             .find(|a| a.account_id_hex == target_id)
             .ok_or_else(|| anyhow!("account did not appear in home after login"))?;
 
-        // Pull anything that landed in the inbox while we were closed —
-        // welcomes from peers, group evolutions, etc. `runtime.start()` only
-        // does directory sync + reconcile; it does NOT poll the inbox relay.
-        // Without this, invites to new groups created from another client
-        // never appear locally until the user happens to perform a write op
-        // (which calls catch_up_accounts as a side effect).
-        {
-            let rt = runtime.clone();
-            if let Err(e) = tokio.block_on(async move { rt.catch_up_accounts().await }) {
-                eprintln!("[backend] initial catch_up_accounts failed: {e}");
-            }
-        }
-
-        // Then a low-frequency background poll so invites that arrive while
+        // A low-frequency background poll so invites that arrive while
         // the app is running show up without requiring user action. 15s is
         // arbitrary — picks up new welcomes quickly without hammering relays.
         {
@@ -211,30 +234,128 @@ impl Backend {
             account,
             home,
             relays,
+            members_cache: Arc::new(Mutex::new(HashMap::new())),
+            members_inflight: Arc::new(Mutex::new(HashSet::new())),
+            profile_cache: Arc::new(Mutex::new(HashMap::new())),
+            profile_inflight: Arc::new(Mutex::new(HashSet::new())),
         };
 
-        // KP bootstrap: if the account has no locally-recorded key package
-        // and we have relays to publish to, publish one now. Without this,
-        // peers can't find a fresh KP to invite us with (and any KP they
-        // cached from before the local state was wiped is stale → silently
-        // unpeelable welcomes).
-        if !backend.relays.is_empty() && !backend.has_local_key_package() {
-            match backend.publish_key_package() {
-                Ok(acks) => {
-                    eprintln!("[backend] bootstrap-published key package ({acks} relay acks)")
-                }
-                Err(e) => eprintln!("[backend] bootstrap publish_key_package failed: {e}"),
-            }
-        }
+        // Warm the members + profile caches NOW, before the background
+        // network phase starts competing for the account worker and the
+        // shared directory storage: these local reads land in milliseconds
+        // here but block behind relay timeouts afterwards.
+        backend.warm_members_cache();
+        backend.warm_profile_cache();
 
         // Point marmot's telemetry exporter + audit-log tracker at the IPF
         // services. The library auto-exports metrics (~60s) and auto-uploads
         // audit logs after sends/syncs — we only supply endpoints, tokens, and
         // resource attributes. Failures are non-fatal: they just mean no
-        // telemetry/audit until the next boot.
+        // telemetry/audit until the next boot. Configured before the
+        // (possibly background) runtime start so start() reads the real
+        // endpoints when it sets up the exporter.
         backend.configure_observability();
 
+        // An already-present account skipped the synchronous start above, so
+        // the background phase begins with runtime.start().
+        backend.spawn_background_sync(
+            nsec.to_string(),
+            /* needs_start */ already_present,
+            on_synced,
+        );
+
+        eprintln!("[boot-timing] boot returning at {:?}", t_boot.elapsed());
         Ok(backend)
+    }
+
+    /// The network phase of boot, off the UI's critical path:
+    ///
+    /// 1. For an existing account (`needs_start`), `runtime.start()` itself —
+    ///    its directory sync blocks on relay round-trips, and a misbehaving
+    ///    relay holds it for a full connection timeout (~35s observed on a
+    ///    relay rejecting auth). Self-heal mirrors [`Self::start_with_self_heal`],
+    ///    plus a re-import since the wipe removes our account.
+    /// 2. KP bootstrap: if the account has no locally-recorded key package
+    ///    and we have relays to publish to, publish one. Without this, peers
+    ///    can't find a fresh KP to invite us with (and any KP they cached
+    ///    from before the local state was wiped is stale → silently
+    ///    unpeelable welcomes).
+    /// 3. Inbox catch-up: pull anything that landed while we were closed —
+    ///    welcomes from peers, group evolutions, etc. `runtime.start()` only
+    ///    does directory sync + reconcile; it does NOT poll the inbox relay.
+    ///
+    /// `on_synced` fires (still on the background thread) when the phase
+    /// ends so the UI can do one refresh to pick up whatever it pulled in.
+    fn spawn_background_sync(
+        &self,
+        nsec: String,
+        needs_start: bool,
+        on_synced: impl FnOnce(Result<()>) + Send + 'static,
+    ) {
+        let handle = self.tokio.handle().clone();
+        let runtime = self.runtime.clone();
+        let account_home = self.account_home.clone();
+        let app = self.app.clone();
+        let relays = self.relays.clone();
+        let label = self.account.label.clone();
+        std::thread::spawn(move || {
+            let t_sync = std::time::Instant::now();
+            let result = (|| -> Result<()> {
+                if needs_start {
+                    let rt = runtime.clone();
+                    let first = handle.block_on(async move { rt.start().await });
+                    eprintln!(
+                        "[boot-timing] background runtime.start done at {:?} (ok={})",
+                        t_sync.elapsed(),
+                        first.is_ok()
+                    );
+                    if let Err(err) = first {
+                        eprintln!(
+                            "[backend] runtime.start failed ({err}); wiping local accounts and retrying"
+                        );
+                        for acc in account_home.accounts().unwrap_or_default() {
+                            if let Err(e) = account_home.remove_account(&acc.label) {
+                                eprintln!("[backend] remove_account({}) failed: {e}", acc.label);
+                            }
+                        }
+                        let rt = runtime.clone();
+                        handle
+                            .block_on(async move { rt.start().await })
+                            .context("runtime.start retry after wipe")?;
+                        // The wipe removed our account — re-import it. The
+                        // account id is derived from the nsec, so the summary
+                        // the Backend resolved at boot stays valid.
+                        Self::login_account(&handle, &runtime, &nsec, &relays)?;
+                    }
+                }
+                let has_kp = app
+                    .local_key_package_records(&label)
+                    .map(|v| !v.is_empty())
+                    .unwrap_or(false);
+                if !relays.is_empty() && !has_kp {
+                    let rt = runtime.clone();
+                    let l = label.clone();
+                    match handle.block_on(async move { rt.publish_key_package(&l).await }) {
+                        Ok(acks) => eprintln!(
+                            "[backend] bootstrap-published key package ({acks} relay acks)"
+                        ),
+                        Err(e) => {
+                            eprintln!("[backend] bootstrap publish_key_package failed: {e}")
+                        }
+                    }
+                }
+                let rt = runtime.clone();
+                if let Err(e) = handle.block_on(async move { rt.catch_up_accounts().await }) {
+                    eprintln!("[backend] initial catch_up_accounts failed: {e}");
+                }
+                eprintln!(
+                    "[boot-timing] background sync finished at {:?}",
+                    t_sync.elapsed()
+                );
+                Ok(())
+            })();
+            on_synced(result);
+        });
     }
 
     /// Configure marmot's relay-telemetry exporter (OTLP/HTTP metrics) and the
@@ -322,7 +443,7 @@ impl Backend {
     /// path. This is what writes the marmot `account-identity-proof v1`
     /// LeafNode extension that `runtime.start()` validates.
     fn login_account(
-        tokio: &TokioRuntime,
+        tokio: &tokio::runtime::Handle,
         runtime: &MarmotAppRuntime,
         nsec: &str,
         relays: &[String],
@@ -339,6 +460,9 @@ impl Backend {
             // Only attempt relay-list / key-package publishing when we have
             // somewhere to publish to. Otherwise the login round-trip times
             // out instead of giving the user a working local identity.
+            // (login also validates the lists against the relays, so a
+            // brand-new identity hard-fails with MissingRelayLists when
+            // publishing is disabled — this can't move to the background.)
             publish_missing_relay_lists: !relays.is_empty(),
             publish_initial_key_package: !relays.is_empty(),
         };
@@ -367,25 +491,23 @@ impl Backend {
 
     /// Snapshot of visible (non-archived) chats for the active account.
     pub fn chats(&self) -> Result<Vec<AppGroupRecord>> {
-        // subscribe_chats internally calls tokio::spawn for the live-update
-        // forwarder, so we must be inside a tokio runtime context even
-        // though the snapshot itself is sync.
-        let _guard = self.tokio.handle().enter();
-        let sub = self
-            .runtime
-            .subscribe_chats(&self.account.label, false)
-            .map_err(|e| anyhow!("subscribe_chats: {e}"))?;
-        Ok(sub.snapshot)
+        // Direct snapshot read. Don't go through subscribe_chats here: it
+        // spawns a live-update forwarder task and a broadcast subscriber per
+        // call that we'd immediately throw away.
+        self.app
+            .visible_groups(&self.account.label)
+            .map_err(|e| anyhow!("visible_groups: {e}"))
     }
 
     /// Snapshot of archived chats for the active account.
     pub fn archived_chats(&self) -> Result<Vec<AppGroupRecord>> {
-        let _guard = self.tokio.handle().enter();
-        let sub = self
-            .runtime
-            .subscribe_chats(&self.account.label, true)
-            .map_err(|e| anyhow!("subscribe_chats(archived): {e}"))?;
-        Ok(sub.snapshot.into_iter().filter(|g| g.archived).collect())
+        Ok(self
+            .app
+            .groups(&self.account.label)
+            .map_err(|e| anyhow!("groups: {e}"))?
+            .into_iter()
+            .filter(|g| g.archived)
+            .collect())
     }
 
     /// Most recent **user-visible** message in a group, if any. Pulls a small
@@ -393,16 +515,14 @@ impl Backend {
     /// chat (9). Push-token gossip (MIP-05 kinds 447/448/449), reactions,
     /// deletes, etc. are skipped so chat-list previews stay clean.
     pub fn latest_message(&self, group_hex: &str) -> Option<AppMessageRecord> {
-        let _guard = self.tokio.handle().enter();
         let query = AppMessageQuery {
             group_id_hex: Some(group_hex.to_string()),
             limit: Some(32),
         };
         let mut snapshot = self
             .runtime
-            .subscribe_messages(&self.account.label, query)
-            .ok()?
-            .snapshot;
+            .messages_with_query(&self.account.label, query)
+            .ok()?;
         // snapshot is oldest-first; walk back to find the most recent visible
         // entry.
         while let Some(record) = snapshot.pop() {
@@ -558,16 +678,16 @@ impl Backend {
 
     /// Snapshot of messages for a group, newest-last.
     pub fn messages(&self, group_hex: &str, limit: Option<usize>) -> Result<Vec<AppMessageRecord>> {
-        let _guard = self.tokio.handle().enter();
+        // Direct snapshot read — no subscription. This runs on the UI thread
+        // for every chat switch and every surgical row refresh, so it must not
+        // pay for a forwarder task + full-history dedup set per call.
         let query = AppMessageQuery {
             group_id_hex: Some(group_hex.to_string()),
             limit,
         };
-        let sub = self
-            .runtime
-            .subscribe_messages(&self.account.label, query)
-            .map_err(|e| anyhow!("subscribe_messages: {e}"))?;
-        Ok(sub.snapshot)
+        self.runtime
+            .messages_with_query(&self.account.label, query)
+            .map_err(|e| anyhow!("messages_with_query: {e}"))
     }
 
     /// Synchronously send a text message — blocks the UI thread for the
@@ -890,23 +1010,92 @@ impl Backend {
     }
 
     /// MLS roster for a group (account ids + any locally-known profile labels).
+    /// Cached member list for a group. Served from the in-process cache —
+    /// NEVER synchronously from the account worker (see `members_cache`).
+    /// A cold entry returns empty and queues a background refresh; the cache
+    /// is warmed for all groups at boot and re-refreshed on group events, so
+    /// misses are rare.
     pub fn group_members(&self, group_hex: &str) -> Result<Vec<AppGroupMemberRecord>> {
-        let group_id = group_id_from_hex(group_hex)?;
-        let label = self.account.label.clone();
-        let runtime = self.runtime.clone();
-        self.tokio.block_on(async move {
-            runtime
-                .group_members(&label, &group_id)
-                .await
-                .map_err(|e| anyhow!("group_members: {e}"))
-        })
+        if let Some(m) = self.members_cache.lock().unwrap().get(group_hex) {
+            return Ok(m.clone());
+        }
+        self.refresh_members_async(group_hex);
+        Ok(Vec::new())
     }
 
-    /// Member count from the local MLS group state (cheap; no per-member profile lookup).
+    /// Member count from the cached member list (0 while the cache is cold).
     pub fn group_member_count(&self, group_hex: &str) -> usize {
-        self.group_mls_state(group_hex)
-            .map(|s| s.member_count)
+        self.group_members(group_hex)
+            .map(|m| m.len())
             .unwrap_or(0)
+    }
+
+    /// Queue a background refresh of one group's member list into the cache.
+    /// Deduped: a group with a refresh already in flight is skipped. The
+    /// worker query is a fast local MLS read, but it can queue behind a
+    /// long-running catch-up — hence always async, never on the UI thread.
+    pub fn refresh_members_async(&self, group_hex: &str) {
+        let Ok(group_id) = group_id_from_hex(group_hex) else {
+            return;
+        };
+        {
+            let mut inflight = self.members_inflight.lock().unwrap();
+            if !inflight.insert(group_hex.to_string()) {
+                return;
+            }
+        }
+        let label = self.account.label.clone();
+        let runtime = self.runtime.clone();
+        let cache = self.members_cache.clone();
+        let inflight = self.members_inflight.clone();
+        let key = group_hex.to_string();
+        self.tokio.spawn(async move {
+            let result = runtime.group_members(&label, &group_id).await;
+            inflight.lock().unwrap().remove(&key);
+            match result {
+                Ok(members) => {
+                    cache.lock().unwrap().insert(key, members);
+                }
+                Err(e) => eprintln!("[backend] members refresh ({key}) failed: {e}"),
+            }
+        });
+    }
+
+    /// Synchronously fill the members cache for every known group (visible +
+    /// archived). Called from boot — which runs on a worker thread, never the
+    /// UI thread — while the account worker is still idle, before the
+    /// background network phase can occupy it. This way the very first
+    /// chat-list build names 1:1 chats correctly instead of upgrading them a
+    /// couple of seconds later.
+    fn warm_members_cache(&self) {
+        let t = std::time::Instant::now();
+        let groups = self.app.groups(&self.account.label).unwrap_or_default();
+        for g in &groups {
+            let Ok(group_id) = group_id_from_hex(&g.group_id_hex) else {
+                continue;
+            };
+            let label = self.account.label.clone();
+            let rt = self.runtime.clone();
+            match self
+                .tokio
+                .block_on(async move { rt.group_members(&label, &group_id).await })
+            {
+                Ok(members) => {
+                    self.members_cache
+                        .lock()
+                        .unwrap()
+                        .insert(g.group_id_hex.clone(), members);
+                }
+                Err(e) => {
+                    eprintln!("[backend] warm members ({}) failed: {e}", g.group_id_hex)
+                }
+            }
+        }
+        eprintln!(
+            "[boot-timing] members cache warmed for {} groups in {:?}",
+            groups.len(),
+            t.elapsed()
+        );
     }
 
     pub fn group_mls_state(&self, group_hex: &str) -> Result<AppGroupMlsState> {
@@ -921,86 +1110,123 @@ impl Backend {
         })
     }
 
-    /// Best-effort profile picture URL for an account id, if one is known
-    /// either in the local profile (self) or the directory cache (peers).
+    /// Best-effort profile picture URL for an account id. Cache-backed —
+    /// see [`Backend::account_name_and_picture`].
     pub fn account_picture_url(&self, account_id_hex: &str) -> Option<String> {
-        if account_id_hex.eq_ignore_ascii_case(&self.account.account_id_hex) {
-            return self
-                .load_profile()
-                .ok()
-                .flatten()
-                .and_then(|p| p.picture.filter(|s| !s.is_empty()));
-        }
-        self.app
-            .directory_entry_for_account_id(account_id_hex)
-            .ok()
-            .flatten()
-            .and_then(|entry| {
-                entry
-                    .profile
-                    .and_then(|p| p.picture.filter(|s| !s.is_empty()))
-            })
+        self.account_name_and_picture(account_id_hex).1
     }
 
-    /// Best-effort display name for an account id (directory cache, then hex tail).
+    /// Best-effort display name for an account id (cache, then hex tail).
     pub fn account_display_name(&self, account_id_hex: &str) -> String {
-        if account_id_hex.eq_ignore_ascii_case(&self.account.account_id_hex) {
-            if let Ok(Some(profile)) = self.load_profile() {
-                if let Some(name) = profile
-                    .display_name
-                    .filter(|s| !s.is_empty())
-                    .or(profile.name.filter(|s| !s.is_empty()))
-                {
-                    return name;
-                }
-            }
-            return "You".to_string();
-        }
-        if let Ok(Some(entry)) = self.app.directory_entry_for_account_id(account_id_hex) {
-            if let Some(name) = entry.profile.as_ref().and_then(|p| {
-                p.display_name
-                    .clone()
-                    .filter(|s| !s.is_empty())
-                    .or_else(|| p.name.clone().filter(|s| !s.is_empty()))
-            }) {
-                return name;
-            }
-        }
-        short_account_id(account_id_hex)
+        self.account_name_and_picture(account_id_hex).0
     }
 
-    /// Resolve display name *and* picture URL for an account id in a single
-    /// directory read. Cheaper than calling [`Backend::account_display_name`]
-    /// and [`Backend::account_picture_url`] back-to-back (which each hit the
-    /// directory cache) when both are needed — as they are when building chat
-    /// rows. Returns the hex-tail fallback name when no profile is known.
+    /// Display name + picture URL for an account id, served from the
+    /// in-process profile cache — NEVER synchronously from the directory
+    /// storage (see `profile_cache`). A cold entry returns the hex-tail
+    /// fallback and queues a background refresh; the cache is warmed at boot
+    /// for every group member + contact, so misses are rare.
     pub fn account_name_and_picture(&self, account_id_hex: &str) -> (String, Option<String>) {
-        let pick = |p: &UserProfileMetadata| -> (Option<String>, Option<String>) {
-            let name = p
-                .display_name
+        let key = account_id_hex.to_ascii_lowercase();
+        if let Some(v) = self.profile_cache.lock().unwrap().get(&key) {
+            return v.clone();
+        }
+        self.refresh_profile_cache_async(account_id_hex);
+        let fallback = if account_id_hex.eq_ignore_ascii_case(&self.account.account_id_hex) {
+            "You".to_string()
+        } else {
+            short_account_id(account_id_hex)
+        };
+        (fallback, None)
+    }
+
+    /// The uncached directory read backing the profile cache. Reads marmot's
+    /// shared directory storage — can block behind the background sync's
+    /// writes, so only the boot warm-up and async refreshes call it.
+    fn name_and_picture_direct(
+        app: &MarmotApp,
+        my_account_id_hex: &str,
+        account_id_hex: &str,
+    ) -> (String, Option<String>) {
+        let is_self = account_id_hex.eq_ignore_ascii_case(my_account_id_hex);
+        let entry = app.directory_entry_for_account_id(account_id_hex).ok().flatten();
+        let profile = entry.and_then(|e| e.profile);
+        let name = profile.as_ref().and_then(|p| {
+            p.display_name
                 .clone()
                 .filter(|s| !s.is_empty())
-                .or_else(|| p.name.clone().filter(|s| !s.is_empty()));
-            let pic = p.picture.clone().filter(|s| !s.is_empty());
-            (name, pic)
-        };
-        if account_id_hex.eq_ignore_ascii_case(&self.account.account_id_hex) {
-            if let Ok(Some(profile)) = self.load_profile() {
-                let (name, pic) = pick(&profile);
-                return (name.unwrap_or_else(|| "You".to_string()), pic);
+                .or_else(|| p.name.clone().filter(|s| !s.is_empty()))
+        });
+        let pic = profile
+            .as_ref()
+            .and_then(|p| p.picture.clone().filter(|s| !s.is_empty()));
+        let name = name.unwrap_or_else(|| {
+            if is_self {
+                "You".to_string()
+            } else {
+                short_account_id(account_id_hex)
             }
-            return ("You".to_string(), None);
-        }
-        if let Ok(Some(entry)) = self.app.directory_entry_for_account_id(account_id_hex) {
-            if let Some(profile) = entry.profile.as_ref() {
-                let (name, pic) = pick(profile);
-                if let Some(name) = name {
-                    return (name, pic);
-                }
-                return (short_account_id(account_id_hex), pic);
+        });
+        (name, pic)
+    }
+
+    /// Queue a background refresh of one account's cached name/picture.
+    /// Deduped per account id.
+    pub fn refresh_profile_cache_async(&self, account_id_hex: &str) {
+        let key = account_id_hex.to_ascii_lowercase();
+        {
+            let mut inflight = self.profile_inflight.lock().unwrap();
+            if !inflight.insert(key.clone()) {
+                return;
             }
         }
-        (short_account_id(account_id_hex), None)
+        let app = self.app.clone();
+        let me = self.account.account_id_hex.clone();
+        let cache = self.profile_cache.clone();
+        let inflight = self.profile_inflight.clone();
+        self.tokio.spawn(async move {
+            let v = Self::name_and_picture_direct(&app, &me, &key);
+            inflight.lock().unwrap().remove(&key);
+            cache.lock().unwrap().insert(key, v);
+        });
+    }
+
+    /// Queue background refreshes for every cached profile. Called when the
+    /// background directory sync completes, so names/pictures that changed
+    /// while we were offline converge shortly after.
+    pub fn refresh_all_profiles_async(&self) {
+        let keys: Vec<String> = self.profile_cache.lock().unwrap().keys().cloned().collect();
+        for k in keys {
+            self.refresh_profile_cache_async(&k);
+        }
+    }
+
+    /// Synchronously fill the profile cache for self, every known group
+    /// member, and every contact. Called from boot (worker thread) before
+    /// the background sync starts writing to the directory storage.
+    fn warm_profile_cache(&self) {
+        let t = std::time::Instant::now();
+        let mut ids: HashSet<String> = HashSet::new();
+        ids.insert(self.account.account_id_hex.to_ascii_lowercase());
+        for members in self.members_cache.lock().unwrap().values() {
+            for m in members {
+                ids.insert(m.member_id_hex.to_ascii_lowercase());
+            }
+        }
+        if let Ok(follows) = self.follow_list() {
+            for f in &follows {
+                ids.insert(f.account_id_hex.to_ascii_lowercase());
+            }
+        }
+        let count = ids.len();
+        for id in ids {
+            let v = Self::name_and_picture_direct(&self.app, &self.account.account_id_hex, &id);
+            self.profile_cache.lock().unwrap().insert(id, v);
+        }
+        eprintln!(
+            "[boot-timing] profile cache warmed for {count} accounts in {:?}",
+            t.elapsed()
+        );
     }
 
     /// Full profile metadata for an account id from the local directory cache
@@ -1671,9 +1897,15 @@ impl Backend {
     {
         let label = self.account.label.clone();
         let runtime = self.runtime.clone();
+        // The subscription snapshot only seeds marmot's internal "already
+        // seen" dedup set — we never read it. `limit: None` would decrypt the
+        // group's ENTIRE history on every chat switch just for that set.
+        // Keep it at 1: re-emitted old events slip through marmot's dedup,
+        // but the UI handler is idempotent (find_message_row /
+        // refresh_one_message_row), so duplicates are no-ops there.
         let query = AppMessageQuery {
             group_id_hex: Some(group_hex.to_string()),
-            limit: None,
+            limit: Some(1),
         };
         self.tokio.spawn(async move {
             let mut sub: RuntimeMessagesSubscription =

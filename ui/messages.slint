@@ -1,6 +1,8 @@
 // messages area — driven by a model fed from Rust.
 import { Palette, Theme, ChatMessage } from "tokens.slint";
-import { IncomingRow, OutgoingRow, CypherScroll } from "primitives.slint";
+import { IncomingRow } from "primitives/incoming-row.slint";
+import { OutgoingRow } from "primitives/outgoing-row.slint";
+import { CypherScroll } from "primitives/cypher-scroll.slint";
 
 export component MessagesArea inherits Rectangle {
     in property <[ChatMessage]> messages;

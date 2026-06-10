@@ -1,7 +1,7 @@
 // chat list panel — a SidePanel populated with chat list items.
 import { ChatMeta } from "tokens.slint";
-import { ChatListItem } from "primitives.slint";
-import { SidePanel } from "shells.slint";
+import { ChatListItem } from "primitives/chat-list-item.slint";
+import { SidePanel } from "shells/side-panel.slint";
 
 export component ChatListPanel inherits SidePanel {
     callback chat-clicked(int);

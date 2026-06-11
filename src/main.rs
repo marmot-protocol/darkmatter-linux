@@ -6521,7 +6521,13 @@ fn copy_to_clipboard(text: &str) -> Result<(), String> {
 /// Spawn a CLI clipboard helper, pipe `text` into its stdin, wait for the
 /// parent to exit (these helpers fork themselves into the background after
 /// reading stdin, so the parent exits in milliseconds), and surface the
-/// exit code + stderr if anything went wrong.
+/// exit code if anything went wrong.
+///
+/// stdout/stderr must NOT be `Stdio::piped()`: the forked background child
+/// that keeps serving the clipboard inherits the pipe write ends, so reading
+/// them to EOF (e.g. `wait_with_output`) blocks until clipboard ownership is
+/// lost — which freezes the UI thread. stderr is inherited instead, so any
+/// helper diagnostics still land in our own stderr log.
 fn copy_via_command(cmd: &str, args: &[&str], text: &str) -> Result<(), String> {
     use std::io::Write;
     use std::process::{Command, Stdio};
@@ -6529,8 +6535,8 @@ fn copy_via_command(cmd: &str, args: &[&str], text: &str) -> Result<(), String> 
     let mut child = Command::new(cmd)
         .args(args)
         .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::inherit())
         .spawn()
         .map_err(|e| format!("spawn: {e}"))?;
     if let Some(mut stdin) = child.stdin.take() {
@@ -6539,19 +6545,9 @@ fn copy_via_command(cmd: &str, args: &[&str], text: &str) -> Result<(), String> 
             .map_err(|e| format!("write stdin: {e}"))?;
         // dropping stdin closes the pipe so the helper sees EOF
     }
-    let output = child
-        .wait_with_output()
-        .map_err(|e| format!("wait: {e}"))?;
-    if !output.status.success() {
-        return Err(format!(
-            "{cmd} exited {}: {}",
-            output.status,
-            String::from_utf8_lossy(&output.stderr).trim()
-        ));
-    }
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    if !stderr.trim().is_empty() {
-        eprintln!("[clipboard] {cmd} stderr: {}", stderr.trim());
+    let status = child.wait().map_err(|e| format!("wait: {e}"))?;
+    if !status.success() {
+        return Err(format!("{cmd} exited {status} (stderr passed through)"));
     }
     Ok(())
 }

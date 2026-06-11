@@ -363,6 +363,14 @@ impl Backend {
     /// per boot after the runtime is running. Whether anything is actually sent
     /// still depends on the user's telemetry/audit *enabled* toggles.
     fn configure_observability(&self) {
+        // marmot's telemetry setter spawns its exporter task with a bare
+        // `tokio::spawn` (runtime.rs), which panics ("no reactor running")
+        // unless a runtime is the ambient context. `boot` calls us on the
+        // caller's thread, *outside* `self.tokio`, so enter it for the
+        // duration of these setters. (Manifested only on first-run/new-user
+        // boot, where the exporter actually gets constructed.)
+        let _rt_guard = self.tokio.enter();
+
         // Endpoints + tokens come from `observability.toml` (embedded default,
         // overridable at `$DM_HOME/observability.toml`).
         let cfg = ObservabilityConfig::load(&self.home);

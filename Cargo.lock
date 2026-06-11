@@ -1102,7 +1102,7 @@ checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 [[package]]
 name = "cgka-engine"
 version = "0.1.0"
-source = "git+ssh://git@github.com/marmot-protocol/darkmatter.git?branch=master#8002173c465015201e6b65c1d900af40627adb3a"
+source = "git+ssh://git@github.com/marmot-protocol/darkmatter.git?branch=master#5ea57d4a5944171c8c8c5563a06e521565cc27ee"
 dependencies = [
  "async-trait",
  "cgka-traits",
@@ -1126,7 +1126,7 @@ dependencies = [
 [[package]]
 name = "cgka-session"
 version = "0.1.0"
-source = "git+ssh://git@github.com/marmot-protocol/darkmatter.git?branch=master#8002173c465015201e6b65c1d900af40627adb3a"
+source = "git+ssh://git@github.com/marmot-protocol/darkmatter.git?branch=master#5ea57d4a5944171c8c8c5563a06e521565cc27ee"
 dependencies = [
  "cgka-engine",
  "cgka-traits",
@@ -1139,7 +1139,7 @@ dependencies = [
 [[package]]
 name = "cgka-traits"
 version = "0.1.0"
-source = "git+ssh://git@github.com/marmot-protocol/darkmatter.git?branch=master#8002173c465015201e6b65c1d900af40627adb3a"
+source = "git+ssh://git@github.com/marmot-protocol/darkmatter.git?branch=master#5ea57d4a5944171c8c8c5563a06e521565cc27ee"
 dependencies = [
  "async-trait",
  "hex",
@@ -4115,7 +4115,7 @@ dependencies = [
 [[package]]
 name = "marmot-account"
 version = "0.1.0"
-source = "git+ssh://git@github.com/marmot-protocol/darkmatter.git?branch=master#8002173c465015201e6b65c1d900af40627adb3a"
+source = "git+ssh://git@github.com/marmot-protocol/darkmatter.git?branch=master#5ea57d4a5944171c8c8c5563a06e521565cc27ee"
 dependencies = [
  "android-native-keyring-store",
  "apple-native-keyring-store",
@@ -4137,7 +4137,7 @@ dependencies = [
 [[package]]
 name = "marmot-app"
 version = "0.1.0"
-source = "git+ssh://git@github.com/marmot-protocol/darkmatter.git?branch=master#8002173c465015201e6b65c1d900af40627adb3a"
+source = "git+ssh://git@github.com/marmot-protocol/darkmatter.git?branch=master#5ea57d4a5944171c8c8c5563a06e521565cc27ee"
 dependencies = [
  "async-trait",
  "cgka-engine",
@@ -4173,7 +4173,7 @@ dependencies = [
 [[package]]
 name = "marmot-forensics"
 version = "0.1.0"
-source = "git+ssh://git@github.com/marmot-protocol/darkmatter.git?branch=master#8002173c465015201e6b65c1d900af40627adb3a"
+source = "git+ssh://git@github.com/marmot-protocol/darkmatter.git?branch=master#5ea57d4a5944171c8c8c5563a06e521565cc27ee"
 dependencies = [
  "serde",
  "serde_json",
@@ -7082,7 +7082,7 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 [[package]]
 name = "storage-sqlite"
 version = "0.1.0"
-source = "git+ssh://git@github.com/marmot-protocol/darkmatter.git?branch=master#8002173c465015201e6b65c1d900af40627adb3a"
+source = "git+ssh://git@github.com/marmot-protocol/darkmatter.git?branch=master#5ea57d4a5944171c8c8c5563a06e521565cc27ee"
 dependencies = [
  "cgka-traits",
  "hex",
@@ -7714,7 +7714,7 @@ dependencies = [
 [[package]]
 name = "transport-nostr-adapter"
 version = "0.1.0"
-source = "git+ssh://git@github.com/marmot-protocol/darkmatter.git?branch=master#8002173c465015201e6b65c1d900af40627adb3a"
+source = "git+ssh://git@github.com/marmot-protocol/darkmatter.git?branch=master#5ea57d4a5944171c8c8c5563a06e521565cc27ee"
 dependencies = [
  "async-trait",
  "cgka-traits",
@@ -7732,7 +7732,7 @@ dependencies = [
 [[package]]
 name = "transport-nostr-peeler"
 version = "0.1.0"
-source = "git+ssh://git@github.com/marmot-protocol/darkmatter.git?branch=master#8002173c465015201e6b65c1d900af40627adb3a"
+source = "git+ssh://git@github.com/marmot-protocol/darkmatter.git?branch=master#5ea57d4a5944171c8c8c5563a06e521565cc27ee"
 dependencies = [
  "async-trait",
  "cgka-traits",
@@ -7749,7 +7749,7 @@ dependencies = [
 [[package]]
 name = "transport-quic-broker"
 version = "0.1.0"
-source = "git+ssh://git@github.com/marmot-protocol/darkmatter.git?branch=master#8002173c465015201e6b65c1d900af40627adb3a"
+source = "git+ssh://git@github.com/marmot-protocol/darkmatter.git?branch=master#5ea57d4a5944171c8c8c5563a06e521565cc27ee"
 dependencies = [
  "cgka-traits",
  "clap",
@@ -7769,7 +7769,7 @@ dependencies = [
 [[package]]
 name = "transport-quic-stream"
 version = "0.1.0"
-source = "git+ssh://git@github.com/marmot-protocol/darkmatter.git?branch=master#8002173c465015201e6b65c1d900af40627adb3a"
+source = "git+ssh://git@github.com/marmot-protocol/darkmatter.git?branch=master#5ea57d4a5944171c8c8c5563a06e521565cc27ee"
 dependencies = [
  "cgka-traits",
  "chacha20poly1305",

@@ -1583,6 +1583,7 @@ dependencies = [
  "cgka-traits",
  "chacha20poly1305",
  "directories",
+ "dm-ui",
  "emojis",
  "getrandom 0.2.17",
  "hex",
@@ -1598,12 +1599,10 @@ dependencies = [
  "serde_json",
  "sha2",
  "slint",
- "slint-build",
  "tokio",
  "toml 0.9.12+spec-1.1.0",
  "tracing",
  "tracing-subscriber",
- "twemoji-assets",
  "whitenoise-markdown",
  "zeroize",
 ]
@@ -1758,6 +1757,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ab8ecd87370524b461f8557c119c405552c396ed91fc0a8eec68679eab26f94a"
 dependencies = [
  "libloading",
+]
+
+[[package]]
+name = "dm-ui"
+version = "0.1.0"
+dependencies = [
+ "emojis",
+ "image",
+ "slint",
+ "slint-build",
+ "twemoji-assets",
 ]
 
 [[package]]

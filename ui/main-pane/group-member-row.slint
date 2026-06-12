@@ -98,12 +98,12 @@ export component GroupMemberRow inherits Rectangle {
             }
             width: demote-badge.preferred-width + 20px;
             border-radius: (6px) * Theme.r-scale;
-            background: demote-ta.has-hover ? #ff5a5a20 : transparent;
+            background: demote-ta.has-hover ? Palette.danger-soft : transparent;
             border-width: Theme.border-w;
-            border-color: demote-ta.has-hover ? #ff5a5a : Palette.border-2;
+            border-color: demote-ta.has-hover ? Palette.danger : Palette.border-2;
             demote-badge := Text {
                 text: @tr("Remove admin");
-                color: demote-ta.has-hover ? #ff5a5a : Palette.text-mid;
+                color: demote-ta.has-hover ? Palette.danger : Palette.text-mid;
                 font-size: (Theme.retro ? 11px : 10px) * Theme.fs-scale;
                 horizontal-alignment: center;
                 vertical-alignment: center;
@@ -117,12 +117,12 @@ export component GroupMemberRow inherits Rectangle {
             }
             width: self-demote-badge.preferred-width + 20px;
             border-radius: (6px) * Theme.r-scale;
-            background: self-demote-ta.has-hover ? #ff5a5a20 : transparent;
+            background: self-demote-ta.has-hover ? Palette.danger-soft : transparent;
             border-width: Theme.border-w;
-            border-color: self-demote-ta.has-hover ? #ff5a5a : Palette.border-2;
+            border-color: self-demote-ta.has-hover ? Palette.danger : Palette.border-2;
             self-demote-badge := Text {
                 text: @tr("Step down");
-                color: self-demote-ta.has-hover ? #ff5a5a : Palette.text-mid;
+                color: self-demote-ta.has-hover ? Palette.danger : Palette.text-mid;
                 font-size: (Theme.retro ? 11px : 10px) * Theme.fs-scale;
                 horizontal-alignment: center;
                 vertical-alignment: center;

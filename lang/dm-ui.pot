@@ -2,7 +2,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-06-11 23:57+0000\n"
+"POT-Creation-Date: 2026-06-12 01:00+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -249,9 +249,26 @@ msgctxt "ContactsSidebar"
 msgid "Search contacts…"
 msgstr ""
 
-#: ui/dark-matter-linux.slint:261
+#: ui/dark-matter-linux.slint:262
 msgctxt "DarkMatterLinux"
 msgid "Connecting to relays…"
+msgstr ""
+
+#: ui/dark-matter-linux.slint:764
+msgctxt "DarkMatterLinux"
+msgid "Block this chat request?"
+msgstr ""
+
+#: ui/dark-matter-linux.slint:765
+msgctxt "DarkMatterLinux"
+msgid ""
+"This declines the invite from {}. It can't be restored unless they invite "
+"you again."
+msgstr ""
+
+#: ui/dark-matter-linux.slint:766
+msgctxt "DarkMatterLinux"
+msgid "Block"
 msgstr ""
 
 #: ui/emoji-picker.slint:89
@@ -680,12 +697,12 @@ msgctxt "ChatHeader"
 msgid "Block"
 msgstr ""
 
-#: ui/main-pane/chat-header.slint:123
+#: ui/main-pane/chat-header.slint:124
 msgctxt "ChatHeader"
 msgid "Archive"
 msgstr ""
 
-#: ui/main-pane/chat-header.slint:129
+#: ui/main-pane/chat-header.slint:131
 msgctxt "ChatHeader"
 msgid "Accept"
 msgstr ""
@@ -854,7 +871,7 @@ msgctxt "MentionPicker"
 msgid "(you)"
 msgstr ""
 
-#: ui/messages.slint:106
+#: ui/messages.slint:107
 msgctxt "MessagesArea"
 msgid "Load earlier messages"
 msgstr ""
@@ -894,6 +911,11 @@ msgstr ""
 #: ui/modals/command-palette.slint:229
 msgctxt "CommandPalette"
 msgid "No matches"
+msgstr ""
+
+#: ui/modals/confirm-modal.slint:12
+msgctxt "ConfirmModal"
+msgid "Cancel"
 msgstr ""
 
 #: ui/modals/edit-history-modal.slint:12
@@ -1000,7 +1022,7 @@ msgctxt "StartNewChatModal"
 msgid "e.g. friday-crew"
 msgstr ""
 
-#: ui/modals/start-new-chat-modal.slint:31
+#: ui/modals/start-new-chat-modal.slint:34
 msgctxt "StartNewChatModal"
 msgid "MEMBERS"
 msgstr ""

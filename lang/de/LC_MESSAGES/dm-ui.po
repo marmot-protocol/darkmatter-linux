@@ -2,35 +2,35 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-06-11 23:57+0000\n"
+"POT-Creation-Date: 2026-06-12 01:00+0000\n"
 "PO-Revision-Date: 2026-05-27 13:20+0000\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
-"Language: ja\n"
+"Language: de\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=1; plural=0;\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: ui/archived/archived-detail.slint:27
 msgctxt "ArchivedDetail"
 msgid "ARCHIVED  ·  {} MEMBERS  ·  {}"
-msgstr "アーカイブ済み  ·  {} メンバー  ·  {}"
+msgstr "ARCHIVIERT  ·  {} MITGLIEDER  ·  {}"
 
 #: ui/archived/archived-detail.slint:32
 msgctxt "ArchivedDetail"
 msgid "Unarchive"
-msgstr "アーカイブ解除"
+msgstr "Wiederherstellen"
 
 #: ui/archived/archived-detail.slint:39
 msgctxt "ArchivedDetail"
 msgid "Delete"
-msgstr "削除"
+msgstr "Löschen"
 
 #: ui/archived/archived-detail.slint:75
 msgctxt "ArchivedDetail"
 msgid "This chat is archived"
-msgstr "このチャットはアーカイブされています"
+msgstr "Dieser Chat ist archiviert"
 
 #: ui/archived/archived-detail.slint:81
 msgctxt "ArchivedDetail"
@@ -38,39 +38,39 @@ msgid ""
 "It stays end-to-end encrypted. Unarchiving returns it to your main list and "
 "resumes notifications."
 msgstr ""
-"エンドツーエンド暗号化は維持されます。アーカイブ解除するとメインリストに戻"
-"り、通知が再開されます。"
+"Sie bleibt Ende-zu-Ende-verschlüsselt. Durch Wiederherstellen kehrt sie in "
+"deine Hauptliste zurück und Benachrichtigungen werden fortgesetzt."
 
 #: ui/archived/archived-detail.slint:91
 msgctxt "ArchivedDetail"
 msgid "LAST ACTIVITY"
-msgstr "最終アクティビティ"
+msgstr "LETZTE AKTIVITÄT"
 
 #: ui/archived/archived-detail.slint:94
 msgctxt "ArchivedDetail"
 msgid "Last message"
-msgstr "最後のメッセージ"
+msgstr "Letzte Nachricht"
 
 #: ui/archived/archived-detail.slint:99
 msgctxt "ArchivedDetail"
 msgid "Members"
-msgstr "メンバー"
+msgstr "Mitglieder"
 
 #: ui/archived/archived-detail.slint:103
 msgctxt "ArchivedDetail"
 msgid "Group id"
-msgstr "グループ ID"
+msgstr "Gruppen-ID"
 
 #: ui/archived/archived-detail.slint:111
 msgctxt "ArchivedDetail"
 msgid "MEMBER LIST"
-msgstr "メンバー一覧"
+msgstr "MITGLIEDERLISTE"
 
 #: ui/archived/archived-page.slint:36
 #, fuzzy
 msgctxt "ArchivedPage"
 msgid "No archived chats"
-msgstr "チャットをアーカイブ"
+msgstr "Chat archivieren"
 
 #: ui/archived/archived-page.slint:37
 msgctxt "ArchivedPage"
@@ -80,29 +80,29 @@ msgstr ""
 #: ui/archived/archived-sidebar.slint:10
 msgctxt "ArchivedSidebar"
 msgid "ARCHIVED"
-msgstr "アーカイブ"
+msgstr "ARCHIVIERT"
 
 #: ui/chat-list.slint:19
 msgctxt "ChatListPanel"
 msgid "CHATS"
-msgstr "チャット"
+msgstr "CHATS"
 
 #: ui/chat-list.slint:22
 msgctxt "ChatListPanel"
 msgid "Search chats…"
-msgstr "チャットを検索…"
+msgstr "Chats durchsuchen…"
 
 #: ui/chat-list.slint:26
 #, fuzzy
 msgctxt "ChatListPanel"
 msgid "RELAYS"
-msgstr "リレー"
+msgstr "RELAYS"
 
 #: ui/chat-list.slint:27
 #, fuzzy
 msgctxt "ChatListPanel"
 msgid "NO RELAYS"
-msgstr "リレー"
+msgstr "RELAYS"
 
 #: ui/chat-list.slint:29
 msgctxt "ChatListPanel"
@@ -122,12 +122,12 @@ msgstr ""
 #: ui/contacts/contact-detail.slint:26
 msgctxt "ContactDetail"
 msgid "Contact"
-msgstr "連絡先"
+msgstr "Kontakt"
 
 #: ui/contacts/contact-detail.slint:27
 msgctxt "ContactDetail"
 msgid "ADDED {}  ·  {} RELAYS"
-msgstr "追加 {}  ·  {} リレー"
+msgstr "HINZUGEFÜGT {}  ·  {} RELAYS"
 
 #: ui/contacts/contact-detail.slint:75
 msgctxt "ContactDetail"
@@ -137,7 +137,7 @@ msgstr ""
 #: ui/contacts/contact-detail.slint:81
 msgctxt "ContactDetail"
 msgid "✓ VERIFIED"
-msgstr "✓ 確認済み"
+msgstr "✓ VERIFIZIERT"
 
 #: ui/contacts/contact-detail.slint:88
 msgctxt "ContactDetail"
@@ -147,98 +147,98 @@ msgstr ""
 #: ui/contacts/contact-detail.slint:95
 msgctxt "ContactDetail"
 msgid "{} RELAYS"
-msgstr "{} リレー"
+msgstr "{} RELAYS"
 
 #: ui/contacts/contact-detail.slint:117
 msgctxt "ContactDetail"
 msgid "Start chat"
-msgstr "チャットを開始"
+msgstr "Chat starten"
 
 #: ui/contacts/contact-detail.slint:129
 msgctxt "ContactDetail"
 msgid "IDENTITY"
-msgstr "ID"
+msgstr "IDENTITÄT"
 
 #: ui/contacts/contact-detail.slint:133
 msgctxt "ContactDetail"
 msgid "Public key, safe to share."
-msgstr "公開鍵。共有して問題ありません。"
+msgstr "Öffentlicher Schlüssel, sicher zum Teilen."
 
 #: ui/contacts/contact-detail.slint:136
 msgctxt "ContactDetail"
 msgid "Copy"
-msgstr "コピー"
+msgstr "Kopieren"
 
 #: ui/contacts/contact-detail.slint:141
 msgctxt "ContactDetail"
 msgid "Key package"
-msgstr "キーパッケージ"
+msgstr "Schlüsselpaket"
 
 #: ui/contacts/contact-detail.slint:142
 msgctxt "ContactDetail"
 msgid "Fetched from relay.damus.io · refreshed 4m ago"
-msgstr "relay.damus.io から取得 · 4分前に更新"
+msgstr "Von relay.damus.io abgerufen · vor 4 Min. aktualisiert"
 
 #: ui/contacts/contact-detail.slint:143
 msgctxt "ContactDetail"
 msgid "up to date"
-msgstr "最新"
+msgstr "aktuell"
 
 #: ui/contacts/contact-detail.slint:145
 msgctxt "ContactDetail"
 msgid "Refresh"
-msgstr "更新"
+msgstr "Aktualisieren"
 
 #: ui/contacts/contact-detail.slint:150
 msgctxt "ContactDetail"
 msgid "Mutual relays"
-msgstr "共通リレー"
+msgstr "Gemeinsame Relays"
 
 #: ui/contacts/contact-detail.slint:151
 msgctxt "ContactDetail"
 msgid "Used to deliver messages between you."
-msgstr "お互いの間でメッセージを配信するために使用されます。"
+msgstr "Werden genutzt, um Nachrichten zwischen euch zuzustellen."
 
 #: ui/contacts/contact-detail.slint:152
 msgctxt "ContactDetail"
 msgid "{} relays"
-msgstr "{} リレー"
+msgstr "{} Relays"
 
 #: ui/contacts/contact-detail.slint:162
 msgctxt "ContactDetail"
 msgid "Show as QR"
-msgstr "QR コードで表示"
+msgstr "Als QR anzeigen"
 
 #: ui/contacts/contact-detail.slint:171
 msgctxt "ContactDetail"
 msgid "ACTIONS"
-msgstr "操作"
+msgstr "AKTIONEN"
 
 #: ui/contacts/contact-detail.slint:176
 msgctxt "ContactDetail"
 msgid "Mute"
-msgstr "ミュート"
+msgstr "Stummschalten"
 
 #: ui/contacts/contact-detail.slint:180
 msgctxt "ContactDetail"
 msgid "Archive chat"
-msgstr "チャットをアーカイブ"
+msgstr "Chat archivieren"
 
 #: ui/contacts/contact-detail.slint:185
 msgctxt "ContactDetail"
 msgid "Block"
-msgstr "ブロック"
+msgstr "Blockieren"
 
 #: ui/contacts/contact-detail.slint:194
 msgctxt "ContactDetail"
 msgid "Remove contact"
-msgstr "連絡先を削除"
+msgstr "Kontakt entfernen"
 
 #: ui/contacts/contacts-page.slint:36
 #, fuzzy
 msgctxt "ContactsPage"
 msgid "No contacts yet"
-msgstr "連絡先を削除"
+msgstr "Kontakt entfernen"
 
 #: ui/contacts/contacts-page.slint:37
 msgctxt "ContactsPage"
@@ -248,27 +248,46 @@ msgstr ""
 #: ui/contacts/contacts-sidebar.slint:10
 msgctxt "ContactsSidebar"
 msgid "CONTACTS"
-msgstr "連絡先"
+msgstr "KONTAKTE"
 
 #: ui/contacts/contacts-sidebar.slint:13
 msgctxt "ContactsSidebar"
 msgid "Search contacts…"
-msgstr "連絡先を検索…"
+msgstr "Kontakte durchsuchen…"
 
-#: ui/dark-matter-linux.slint:261
+#: ui/dark-matter-linux.slint:262
 msgctxt "DarkMatterLinux"
 msgid "Connecting to relays…"
-msgstr "リレーに接続中…"
+msgstr "Verbinde mit Relays…"
+
+#: ui/dark-matter-linux.slint:764
+#, fuzzy
+msgctxt "DarkMatterLinux"
+msgid "Block this chat request?"
+msgstr "Chat-Anfrage"
+
+#: ui/dark-matter-linux.slint:765
+msgctxt "DarkMatterLinux"
+msgid ""
+"This declines the invite from {}. It can't be restored unless they invite "
+"you again."
+msgstr ""
+
+#: ui/dark-matter-linux.slint:766
+#, fuzzy
+msgctxt "DarkMatterLinux"
+msgid "Block"
+msgstr "Blockieren"
 
 #: ui/emoji-picker.slint:89
 msgctxt "EmojiPicker"
 msgid "search…"
-msgstr "検索…"
+msgstr "suchen…"
 
 #: ui/emoji-picker.slint:190
 msgctxt "EmojiPicker"
 msgid "no matches"
-msgstr "一致なし"
+msgstr "keine Treffer"
 
 #: ui/get-started.slint:173
 msgctxt "GetStartedScreen"
@@ -286,7 +305,7 @@ msgstr ""
 #, fuzzy
 msgctxt "GetStartedScreen"
 msgid "Connect a relay"
-msgstr "リレーに接続中…"
+msgstr "Verbinde mit Relays…"
 
 #: ui/get-started.slint:192
 msgctxt "GetStartedScreen"
@@ -297,25 +316,25 @@ msgstr ""
 #, fuzzy
 msgctxt "GetStartedScreen"
 msgid "No relays yet"
-msgstr "リレー未設定"
+msgstr "Keine Relays konfiguriert"
 
 #: ui/get-started.slint:210
 #, fuzzy
 msgctxt "GetStartedScreen"
 msgid "Connected · {}/{}"
-msgstr "接続済み · {}/{}"
+msgstr "Verbunden · {}/{}"
 
 #: ui/get-started.slint:211
 #, fuzzy
 msgctxt "GetStartedScreen"
 msgid "Partial · {}/{} connected"
-msgstr "一部接続 · {}/{} 接続"
+msgstr "Teilweise · {}/{} verbunden"
 
 #: ui/get-started.slint:249
 #, fuzzy
 msgctxt "GetStartedScreen"
 msgid "Add"
-msgstr "追加"
+msgstr "Hinzufügen"
 
 #: ui/get-started.slint:270
 msgctxt "GetStartedScreen"
@@ -326,7 +345,7 @@ msgstr ""
 #, fuzzy
 msgctxt "GetStartedScreen"
 msgid "Publish your key package"
-msgstr "キーパッケージがありません"
+msgstr "Noch keine Schlüsselpakete"
 
 #: ui/get-started.slint:325
 msgctxt "GetStartedScreen"
@@ -337,19 +356,19 @@ msgstr ""
 #, fuzzy
 msgctxt "GetStartedScreen"
 msgid "Published"
-msgstr "公開"
+msgstr "Veröffentlichen"
 
 #: ui/get-started.slint:338
 #, fuzzy
 msgctxt "GetStartedScreen"
 msgid "Publishing…"
-msgstr "公開中…"
+msgstr "Veröffentliche…"
 
 #: ui/get-started.slint:338
 #, fuzzy
 msgctxt "GetStartedScreen"
 msgid "Publish key package"
-msgstr "キーパッケージ"
+msgstr "Schlüsselpaket"
 
 #: ui/get-started.slint:361
 msgctxt "GetStartedScreen"
@@ -360,7 +379,7 @@ msgstr ""
 #, fuzzy
 msgctxt "GetStartedScreen"
 msgid "Start your first chat"
-msgstr "新しいチャットを開始"
+msgstr "Neuen Chat starten"
 
 #: ui/get-started.slint:381
 msgctxt "GetStartedScreen"
@@ -375,27 +394,27 @@ msgstr ""
 #: ui/keys/device-row.slint:8
 msgctxt "DeviceRow"
 msgid "Revoke"
-msgstr "取り消し"
+msgstr "Widerrufen"
 
 #: ui/keys/keys-page.slint:33
 msgctxt "KeysPage"
 msgid "This computer"
-msgstr "このコンピューター"
+msgstr "Dieser Computer"
 
 #: ui/keys/keys-page.slint:46
 msgctxt "KeysPage"
 msgid "Keys & identity"
-msgstr "鍵と ID"
+msgstr "Schlüssel & Identität"
 
 #: ui/keys/keys-page.slint:47
 msgctxt "KeysPage"
 msgid "MLS  ·  YOUR KEY MATERIAL"
-msgstr "MLS  ·  あなたの鍵素材"
+msgstr "MLS  ·  DEIN SCHLÜSSELMATERIAL"
 
 #: ui/keys/keys-page.slint:70
 msgctxt "KeysPage"
 msgid "Your identity is sovereign"
-msgstr "あなたの ID は主権的です"
+msgstr "Deine Identität ist souverän"
 
 #: ui/keys/keys-page.slint:76
 msgctxt "KeysPage"
@@ -403,43 +422,43 @@ msgid ""
 "Dark Matter never sees your private key. It lives only on this device and "
 "any signer you connect."
 msgstr ""
-"Dark Matter はあなたの秘密鍵を一切見ません。このデバイスと接続した署名者にの"
-"み存在します。"
+"Dark Matter sieht deinen privaten Schlüssel nie. Er bleibt nur auf diesem "
+"Gerät und jedem verbundenen Signiergerät."
 
 #: ui/keys/keys-page.slint:88
 msgctxt "KeysPage"
 msgid "IDENTITY"
-msgstr "ID"
+msgstr "IDENTITÄT"
 
 #: ui/keys/keys-page.slint:93
 msgctxt "KeysPage"
 msgid "Public key (npub)"
-msgstr "公開鍵 (npub)"
+msgstr "Öffentlicher Schlüssel (npub)"
 
 #: ui/keys/keys-page.slint:94
 msgctxt "KeysPage"
 msgid "Safe to share. This is how people find you."
-msgstr "共有して問題ありません。他のユーザーがあなたを見つける方法です。"
+msgstr "Sicher zum Teilen. So finden dich andere."
 
 #: ui/keys/keys-page.slint:98
 msgctxt "KeysPage"
 msgid "Copy"
-msgstr "コピー"
+msgstr "Kopieren"
 
 #: ui/keys/keys-page.slint:109
 msgctxt "KeysPage"
 msgid "KEY PACKAGES"
-msgstr "キーパッケージ"
+msgstr "SCHLÜSSELPAKETE"
 
 #: ui/keys/keys-page.slint:111
 msgctxt "KeysPage"
 msgid "(published to your kind-10051 relay list)"
-msgstr "(kind-10051 リレーリストに公開)"
+msgstr "(in deiner kind-10051-Relay-Liste veröffentlicht)"
 
 #: ui/keys/keys-page.slint:112
 msgctxt "KeysPage"
 msgid "(no key-package relays configured)"
-msgstr "(キーパッケージ用リレーが未設定)"
+msgstr "(keine Schlüsselpaket-Relays konfiguriert)"
 
 #: ui/keys/keys-page.slint:114 ui/keys/keys-page.slint:238
 msgctxt "KeysPage"
@@ -449,90 +468,91 @@ msgstr "…"
 #: ui/keys/keys-page.slint:114
 msgctxt "KeysPage"
 msgid "Refresh"
-msgstr "更新"
+msgstr "Aktualisieren"
 
 #: ui/keys/keys-page.slint:133
 msgctxt "KeysPage"
 msgid "No key packages yet"
-msgstr "キーパッケージがありません"
+msgstr "Noch keine Schlüsselpakete"
 
 #: ui/keys/keys-page.slint:140
 msgctxt "KeysPage"
 msgid "Publish one so other users can invite you to groups."
-msgstr "公開すると他のユーザーがグループに招待できるようになります。"
+msgstr "Veröffentliche eines, damit andere dich in Gruppen einladen können."
 
 #: ui/keys/keys-page.slint:141
 msgctxt "KeysPage"
 msgid "Configure key-package relays first."
-msgstr "先にキーパッケージ用リレーを設定してください。"
+msgstr "Konfiguriere zuerst Schlüsselpaket-Relays."
 
 #: ui/keys/keys-page.slint:149
 msgctxt "KeysPage"
 msgid "Publishing…"
-msgstr "公開中…"
+msgstr "Veröffentliche…"
 
 #: ui/keys/keys-page.slint:149
 msgctxt "KeysPage"
 msgid "Publish"
-msgstr "公開"
+msgstr "Veröffentlichen"
 
 #: ui/keys/keys-page.slint:160
 msgctxt "KeysPage"
 msgid "{n} relay"
 msgid_plural "{n} relays"
-msgstr[0] "{n} リレー"
-msgstr[1] "{n} リレー"
+msgstr[0] "{n} Relay"
+msgstr[1] "{n} Relays"
 
 #: ui/keys/keys-page.slint:161
 msgctxt "KeysPage"
 msgid "local only"
-msgstr "ローカルのみ"
+msgstr "nur lokal"
 
 #: ui/keys/keys-page.slint:187
 msgctxt "KeysPage"
 msgid "LINKED DEVICES"
-msgstr "リンク済みデバイス"
+msgstr "VERKNÜPFTE GERÄTE"
 
 #: ui/keys/keys-page.slint:188
 msgctxt "KeysPage"
 msgid "(other Dark Matter instances signed into this identity)"
-msgstr "(この ID でサインインしている他の Dark Matter インスタンス)"
+msgstr "(andere Dark Matter-Instanzen mit dieser Identität angemeldet)"
 
 #: ui/keys/keys-page.slint:194
 msgctxt "KeysPage"
 msgid "current"
-msgstr "現在"
+msgstr "aktuell"
 
 #: ui/keys/keys-page.slint:195
 msgctxt "KeysPage"
 msgid "Sign out"
-msgstr "サインアウト"
+msgstr "Abmelden"
 
 #: ui/keys/keys-page.slint:205
 msgctxt "KeysPage"
 msgid "DANGER ZONE"
-msgstr "危険ゾーン"
+msgstr "GEFAHRENZONE"
 
 #: ui/keys/keys-page.slint:224
 msgctxt "KeysPage"
 msgid "Rotate key package now"
-msgstr "キーパッケージを今すぐローテーション"
+msgstr "Schlüsselpaket jetzt rotieren"
 
 #: ui/keys/keys-page.slint:230
 msgctxt "KeysPage"
 msgid "Invalidates the current package and uploads a fresh one to your relays."
-msgstr "現在のパッケージを無効化し、新しいものをリレーにアップロードします。"
+msgstr ""
+"Macht das aktuelle Paket ungültig und lädt ein neues auf deine Relays hoch."
 
 #: ui/keys/keys-page.slint:238
 msgctxt "KeysPage"
 msgid "Rotate"
-msgstr "ローテーション"
+msgstr "Rotieren"
 
 #: ui/left-rail/left-rail.slint:147
 #, fuzzy
 msgctxt "ProfileTile"
 msgid "Profile"
-msgstr "あなたのプロフィール"
+msgstr "Dein Profil"
 
 #: ui/left-rail/left-rail.slint:230
 msgctxt "LeftRail"
@@ -543,13 +563,13 @@ msgstr ""
 #, fuzzy
 msgctxt "LeftRail"
 msgid "Contacts"
-msgstr "連絡先"
+msgstr "Kontakt"
 
 #: ui/left-rail/left-rail.slint:254
 #, fuzzy
 msgctxt "LeftRail"
 msgid "Archive"
-msgstr "アーカイブ"
+msgstr "Archivieren"
 
 #: ui/left-rail/left-rail.slint:265
 msgctxt "LeftRail"
@@ -569,7 +589,7 @@ msgstr ""
 #: ui/login/login-screen.slint:152
 msgctxt "LoginScreen"
 msgid "Sign in to your Nostr identity"
-msgstr "Nostr ID でサインイン"
+msgstr "Bei deiner Nostr-Identität anmelden"
 
 #: ui/login/login-screen.slint:154
 msgctxt "LoginScreen"
@@ -584,22 +604,22 @@ msgstr ""
 #: ui/login/login-screen.slint:157
 msgctxt "LoginScreen"
 msgid "Save your new key"
-msgstr "新しい鍵を保存"
+msgstr "Speichere deinen neuen Schlüssel"
 
 #: ui/login/login-screen.slint:169
 msgctxt "LoginScreen"
 msgid "I have an nsec"
-msgstr "nsec がある"
+msgstr "Ich habe einen nsec"
 
 #: ui/login/login-screen.slint:189
 msgctxt "LoginScreen"
 msgid "Generate a new key"
-msgstr "新しい鍵を生成"
+msgstr "Neuen Schlüssel generieren"
 
 #: ui/login/login-screen.slint:209
 msgctxt "LoginScreen"
 msgid "Your key never leaves this device."
-msgstr "鍵がこのデバイス外に出ることはありません。"
+msgstr "Dein Schlüssel verlässt nie dieses Gerät."
 
 #: ui/login/login-screen.slint:228 ui/login/login-screen.slint:401
 msgctxt "LoginScreen"
@@ -624,22 +644,22 @@ msgstr ""
 #: ui/login/login-screen.slint:254 ui/login/login-screen.slint:427
 msgctxt "LoginScreen"
 msgid "Back"
-msgstr "戻る"
+msgstr "Zurück"
 
 #: ui/login/login-screen.slint:264
 msgctxt "LoginScreen"
 msgid "Signing in…"
-msgstr "サインイン中…"
+msgstr "Anmeldung…"
 
 #: ui/login/login-screen.slint:264
 msgctxt "LoginScreen"
 msgid "Continue"
-msgstr "続行"
+msgstr "Weiter"
 
 #: ui/login/login-screen.slint:301
 msgctxt "LoginScreen"
 msgid "Back up your nsec before saving"
-msgstr "保存前に nsec をバックアップ"
+msgstr "Sichere deinen nsec vor dem Speichern"
 
 #: ui/login/login-screen.slint:307
 #, fuzzy
@@ -648,23 +668,23 @@ msgid ""
 "Sealed with your password on this device. Keep your own copy of the nsec too "
 "— lose both and this identity is gone."
 msgstr ""
-"保存すると OS のキーリングに格納されます。自分でもコピーを保管してください。"
-"失うとこの ID は復元できません。"
+"Speichern legt ihn im OS-Schlüsselbund ab. Bewahre auch eine eigene Kopie "
+"auf — verlierst du ihn, ist die Identität weg."
 
 #: ui/login/login-screen.slint:376
 msgctxt "LoginScreen"
 msgid "Regenerate"
-msgstr "再生成"
+msgstr "Neu generieren"
 
 #: ui/login/login-screen.slint:387
 msgctxt "LoginScreen"
 msgid "Copy"
-msgstr "コピー"
+msgstr "Kopieren"
 
 #: ui/login/login-screen.slint:434
 msgctxt "LoginScreen"
 msgid "Saving…"
-msgstr "保存中…"
+msgstr "Speichere…"
 
 #: ui/login/login-screen.slint:434
 msgctxt "LoginScreen"
@@ -690,44 +710,44 @@ msgstr ""
 #, fuzzy
 msgctxt "LoginScreen"
 msgid "Unlock"
-msgstr "ブロック"
+msgstr "Blockieren"
 
 #: ui/main-pane/chat-header.slint:87
 msgctxt "ChatHeader"
 msgid "1 member"
 msgid_plural "{n} members"
-msgstr[0] "1 メンバー"
-msgstr[1] "{n} メンバー"
+msgstr[0] "1 Mitglied"
+msgstr[1] "{n} Mitglieder"
 
 #: ui/main-pane/chat-header.slint:117
 msgctxt "ChatHeader"
 msgid "Block"
-msgstr "ブロック"
+msgstr "Blockieren"
 
-#: ui/main-pane/chat-header.slint:123
+#: ui/main-pane/chat-header.slint:124
 msgctxt "ChatHeader"
 msgid "Archive"
-msgstr "アーカイブ"
+msgstr "Archivieren"
 
-#: ui/main-pane/chat-header.slint:129
+#: ui/main-pane/chat-header.slint:131
 msgctxt "ChatHeader"
 msgid "Accept"
-msgstr "承認"
+msgstr "Annehmen"
 
 #: ui/main-pane/chat-request-banner.slint:30
 msgctxt "ChatRequestBanner"
 msgid "Chat request"
-msgstr "チャットリクエスト"
+msgstr "Chat-Anfrage"
 
 #: ui/main-pane/chat-request-banner.slint:36
 msgctxt "ChatRequestBanner"
 msgid "This sender isn't in your contacts. Accept to start an"
-msgstr "この送信者は連絡先にいません。承認して"
+msgstr "Dieser Absender ist nicht in deinen Kontakten. Annehmen, um eine"
 
 #: ui/main-pane/chat-request-banner.slint:36
 msgctxt "ChatRequestBanner"
 msgid "session."
-msgstr "セッションを開始。"
+msgstr "Sitzung zu starten."
 
 #: ui/main-pane/composer.slint:66
 msgctxt "Composer"
@@ -737,47 +757,47 @@ msgstr ""
 #: ui/main-pane/composer.slint:119
 msgctxt "Composer"
 msgid "Replying to message:"
-msgstr "返信先メッセージ:"
+msgstr "Antwort auf Nachricht:"
 
 #: ui/main-pane/composer.slint:120
 msgctxt "Composer"
 msgid "Replying to {}:"
-msgstr "{} への返信:"
+msgstr "Antwort an {}:"
 
 #: ui/main-pane/composer.slint:197
 msgctxt "Composer"
 msgid "Send a message  ·  encrypted with"
-msgstr "メッセージを送信  ·  暗号化:"
+msgstr "Nachricht senden  ·  verschlüsselt mit"
 
 #: ui/main-pane/composer.slint:197
 msgctxt "Composer"
 msgid "for newline"
-msgstr "改行"
+msgstr "für Zeilenumbruch"
 
 #: ui/main-pane/composer.slint:236
 msgctxt "Composer"
 msgid "Send"
-msgstr "送信"
+msgstr "Senden"
 
 #: ui/main-pane/encryption-banner.slint:41
 msgctxt "EncryptionBanner"
 msgid "End-to-end encrypted with"
-msgstr "エンドツーエンド暗号化:"
+msgstr "Ende-zu-Ende-verschlüsselt mit"
 
 #: ui/main-pane/encryption-banner.slint:49
 msgctxt "EncryptionBanner"
 msgid "Forward secret"
-msgstr "フォワードシークレット"
+msgstr "Forward Secret"
 
 #: ui/main-pane/encryption-banner.slint:51
 msgctxt "EncryptionBanner"
 msgid "post-compromise secure"
-msgstr "侵害後も安全"
+msgstr "post-kompromiss-sicher"
 
 #: ui/main-pane/group-member-row.slint:54
 msgctxt "GroupMemberRow"
 msgid "YOU"
-msgstr "あなた"
+msgstr "DU"
 
 #: ui/main-pane/group-member-row.slint:60
 msgctxt "GroupMemberRow"
@@ -793,7 +813,7 @@ msgstr ""
 #, fuzzy
 msgctxt "GroupMemberRow"
 msgid "Remove admin"
-msgstr "連絡先を削除"
+msgstr "Kontakt entfernen"
 
 #: ui/main-pane/group-member-row.slint:124
 msgctxt "GroupMemberRow"
@@ -803,68 +823,68 @@ msgstr ""
 #: ui/main-pane/group-members-panel.slint:62
 msgctxt "GroupMembersPanel"
 msgid "Members"
-msgstr "メンバー"
+msgstr "Mitglieder"
 
 #: ui/main-pane/group-members-panel.slint:68
 msgctxt "GroupMembersPanel"
 msgid "1 in this group"
 msgid_plural "{n} in this group"
-msgstr[0] "このグループに 1 人"
-msgstr[1] "このグループに {n} 人"
+msgstr[0] "1 in dieser Gruppe"
+msgstr[1] "{n} in dieser Gruppe"
 
 #: ui/main-pane/group-members-panel.slint:89
 #, fuzzy
 msgctxt "GroupMembersPanel"
 msgid "Group settings"
-msgstr "グループ ID"
+msgstr "Gruppen-ID"
 
 #: ui/main-pane/group-members-panel.slint:112
 #, fuzzy
 msgctxt "GroupMembersPanel"
 msgid "Uploading…"
-msgstr "保存中…"
+msgstr "Speichere…"
 
 #: ui/main-pane/group-members-panel.slint:112
 #, fuzzy
 msgctxt "GroupMembersPanel"
 msgid "Change image"
-msgstr "変更"
+msgstr "Ändern"
 
 #: ui/main-pane/group-members-panel.slint:122
 #, fuzzy
 msgctxt "GroupMembersPanel"
 msgid "Remove image"
-msgstr "連絡先を削除"
+msgstr "Kontakt entfernen"
 
 #: ui/main-pane/group-members-panel.slint:142
 #, fuzzy
 msgctxt "GroupMembersPanel"
 msgid "Group name"
-msgstr "グループ ID"
+msgstr "Gruppen-ID"
 
 #: ui/main-pane/group-members-panel.slint:173
 #, fuzzy
 msgctxt "GroupMembersPanel"
 msgid "Saving…"
-msgstr "保存中…"
+msgstr "Speichere…"
 
 #: ui/main-pane/group-members-panel.slint:173
 #, fuzzy
 msgctxt "GroupMembersPanel"
 msgid "Save name"
-msgstr "保存"
+msgstr "Speichern"
 
 #: ui/main-pane/group-members-panel.slint:233
 #, fuzzy
 msgctxt "GroupMembersPanel"
 msgid "Add member"
-msgstr "1 メンバー"
+msgstr "1 Mitglied"
 
 #: ui/main-pane/group-members-panel.slint:267
 #, fuzzy
 msgctxt "GroupMembersPanel"
 msgid "Inviting…"
-msgstr "保存中…"
+msgstr "Speichere…"
 
 #: ui/main-pane/group-members-panel.slint:267
 msgctxt "GroupMembersPanel"
@@ -874,29 +894,29 @@ msgstr ""
 #: ui/main-pane/main-pane.slint:114
 msgctxt "MainPane"
 msgid "CHAT REQUEST"
-msgstr "チャットリクエスト"
+msgstr "CHAT-ANFRAGE"
 
 #: ui/main-pane/main-pane.slint:115
 msgctxt "MainPane"
 msgid "SESSION ESTABLISHED"
-msgstr "セッション確立"
+msgstr "SITZUNG HERGESTELLT"
 
 #: ui/main-pane/mention-picker.slint:65
 msgctxt "MentionPicker"
 msgid "(you)"
 msgstr ""
 
-#: ui/messages.slint:106
+#: ui/messages.slint:107
 #, fuzzy
 msgctxt "MessagesArea"
 msgid "Load earlier messages"
-msgstr "最後のメッセージ"
+msgstr "Letzte Nachricht"
 
 #: ui/modals/add-contact-modal.slint:11 ui/modals/add-contact-modal.slint:14
 #, fuzzy
 msgctxt "AddContactModal"
 msgid "Add contact"
-msgstr "連絡先"
+msgstr "Kontakt"
 
 #: ui/modals/add-contact-modal.slint:12
 msgctxt "AddContactModal"
@@ -909,13 +929,13 @@ msgstr ""
 #, fuzzy
 msgctxt "AddContactModal"
 msgid "Cancel"
-msgstr "キャンセル"
+msgstr "Abbrechen"
 
 #: ui/modals/add-contact-modal.slint:15
 #, fuzzy
 msgctxt "AddContactModal"
 msgid "Adding…"
-msgstr "保存中…"
+msgstr "Speichere…"
 
 #: ui/modals/add-contact-modal.slint:20
 msgctxt "AddContactModal"
@@ -925,12 +945,18 @@ msgstr ""
 #: ui/modals/command-palette.slint:80
 msgctxt "CommandPalette"
 msgid "Type a command…"
-msgstr "コマンドを入力…"
+msgstr "Befehl eingeben…"
 
 #: ui/modals/command-palette.slint:229
 msgctxt "CommandPalette"
 msgid "No matches"
-msgstr "一致なし"
+msgstr "Keine Treffer"
+
+#: ui/modals/confirm-modal.slint:12
+#, fuzzy
+msgctxt "ConfirmModal"
+msgid "Cancel"
+msgstr "Abbrechen"
 
 #: ui/modals/edit-history-modal.slint:12
 msgctxt "EditHistoryModal"
@@ -940,7 +966,7 @@ msgstr ""
 #: ui/modals/language-picker-modal.slint:53
 msgctxt "LanguagePickerModal"
 msgid "Interface language"
-msgstr "インターフェース言語"
+msgstr "Oberflächensprache"
 
 #: ui/modals/nickname-modal.slint:13
 msgctxt "NicknameModal"
@@ -958,13 +984,13 @@ msgstr ""
 #, fuzzy
 msgctxt "NicknameModal"
 msgid "Cancel"
-msgstr "キャンセル"
+msgstr "Abbrechen"
 
 #: ui/modals/nickname-modal.slint:16
 #, fuzzy
 msgctxt "NicknameModal"
 msgid "Save"
-msgstr "保存"
+msgstr "Speichern"
 
 #: ui/modals/nickname-modal.slint:20
 msgctxt "NicknameModal"
@@ -975,13 +1001,13 @@ msgstr ""
 #, fuzzy
 msgctxt "ProfileModal"
 msgid "Add contact"
-msgstr "連絡先"
+msgstr "Kontakt"
 
 #: ui/modals/profile-modal.slint:36
 #, fuzzy
 msgctxt "ProfileModal"
 msgid "Adding…"
-msgstr "保存中…"
+msgstr "Speichere…"
 
 #: ui/modals/profile-modal.slint:188
 msgctxt "ProfileModal"
@@ -997,7 +1023,7 @@ msgstr ""
 #, fuzzy
 msgctxt "ProfileModal"
 msgid "Contacting relays…"
-msgstr "リレーに接続中…"
+msgstr "Verbinde mit Relays…"
 
 #: ui/modals/profile-modal.slint:289
 msgctxt "ProfileModal"
@@ -1019,7 +1045,7 @@ msgstr ""
 #: ui/modals/start-new-chat-modal.slint:16
 msgctxt "StartNewChatModal"
 msgid "Cancel"
-msgstr "キャンセル"
+msgstr "Abbrechen"
 
 #: ui/modals/start-new-chat-modal.slint:17
 msgctxt "StartNewChatModal"
@@ -1030,7 +1056,7 @@ msgstr ""
 #, fuzzy
 msgctxt "StartNewChatModal"
 msgid "Creating…"
-msgstr "保存中…"
+msgstr "Speichere…"
 
 #: ui/modals/start-new-chat-modal.slint:24
 msgctxt "StartNewChatModal"
@@ -1042,11 +1068,11 @@ msgctxt "StartNewChatModal"
 msgid "e.g. friday-crew"
 msgstr ""
 
-#: ui/modals/start-new-chat-modal.slint:31
+#: ui/modals/start-new-chat-modal.slint:34
 #, fuzzy
 msgctxt "StartNewChatModal"
 msgid "MEMBERS"
-msgstr "メンバー一覧"
+msgstr "MITGLIEDERLISTE"
 
 #: ui/primitives/context-menu.slint:110
 msgctxt "MessageContextMenu"
@@ -1062,17 +1088,17 @@ msgstr ""
 #, fuzzy
 msgctxt "MessageContextMenu"
 msgid "Edit message"
-msgstr "最後のメッセージ"
+msgstr "Letzte Nachricht"
 
 #: ui/primitives/message-bubble.slint:228
 msgctxt "MessageBubble"
 msgid "Original message"
-msgstr "元のメッセージ"
+msgstr "Originalnachricht"
 
 #: ui/primitives/message-bubble.slint:238
 msgctxt "MessageBubble"
 msgid "(message unavailable)"
-msgstr "(メッセージを表示できません)"
+msgstr "(Nachricht nicht verfügbar)"
 
 #: ui/primitives/message-bubble.slint:281
 msgctxt "MessageBubble"
@@ -1083,7 +1109,7 @@ msgstr ""
 #, fuzzy
 msgctxt "MessageBubble"
 msgid "tap to retry"
-msgstr "失敗 · タップして再試行"
+msgstr "fehlgeschlagen · tippen zum Wiederholen"
 
 #: ui/primitives/message-bubble.slint:284
 msgctxt "MessageBubble"
@@ -1093,7 +1119,7 @@ msgstr ""
 #: ui/primitives/message-bubble.slint:330
 msgctxt "MessageBubble"
 msgid "failed · tap to retry"
-msgstr "失敗 · タップして再試行"
+msgstr "fehlgeschlagen · tippen zum Wiederholen"
 
 #: ui/primitives/message-bubble.slint:439
 msgctxt "MessageBubble"
@@ -1103,19 +1129,19 @@ msgstr ""
 #: ui/primitives/outgoing-row.slint:129 ui/primitives/outgoing-row.slint:139
 msgctxt "OutgoingRow"
 msgid "You"
-msgstr "あなた"
+msgstr "Du"
 
 #: ui/profile/profile-page.slint:69
 #, fuzzy
 msgctxt "PictureField"
 msgid "Picture"
-msgstr "画像"
+msgstr "Bild"
 
 #: ui/profile/profile-page.slint:96
 #, fuzzy
 msgctxt "PictureField"
 msgid "Uploading…"
-msgstr "保存中…"
+msgstr "Speichere…"
 
 #: ui/profile/profile-page.slint:96
 msgctxt "PictureField"
@@ -1126,47 +1152,47 @@ msgstr ""
 #, fuzzy
 msgctxt "AvatarEditable"
 msgid "Uploading…"
-msgstr "保存中…"
+msgstr "Speichere…"
 
 #: ui/profile/profile-page.slint:255
 msgctxt "ProfilePage"
 msgid "Your profile"
-msgstr "あなたのプロフィール"
+msgstr "Dein Profil"
 
 #: ui/profile/profile-page.slint:262
 msgctxt "ProfilePage"
 msgid "EDITING · BROADCAST TO RELAYS ON SAVE"
-msgstr "編集中 · 保存時にリレーへ配信"
+msgstr "BEARBEITUNG · BEIM SPEICHERN AN RELAYS SENDEN"
 
 #: ui/profile/profile-page.slint:263
 msgctxt "ProfilePage"
 msgid "VISIBLE TO ANYONE YOU CHAT WITH"
-msgstr "チャット相手全員に公開"
+msgstr "SICHTBAR FÜR ALLE CHAT-PARTNER"
 
 #: ui/profile/profile-page.slint:273
 msgctxt "ProfilePage"
 msgid "Edit profile"
-msgstr "プロフィールを編集"
+msgstr "Profil bearbeiten"
 
 #: ui/profile/profile-page.slint:291
 msgctxt "ProfilePage"
 msgid "Saving…"
-msgstr "保存中…"
+msgstr "Speichere…"
 
 #: ui/profile/profile-page.slint:291
 msgctxt "ProfilePage"
 msgid "Save"
-msgstr "保存"
+msgstr "Speichern"
 
 #: ui/profile/profile-page.slint:302
 msgctxt "ProfilePage"
 msgid "Cancel"
-msgstr "キャンセル"
+msgstr "Abbrechen"
 
 #: ui/profile/profile-page.slint:366
 msgctxt "ProfilePage"
 msgid "(no display name)"
-msgstr "(表示名なし)"
+msgstr "(kein Anzeigename)"
 
 #: ui/profile/profile-page.slint:386
 msgctxt "ProfilePage"
@@ -1176,62 +1202,62 @@ msgstr ""
 #: ui/profile/profile-page.slint:423
 msgctxt "ProfilePage"
 msgid "IDENTITY"
-msgstr "ID"
+msgstr "IDENTITÄT"
 
 #: ui/profile/profile-page.slint:427
 msgctxt "ProfilePage"
 msgid "Your public key. Safe to share."
-msgstr "公開鍵。共有して問題ありません。"
+msgstr "Dein öffentlicher Schlüssel. Sicher zum Teilen."
 
 #: ui/profile/profile-page.slint:431
 msgctxt "ProfilePage"
 msgid "Copy"
-msgstr "コピー"
+msgstr "Kopieren"
 
 #: ui/profile/profile-page.slint:443
 msgctxt "ProfilePage"
 msgid "EDIT"
-msgstr "編集"
+msgstr "BEARBEITEN"
 
 #: ui/profile/profile-page.slint:446
 msgctxt "ProfilePage"
 msgid "Display name"
-msgstr "表示名"
+msgstr "Anzeigename"
 
 #: ui/profile/profile-page.slint:447
 msgctxt "ProfilePage"
 msgid "How your name appears in chats"
-msgstr "チャットでの表示名"
+msgstr "Wie dein Name in Chats erscheint"
 
 #: ui/profile/profile-page.slint:451 ui/profile/profile-page.slint:484
 msgctxt "ProfilePage"
 msgid "Username"
-msgstr "ユーザー名"
+msgstr "Benutzername"
 
 #: ui/profile/profile-page.slint:452
 msgctxt "ProfilePage"
 msgid "Short handle (no spaces)"
-msgstr "短いハンドル（スペース不可）"
+msgstr "Kurzer Handle (ohne Leerzeichen)"
 
 #: ui/profile/profile-page.slint:456
 msgctxt "ProfilePage"
 msgid "About"
-msgstr "自己紹介"
+msgstr "Über"
 
 #: ui/profile/profile-page.slint:457
 msgctxt "ProfilePage"
 msgid "A line or two about you"
-msgstr "自己紹介を1〜2行"
+msgstr "Ein oder zwei Zeilen über dich"
 
 #: ui/profile/profile-page.slint:472
 msgctxt "ProfilePage"
 msgid "Lightning address (LUD-16)"
-msgstr "Lightning アドレス (LUD-16)"
+msgstr "Lightning-Adresse (LUD-16)"
 
 #: ui/profile/profile-page.slint:481
 msgctxt "ProfilePage"
 msgid "PROFILE"
-msgstr "プロフィール"
+msgstr "PROFIL"
 
 #: ui/profile/profile-page.slint:492
 msgctxt "ProfilePage"
@@ -1241,7 +1267,7 @@ msgstr "Lightning"
 #: ui/profile/profile-page.slint:496
 msgctxt "ProfilePage"
 msgid "Picture"
-msgstr "画像"
+msgstr "Bild"
 
 #: ui/profile/profile-page.slint:497
 msgctxt "ProfilePage"
@@ -1256,23 +1282,23 @@ msgstr ""
 #: ui/profile/wallet-address-row.slint:10
 msgctxt "WalletAddressRow"
 msgid "Lightning address"
-msgstr "Lightning アドレス"
+msgstr "Lightning-Adresse"
 
 #: ui/profile/wallet-address-row.slint:11
 msgctxt "WalletAddressRow"
 msgid "People can zap you via this address."
-msgstr "このアドレスで Zap できます。"
+msgstr "Andere können dir über diese Adresse zappen."
 
 #: ui/profile/wallet-address-row.slint:14
 msgctxt "WalletAddressRow"
 msgid "Copy"
-msgstr "コピー"
+msgstr "Kopieren"
 
 #: ui/settings/about-pane.slint:94
 #, fuzzy
 msgctxt "AboutPane"
 msgid "About"
-msgstr "自己紹介"
+msgstr "Über"
 
 #: ui/settings/about-pane.slint:95
 msgctxt "AboutPane"
@@ -1283,7 +1309,7 @@ msgstr ""
 #, fuzzy
 msgctxt "AboutPane"
 msgid "End-to-end encrypted group messaging for Linux."
-msgstr "エンドツーエンド暗号化:"
+msgstr "Ende-zu-Ende-verschlüsselt mit"
 
 #: ui/settings/about-pane.slint:183
 msgctxt "AboutPane"
@@ -1312,7 +1338,7 @@ msgstr ""
 #, fuzzy
 msgctxt "AboutPane"
 msgid "End-to-end encryption"
-msgstr "エンドツーエンド暗号化:"
+msgstr "Ende-zu-Ende-verschlüsselt mit"
 
 #: ui/settings/about-pane.slint:217
 msgctxt "AboutPane"
@@ -1343,7 +1369,7 @@ msgstr ""
 #, fuzzy
 msgctxt "AboutPane"
 msgid "CREDITS"
-msgstr "編集"
+msgstr "BEARBEITEN"
 
 #: ui/settings/about-pane.slint:239
 msgctxt "AboutPane"
@@ -1358,13 +1384,13 @@ msgstr ""
 #: ui/settings/advanced-pane.slint:80
 msgctxt "AdvancedPane"
 msgid "Advanced"
-msgstr "詳細"
+msgstr "Erweitert"
 
 #: ui/settings/advanced-pane.slint:81
 #, fuzzy
 msgctxt "AdvancedPane"
 msgid "Privacy & developer flags"
-msgstr "開発者フラグ"
+msgstr "Entwickler-Flags"
 
 #: ui/settings/advanced-pane.slint:86
 msgctxt "AdvancedPane"
@@ -1405,7 +1431,7 @@ msgstr ""
 #, fuzzy
 msgctxt "AdvancedPane"
 msgid "Refresh"
-msgstr "更新"
+msgstr "Aktualisieren"
 
 #: ui/settings/advanced-pane.slint:148
 msgctxt "AdvancedPane"
@@ -1417,13 +1443,13 @@ msgstr ""
 #: ui/settings/advanced-pane.slint:156
 msgctxt "AdvancedPane"
 msgid "DEVELOPER"
-msgstr "開発者"
+msgstr "ENTWICKLER"
 
 #: ui/settings/advanced-pane.slint:159
 #, fuzzy
 msgctxt "AdvancedPane"
 msgid "Developer mode"
-msgstr "開発者フラグ"
+msgstr "Entwickler-Flags"
 
 #: ui/settings/advanced-pane.slint:160
 #, fuzzy
@@ -1432,12 +1458,13 @@ msgid ""
 "Shows diagnostics and MLS internals. Adds a Debug entry with account, key-"
 "packages, and group state."
 msgstr ""
-"下に Debug 項目を追加。アカウント、キーパッケージ、グループ状態を表示します。"
+"Fügt unten einen Debug-Eintrag hinzu. Zeigt Konto, Schlüsselpakete und "
+"Gruppenstatus."
 
 #: ui/settings/appearance-pane.slint:21
 msgctxt "AppearancePane"
 msgid "Mint"
-msgstr "ミント"
+msgstr "Minze"
 
 #: ui/settings/appearance-pane.slint:22
 msgctxt "AppearancePane"
@@ -1462,23 +1489,23 @@ msgstr ""
 #: ui/settings/appearance-pane.slint:29
 msgctxt "AppearancePane"
 msgid "Appearance"
-msgstr "外観"
+msgstr "Erscheinungsbild"
 
 #: ui/settings/appearance-pane.slint:35
 msgctxt "AppearancePane"
 msgid "THEME"
-msgstr "テーマ"
+msgstr "THEMA"
 
 #: ui/settings/appearance-pane.slint:38
 msgctxt "AppearancePane"
 msgid "Theme"
-msgstr "テーマ"
+msgstr "Thema"
 
 #: ui/settings/appearance-pane.slint:39
 #, fuzzy
 msgctxt "AppearancePane"
 msgid "Retro"
-msgstr "レトロモード"
+msgstr "Retro-Modus"
 
 #: ui/settings/appearance-pane.slint:39
 #, fuzzy
@@ -1489,7 +1516,7 @@ msgstr "Lightning"
 #: ui/settings/appearance-pane.slint:39
 msgctxt "AppearancePane"
 msgid "Dark"
-msgstr "ダーク"
+msgstr "Dunkel"
 
 #: ui/settings/appearance-pane.slint:42
 msgctxt "AppearancePane"
@@ -1504,22 +1531,22 @@ msgstr ""
 #: ui/settings/appearance-pane.slint:50
 msgctxt "AppearancePane"
 msgid "Accent color"
-msgstr "アクセントカラー"
+msgstr "Akzentfarbe"
 
 #: ui/settings/appearance-pane.slint:62
 msgctxt "AppearancePane"
 msgid "FUN"
-msgstr "お楽しみ"
+msgstr "SPASS"
 
 #: ui/settings/appearance-pane.slint:65
 msgctxt "AppearancePane"
 msgid "Retro mode"
-msgstr "レトロモード"
+msgstr "Retro-Modus"
 
 #: ui/settings/appearance-pane.slint:66
 msgctxt "AppearancePane"
 msgid "Turn the whole app into SNES style."
-msgstr "アプリ全体を SNES スタイルにします。"
+msgstr "Verwandelt die ganze App in SNES-Stil."
 
 #: ui/settings/appearance-pane.slint:79
 msgctxt "AppearancePane"
@@ -1539,147 +1566,148 @@ msgstr ""
 #: ui/settings/debug-pane.slint:14
 msgctxt "DebugPane"
 msgid "Debug"
-msgstr "デバッグ"
+msgstr "Debug"
 
 #: ui/settings/debug-pane.slint:15
 msgctxt "DebugPane"
 msgid "Account / key packages / groups"
-msgstr "アカウント / キーパッケージ / グループ"
+msgstr "Konto / Schlüsselpakete / Gruppen"
 
 #: ui/settings/debug-pane.slint:20
 msgctxt "DebugPane"
 msgid "STATE SNAPSHOT"
-msgstr "状態スナップショット"
+msgstr "ZUSTANDSSNAPSHOT"
 
 #: ui/settings/debug-pane.slint:26
 msgctxt "DebugPane"
 msgid "Refresh"
-msgstr "更新"
+msgstr "Aktualisieren"
 
 #: ui/settings/debug-pane.slint:30
 msgctxt "DebugPane"
 msgid "Copy JSON"
-msgstr "JSON をコピー"
+msgstr "JSON kopieren"
 
 #: ui/settings/debug-pane.slint:54
 msgctxt "DebugPane"
 msgid "(no snapshot yet — click Refresh)"
-msgstr "(スナップショットなし — 更新をクリック)"
+msgstr "(noch kein Snapshot — Aktualisieren klicken)"
 
 #: ui/settings/general-pane.slint:17
 msgctxt "GeneralPane"
 msgid "General"
-msgstr "一般"
+msgstr "Allgemein"
 
 #: ui/settings/general-pane.slint:23
 msgctxt "GeneralPane"
 msgid "STARTUP"
-msgstr "起動"
+msgstr "START"
 
 #: ui/settings/general-pane.slint:26
 msgctxt "GeneralPane"
 msgid "Launch at login"
-msgstr "ログイン時に起動"
+msgstr "Beim Anmelden starten"
 
 #: ui/settings/general-pane.slint:30
 msgctxt "GeneralPane"
 msgid "Start minimized to tray"
-msgstr "トレイに最小化して起動"
+msgstr "Minimiert in Tray starten"
 
 #: ui/settings/general-pane.slint:34
 msgctxt "GeneralPane"
 msgid "Restore last selected chat on launch"
-msgstr "起動時に最後のチャットを復元"
+msgstr "Letzten Chat beim Start wiederherstellen"
 
 #: ui/settings/general-pane.slint:42
 msgctxt "GeneralPane"
 msgid "LANGUAGE"
-msgstr "言語"
+msgstr "SPRACHE"
 
 #: ui/settings/general-pane.slint:45
 msgctxt "GeneralPane"
 msgid "Interface language"
-msgstr "インターフェース言語"
+msgstr "Oberflächensprache"
 
 #: ui/settings/general-pane.slint:48
 msgctxt "language picker button"
 msgid "Change"
-msgstr "変更"
+msgstr "Ändern"
 
 #: ui/settings/general-pane.slint:54
 msgctxt "GeneralPane"
 msgid "Time format"
-msgstr "時刻形式"
+msgstr "Zeitformat"
 
 #: ui/settings/general-pane.slint:58
 msgctxt "GeneralPane"
 msgid "Date format"
-msgstr "日付形式"
+msgstr "Datumsformat"
 
 #: ui/settings/network-pane.slint:82
 msgctxt "NetworkPane"
 msgid "Network & relays"
-msgstr "ネットワークとリレー"
+msgstr "Netzwerk & Relays"
 
 #: ui/settings/network-pane.slint:83
 msgctxt "NetworkPane"
 msgid "Where your messages land."
-msgstr "メッセージの配信先。"
+msgstr "Wo deine Nachrichten ankommen."
 
 #: ui/settings/network-pane.slint:88
 msgctxt "NetworkPane"
 msgid "STATUS"
-msgstr "状態"
+msgstr "STATUS"
 
 #: ui/settings/network-pane.slint:112
 msgctxt "NetworkPane"
 msgid "No relays configured"
-msgstr "リレー未設定"
+msgstr "Keine Relays konfiguriert"
 
 #: ui/settings/network-pane.slint:114
 msgctxt "NetworkPane"
 msgid "Connected · {}/{}"
-msgstr "接続済み · {}/{}"
+msgstr "Verbunden · {}/{}"
 
 #: ui/settings/network-pane.slint:115
 msgctxt "NetworkPane"
 msgid "Partial · {}/{} connected"
-msgstr "一部接続 · {}/{} 接続"
+msgstr "Teilweise · {}/{} verbunden"
 
 #: ui/settings/network-pane.slint:122
 msgctxt "NetworkPane"
 msgid "Add a relay below — nothing publishes until you do."
-msgstr "下にリレーを追加してください。追加するまで何も公開されません。"
+msgstr ""
+"Füge unten ein Relay hinzu — nichts wird veröffentlicht, bis du es tust."
 
 #: ui/settings/network-pane.slint:123
 msgctxt "NetworkPane"
 msgid "Aggregate connection counter from the relay pool."
-msgstr "リレープールからの接続数カウンター。"
+msgstr "Aggregierter Verbindungszähler aus dem Relay-Pool."
 
 #: ui/settings/network-pane.slint:132
 msgctxt "NetworkPane"
 msgid "Refresh"
-msgstr "更新"
+msgstr "Aktualisieren"
 
 #: ui/settings/network-pane.slint:143
 msgctxt "NetworkPane"
 msgid "RELAYS"
-msgstr "リレー"
+msgstr "RELAYS"
 
 #: ui/settings/network-pane.slint:177
 msgctxt "NetworkPane"
 msgid "Add"
-msgstr "追加"
+msgstr "Hinzufügen"
 
 #: ui/settings/network-pane.slint:204
 msgctxt "NetworkPane"
 msgid "No relays yet. Add one above."
-msgstr "リレーがありません。上で追加してください。"
+msgstr "Noch keine Relays. Füge oben eines hinzu."
 
 #: ui/settings/network-pane.slint:239
 msgctxt "NetworkPane"
 msgid "Restart darkmatter to apply relay changes."
-msgstr "リレー変更を適用するには darkmatter を再起動してください。"
+msgstr "Starte darkmatter neu, um Relay-Änderungen anzuwenden."
 
 #: ui/settings/network-pane.slint:254
 msgctxt "NetworkPane"
@@ -1696,87 +1724,87 @@ msgstr ""
 #: ui/settings/settings-page.slint:98
 msgctxt "SettingsPage"
 msgid "Notifications"
-msgstr "通知"
+msgstr "Benachrichtigungen"
 
 #: ui/settings/settings-page.slint:99
 msgctxt "SettingsPage"
 msgid "Per-chat notification rules, sounds, focus mode."
-msgstr "チャットごとの通知ルール、サウンド、フォーカスモード。"
+msgstr "Benachrichtigungsregeln pro Chat, Töne, Fokusmodus."
 
 #: ui/settings/settings-page.slint:103
 msgctxt "SettingsPage"
 msgid "Storage"
-msgstr "ストレージ"
+msgstr "Speicher"
 
 #: ui/settings/settings-page.slint:104
 msgctxt "SettingsPage"
 msgid "Local cache, message retention, attachments."
-msgstr "ローカルキャッシュ、メッセージ保持、添付ファイル。"
+msgstr "Lokaler Cache, Nachrichtenaufbewahrung, Anhänge."
 
 #: ui/settings/settings-sidebar.slint:33
 msgctxt "SettingsSidebar"
 msgid "SETTINGS"
-msgstr "設定"
+msgstr "EINSTELLUNGEN"
 
 #: ui/settings/settings-sidebar.slint:44
 msgctxt "SettingsSidebar"
 msgid "General"
-msgstr "一般"
+msgstr "Allgemein"
 
 #: ui/settings/settings-sidebar.slint:50
 msgctxt "SettingsSidebar"
 msgid "Network & relays"
-msgstr "ネットワークとリレー"
+msgstr "Netzwerk & Relays"
 
 #: ui/settings/settings-sidebar.slint:56
 msgctxt "SettingsSidebar"
 msgid "Appearance"
-msgstr "外観"
+msgstr "Erscheinungsbild"
 
 #: ui/settings/settings-sidebar.slint:62
 msgctxt "SettingsSidebar"
 msgid "Notifications"
-msgstr "通知"
+msgstr "Benachrichtigungen"
 
 #: ui/settings/settings-sidebar.slint:68
 msgctxt "SettingsSidebar"
 msgid "Storage"
-msgstr "ストレージ"
+msgstr "Speicher"
 
 #: ui/settings/settings-sidebar.slint:74
 msgctxt "SettingsSidebar"
 msgid "Advanced"
-msgstr "詳細"
+msgstr "Erweitert"
 
 #: ui/settings/settings-sidebar.slint:81
 msgctxt "SettingsSidebar"
 msgid "About"
-msgstr "自己紹介"
+msgstr "Über"
 
 #: ui/settings/settings-sidebar.slint:87
 msgctxt "SettingsSidebar"
 msgid "Debug"
-msgstr "デバッグ"
+msgstr "Debug"
 
 #: ui/shells/side-panel.slint:14
 msgctxt "SidePanel"
 msgid "Search…"
-msgstr "検索…"
+msgstr "Suchen…"
 
 #: ui/shells/side-panel.slint:18
 msgctxt "SidePanel"
 msgid "Add"
-msgstr "追加"
+msgstr "Hinzufügen"
 
 #: ui/splash.slint:8
 msgctxt "SplashScreen"
 msgid "Connecting to relays…"
-msgstr "リレーに接続中…"
+msgstr "Verbinde mit Relays…"
 
 #: ui/status-bar.slint:41
 msgctxt "StatusBar"
 msgid "ONLINE"
-msgstr "オンライン"
+msgstr "ONLINE"
 
 #: ui/status-bar.slint:42
 msgctxt "StatusBar"
@@ -1787,73 +1815,73 @@ msgstr ""
 #, fuzzy
 msgctxt "StatusBar"
 msgid "OFFLINE"
-msgstr "オンライン"
+msgstr "ONLINE"
 
 #: ui/status-bar.slint:52
 msgctxt "StatusBar"
 msgid "RELAYS"
-msgstr "リレー"
+msgstr "RELAYS"
 
 #: ui/status-bar.slint:81
 msgctxt "StatusBar"
 msgid "COMMAND"
-msgstr "コマンド"
+msgstr "BEFEHL"
 
 #~ msgctxt "LoginScreen"
 #~ msgid "Paste your nsec"
-#~ msgstr "nsec を貼り付け"
+#~ msgstr "Füge deinen nsec ein"
 
 #~ msgctxt "LoginScreen"
 #~ msgid "Save to keyring"
-#~ msgstr "キーリングに保存"
+#~ msgstr "Im Schlüsselbund speichern"
 
 #~ msgctxt "StartNewChatModal"
 #~ msgid ""
 #~ "Paste an npub or scan a QR. A key package will be fetched from your "
 #~ "relays."
 #~ msgstr ""
-#~ "npub を貼り付けるか QR をスキャンしてください。キーパッケージがリレーから"
-#~ "取得されます。"
+#~ "Füge einen npub ein oder scanne einen QR. Ein Schlüsselpaket wird von "
+#~ "deinen Relays abgerufen."
 
 #~ msgctxt "StartNewChatModal"
 #~ msgid "or"
-#~ msgstr "または"
+#~ msgstr "oder"
 
 #~ msgctxt "StartNewChatModal"
 #~ msgid "Scan QR code from device"
-#~ msgstr "デバイスから QR コードをスキャン"
+#~ msgstr "QR-Code vom Gerät scannen"
 
 #~ msgctxt "StartNewChatModal"
 #~ msgid "Start chat"
-#~ msgstr "チャットを開始"
+#~ msgstr "Chat starten"
 
 #~ msgctxt "ProfilePage"
 #~ msgid "(no nip-05)"
-#~ msgstr "(nip-05 なし)"
+#~ msgstr "(kein nip-05)"
 
 #~ msgctxt "ProfilePage"
 #~ msgid "Picture URL"
-#~ msgstr "画像 URL"
+#~ msgstr "Bild-URL"
 
 #~ msgctxt "AdvancedPane"
 #~ msgid "Show debug pane"
-#~ msgstr "デバッグペインを表示"
+#~ msgstr "Debug-Bereich anzeigen"
 
 #~ msgctxt "AppearancePane"
 #~ msgid "SNES yellow"
-#~ msgstr "SNES イエロー"
+#~ msgstr "SNES-Gelb"
 
 #~ msgctxt "AppearancePane"
 #~ msgid "Density"
-#~ msgstr "密度"
+#~ msgstr "Dichte"
 
 #~ msgctxt "AppearancePane"
 #~ msgid "Comfortable"
-#~ msgstr "快適"
+#~ msgstr "Komfortabel"
 
 #~ msgctxt "SettingsPage"
 #~ msgid "About"
-#~ msgstr "自己紹介"
+#~ msgstr "Über"
 
 #~ msgctxt "SettingsPage"
 #~ msgid "Dark Matter v0.1.0"

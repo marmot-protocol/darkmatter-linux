@@ -100,6 +100,15 @@ export global Palette {
     out property <color> bevel-hi:  Theme.retro ? #F4EFDD : #FFFFFF;
     out property <color> bevel-lo:  Theme.light ? #D8CFBF : #0A0A2A;
 
+    // Destructive/error accent. One token per theme: the dark-mode #FF5A5A
+    // washes out on the light paper surfaces, so light gets a deeper red.
+    out property <color> danger:      Theme.retro ? #FF5A5A : (Theme.light ? #C62828 : #FF5A5A);
+    out property <color> danger-soft: Theme.retro ? #FF5A5A30 : (Theme.light ? #C628281A : #FF5A5A20);
+    // Danger *inside* the outgoing accent bubble: that bubble is a dark
+    // saturated accent even in light theme, so this stays bright everywhere
+    // (the light-theme deep red would vanish on it).
+    out property <color> danger-on-bubble: #FF5A5A;
+
     out property <color> field: Theme.retro ? #0E0E36 : (Theme.light ? #FFFFFF : #0A0D11);
     out property <color> field-hover: Theme.retro ? #2B2B7F : (Theme.light ? #F8FAFC : #12171C);
     out property <color> field-border: Theme.retro ? #E8E0C4 : (Theme.light ? #D7D0C3 : #1F242A);

@@ -4,10 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build & run
 
-- `cargo build` / `cargo run` — `build.rs` compiles the Slint UI tree (`ui/dark-matter-linux.slint`) with bundled gettext translations from `lang/`, and composes a Twemoji sprite sheet at `$OUT_DIR/twemoji_sprite.png` plus a `$OUT_DIR/emoji_sprite_map.rs` lookup table. The first build is slow because of the marmot dependencies and the sprite composition; subsequent builds are fast because the build script only reruns when `build.rs` itself or `lang/` changes.
+- `cargo build` / `cargo run` — the workspace has two crates: the root binary and `dm-ui`, a build-time-isolation lib crate whose `dm-ui/build.rs` compiles the Slint UI tree (`ui/dark-matter-linux.slint`) with bundled gettext translations from `lang/`, and composes a Twemoji sprite sheet at `$OUT_DIR/twemoji_sprite.png` plus a `$OUT_DIR/emoji_sprite_map.rs` lookup table. The ~345k-line generated Slint module lives inside `dm-ui` (`slint::include_modules!()` in `dm-ui/src/lib.rs`), so editing Rust in `src/` rebuilds only the root crate (~2s); editing `.slint` or `lang/` files rebuilds `dm-ui` too (~25s). The first build is slow because of the marmot dependencies and the sprite composition.
 - No test suite exists (`cargo test` is a no-op). Verify changes by running the app.
 - Logging: `tracing-subscriber` is installed in `main` (writes to stderr). Filter via `RUST_LOG`; default is `info`.
-- Translations: after adding/changing `@tr("…")` strings in `.slint` files, run `scripts/update-translations.sh` (requires `cargo install slint-tr-extractor` and gettext's `msgmerge`) to regenerate `lang/darkmatter-linux.pot` and merge into the `it`/`de`/`ja` catalogs.
+- Translations: after adding/changing `@tr("…")` strings in `.slint` files, run `scripts/update-translations.sh` (requires `cargo install slint-tr-extractor` and gettext's `msgmerge`) to regenerate `lang/dm-ui.pot` and merge into the `it`/`de`/`ja` catalogs. (The gettext domain is `dm-ui` because slint-build hardwires it to the name of the crate that compiles the UI.)
 
 ### marmot crates (git dependency)
 
@@ -36,10 +36,10 @@ Note: changes in darkmatter must be **pushed to master** before they're visible 
 ### Layering
 
 ```
-slint UI (ui/*.slint)  ←──  src/main.rs (~7k lines of glue)  ──→  Backend (src/backend.rs)  ──→  MarmotApp (sibling crate) + tokio runtime
+slint UI (ui/*.slint)  ←──  dm-ui (generated Slint module)  ←──  src/main.rs (~7k lines of glue)  ──→  Backend (src/backend.rs)  ──→  MarmotApp (sibling crate) + tokio runtime
 ```
 
-- `slint::include_modules!()` pulls in the generated Slint types. UI structs (`ChatMessage`, `ChatMeta`, `GroupMember`, `Contact`, `ArchivedChat`, `Reaction`) live in `ui/tokens.slint`; Rust constructs them directly.
+- The `dm-ui` crate owns `slint::include_modules!()` and re-exports all generated Slint types; `main.rs` pulls them in with `use dm_ui::*;`. UI structs (`ChatMessage`, `ChatMeta`, `GroupMember`, `Contact`, `ArchivedChat`, `Reaction`) live in `ui/tokens.slint`; Rust constructs them directly. The split exists purely so Rust edits don't recompile the generated module — don't put app logic in `dm-ui`.
 - `src/main.rs` owns the entire callback wiring. It's flat by design: there are no submodules for "send", "react", "members"; everything lives in `main.rs` so the data flow for a given UI action is readable top-to-bottom.
 - `Backend` (`src/backend.rs`, ~1.8k lines) wraps `MarmotApp` plus its own multi-thread tokio runtime. It exposes `tokio_handle()` so callers can `spawn` ad-hoc background work (HTTP fetches, etc.) on that same runtime instead of standing up a second one. All platform-specific code (clipboard, paths) lives here.
 - Support modules are thin and single-purpose: `vault.rs` (password-encrypted secret vault), `settings.rs` (JSON UI prefs), `blossom.rs` (public Blossom uploads), `media_cache.rs` (encrypted attachment cache), `observability.rs` (telemetry/audit endpoint config). They do not own state — the UI does.
@@ -100,11 +100,11 @@ Two layers:
 
 ### Build-time sprite sheet
 
-`build.rs` walks all `emojis::iter()`, looks up each in `twemoji-assets`, and composes a single 44-column 72px-tile sheet. Runtime renders the picker with one shared texture and per-cell `source-clip` — never decoding individual PNGs at runtime. The emitted `EMOJI_POSITIONS` table is included via `include!(concat!(env!("OUT_DIR"), "/emoji_sprite_map.rs"))`.
+`dm-ui/build.rs` walks all `emojis::iter()`, looks up each in `twemoji-assets`, and composes a single 44-column 72px-tile sheet. Runtime renders the picker with one shared texture and per-cell `source-clip` — never decoding individual PNGs at runtime. The emitted `EMOJI_POSITIONS` table and the sprite PNG bytes are included in `dm-ui/src/lib.rs` (`emoji_sprite_map` module, `EMOJI_SPRITE_PNG`) and re-exported to `main.rs`.
 
 ### i18n
 
-All user-visible Slint strings use `@tr("…")`. `build.rs` bundles the gettext catalogs from `lang/` (`slint_build::CompilerConfiguration::new().with_bundled_translations("lang")`); locales are `en` (source), `it`, `de`, `ja`. Runtime switching happens via `slint::select_bundled_translation` (`apply_locale` in `main.rs`), driven by `Settings.locale` and the language-picker modal. Catalog maintenance is `scripts/update-translations.sh` (see Build & run).
+All user-visible Slint strings use `@tr("…")`. `dm-ui/build.rs` bundles the gettext catalogs from `lang/` (`slint_build::CompilerConfiguration::new().with_bundled_translations("../lang")`); locales are `en` (source), `it`, `de`, `ja`. Runtime switching happens via `slint::select_bundled_translation` (`apply_locale` in `main.rs`), driven by `Settings.locale` and the language-picker modal. Catalog maintenance is `scripts/update-translations.sh` (see Build & run).
 
 ### Slint conventions specific to this repo
 

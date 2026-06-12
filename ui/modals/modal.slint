@@ -28,6 +28,7 @@ export component Modal inherits Rectangle {
     in property <string> primary-label;        // "" = no primary button
     in property <string> primary-busy-label;   // label swap while busy
     in property <bool> primary-busy: false;
+    in property <bool> primary-danger: false;  // red primary for destructive confirms
     in property <string> secondary-label;      // "" = no secondary button
     in property <string> status;               // inline status/error line above the footer
     in property <color> status-color: Palette.text-lo;
@@ -208,6 +209,7 @@ export component Modal inherits Rectangle {
                                 alignment: center;
                                 if root.secondary-label != "" : Button {
                                     label: root.secondary-label;
+                                    focusable: true;
                                     button-height: 34px;
                                     pad-left: 14px;
                                     min-w: 96px;
@@ -221,13 +223,15 @@ export component Modal inherits Rectangle {
                                     label: root.primary-busy && root.primary-busy-label != ""
                                         ? root.primary-busy-label
                                         : root.primary-label;
+                                    enabled: !root.primary-busy;
+                                    focusable: true;
                                     button-height: 34px;
                                     pad-left: 14px;
                                     min-w: 96px;
-                                    bg-color: Palette.mint;
-                                    outline: Palette.mint;
-                                    hover-bg: Palette.mint-hi;
-                                    hover-outline: Palette.mint-hi;
+                                    bg-color: root.primary-danger ? Palette.danger : Palette.mint;
+                                    outline: root.primary-danger ? Palette.danger : Palette.mint;
+                                    hover-bg: root.primary-danger ? Palette.danger.brighter(0.12) : Palette.mint-hi;
+                                    hover-outline: root.primary-danger ? Palette.danger.brighter(0.12) : Palette.mint-hi;
                                     fg: Palette.bubble-out-fg;
                                     clicked => {
                                         if (!root.primary-busy) { root.primary(); }
@@ -330,6 +334,9 @@ export component ModalField inherits VerticalLayout {
                 placeholder: root.placeholder;
                 text <=> root.text;
                 single-line: !root.multiline;
+                // In a multiline field Enter must insert the newline the
+                // placeholder promises ("one per line"), not fire submit.
+                enter-submits: !root.multiline;
                 password: root.password;
                 font-size: (Theme.retro ? 14px : 12px);
                 fg: Palette.text-hi;

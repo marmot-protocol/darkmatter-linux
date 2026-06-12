@@ -170,7 +170,7 @@ export component MessageBubble inherits Rectangle {
     border-bottom-left-radius: root.outgoing ? root.r-lg : root.r-sm;
     border-bottom-right-radius: root.outgoing ? root.r-sm : root.r-lg;
     border-width: root.failed ? 1.5px : (Theme.retro ? Theme.border-w : 1px);
-    border-color: root.failed ? #ff5a5a : (root.outgoing ? transparent : Palette.border-2);
+    border-color: root.failed ? Palette.danger-on-bubble : (root.outgoing ? transparent : Palette.border-2);
     drop-shadow-color: Theme.retro
         ? Palette.shadow
         : (root.outgoing ? Palette.mint-glow : (Theme.light ? #00000018 : #00000050));
@@ -332,7 +332,7 @@ export component MessageBubble inherits Rectangle {
                                 ? root.att-size-label + "  ·  " + root.att-mime
                                 : root.att-size-label + root.att-mime);
                         color: root.att-failed
-                            ? #ff5a5a
+                            ? (root.outgoing ? Palette.danger-on-bubble : Palette.danger)
                             : (root.outgoing ? Palette.bubble-out-fg : Palette.text-mid);
                         font-size: (10px) * Theme.fs-scale;
                         font-family: Theme.font;
@@ -452,7 +452,7 @@ export component MessageBubble inherits Rectangle {
                 }
                 Text {
                     text: root.failed ? @tr("failed · tap to retry") : root.stamp;
-                    color: root.failed ? #ff5a5a : (root.outgoing ? Palette.bubble-out-fg : Palette.text-lo);
+                    color: root.failed ? Palette.danger-on-bubble : (root.outgoing ? Palette.bubble-out-fg : Palette.text-lo);
                     font-size: (10px) * Theme.fs-scale;
                     font-family: Theme.font;
                     vertical-alignment: bottom;
@@ -468,7 +468,7 @@ export component MessageBubble inherits Rectangle {
                 }
                 if root.outgoing && root.failed : Text {
                     text: "!";
-                    color: #ff5a5a;
+                    color: Palette.danger-on-bubble;
                     font-size: (11px) * Theme.fs-scale;
                     font-family: Theme.font;
                     vertical-alignment: bottom;

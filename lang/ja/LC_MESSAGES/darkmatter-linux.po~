@@ -2,7 +2,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-06-10 07:57+0000\n"
+"POT-Creation-Date: 2026-06-11 23:57+0000\n"
 "PO-Revision-Date: 2026-05-27 13:20+0000\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -255,7 +255,7 @@ msgctxt "ContactsSidebar"
 msgid "Search contacts…"
 msgstr "連絡先を検索…"
 
-#: ui/dark-matter-linux.slint:250
+#: ui/dark-matter-linux.slint:261
 msgctxt "DarkMatterLinux"
 msgid "Connecting to relays…"
 msgstr "リレーに接続中…"
@@ -886,7 +886,7 @@ msgctxt "MentionPicker"
 msgid "(you)"
 msgstr ""
 
-#: ui/messages.slint:102
+#: ui/messages.slint:106
 #, fuzzy
 msgctxt "MessagesArea"
 msgid "Load earlier messages"
@@ -1355,54 +1355,77 @@ msgctxt "AboutPane"
 msgid "Made with marmots, math, and a little purple liquid."
 msgstr ""
 
-#: ui/settings/advanced-pane.slint:20
+#: ui/settings/advanced-pane.slint:80
 msgctxt "AdvancedPane"
 msgid "Advanced"
 msgstr "詳細"
 
-#: ui/settings/advanced-pane.slint:21
+#: ui/settings/advanced-pane.slint:81
 #, fuzzy
 msgctxt "AdvancedPane"
 msgid "Privacy & developer flags"
 msgstr "開発者フラグ"
 
-#: ui/settings/advanced-pane.slint:26
+#: ui/settings/advanced-pane.slint:86
 msgctxt "AdvancedPane"
 msgid "SECURITY & PRIVACY"
 msgstr ""
 
-#: ui/settings/advanced-pane.slint:29
+#: ui/settings/advanced-pane.slint:89
 msgctxt "AdvancedPane"
 msgid "Share anonymous app telemetry"
 msgstr ""
 
-#: ui/settings/advanced-pane.slint:30
+#: ui/settings/advanced-pane.slint:90
 msgctxt "AdvancedPane"
 msgid "Share relay connection telemetry."
 msgstr ""
 
-#: ui/settings/advanced-pane.slint:37
+#: ui/settings/advanced-pane.slint:97
 msgctxt "AdvancedPane"
 msgid "Audit logs"
 msgstr ""
 
-#: ui/settings/advanced-pane.slint:38
+#: ui/settings/advanced-pane.slint:98
 msgctxt "AdvancedPane"
-msgid "Create and send group audit log files. Takes effect after restart."
+msgid "Create and send group audit log files. Applies immediately."
 msgstr ""
 
-#: ui/settings/advanced-pane.slint:57
+#: ui/settings/advanced-pane.slint:117
+msgctxt "AdvancedPane"
+msgid "AUDIT LOG FILES"
+msgstr ""
+
+#: ui/settings/advanced-pane.slint:125
+msgctxt "AdvancedPane"
+msgid "No audit log files on disk."
+msgstr ""
+
+#: ui/settings/advanced-pane.slint:142
+#, fuzzy
+msgctxt "AdvancedPane"
+msgid "Refresh"
+msgstr "更新"
+
+#: ui/settings/advanced-pane.slint:148
+msgctxt "AdvancedPane"
+msgid ""
+"Deleting the file being recorded rotates it — recording continues in a fresh "
+"file."
+msgstr ""
+
+#: ui/settings/advanced-pane.slint:156
 msgctxt "AdvancedPane"
 msgid "DEVELOPER"
 msgstr "開発者"
 
-#: ui/settings/advanced-pane.slint:60
+#: ui/settings/advanced-pane.slint:159
 #, fuzzy
 msgctxt "AdvancedPane"
 msgid "Developer mode"
 msgstr "開発者フラグ"
 
-#: ui/settings/advanced-pane.slint:61
+#: ui/settings/advanced-pane.slint:160
 #, fuzzy
 msgctxt "AdvancedPane"
 msgid ""
@@ -1670,22 +1693,22 @@ msgid ""
 "find you."
 msgstr ""
 
-#: ui/settings/settings-page.slint:95
+#: ui/settings/settings-page.slint:98
 msgctxt "SettingsPage"
 msgid "Notifications"
 msgstr "通知"
 
-#: ui/settings/settings-page.slint:96
+#: ui/settings/settings-page.slint:99
 msgctxt "SettingsPage"
 msgid "Per-chat notification rules, sounds, focus mode."
 msgstr "チャットごとの通知ルール、サウンド、フォーカスモード。"
 
-#: ui/settings/settings-page.slint:100
+#: ui/settings/settings-page.slint:103
 msgctxt "SettingsPage"
 msgid "Storage"
 msgstr "ストレージ"
 
-#: ui/settings/settings-page.slint:101
+#: ui/settings/settings-page.slint:104
 msgctxt "SettingsPage"
 msgid "Local cache, message retention, attachments."
 msgstr "ローカルキャッシュ、メッセージ保持、添付ファイル。"

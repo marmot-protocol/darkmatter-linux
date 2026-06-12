@@ -17,6 +17,7 @@ import { StatusBar } from "status-bar.slint";
 import { StartNewChatModal } from "modals/start-new-chat-modal.slint";
 import { AddContactModal } from "modals/add-contact-modal.slint";
 import { NicknameModal } from "modals/nickname-modal.slint";
+import { ConfirmModal } from "modals/confirm-modal.slint";
 import { CommandPalette, PaletteAction } from "modals/command-palette.slint";
 import { LanguagePickerModal } from "modals/language-picker-modal.slint";
 import { EditHistoryModal } from "modals/edit-history-modal.slint";
@@ -383,6 +384,11 @@ export component DarkMatterLinux inherits Window {
     callback set-contact-nickname(string);
     callback nickname-modal-dismissed();
 
+    // Block-chat-request confirmation. Blocking declines the invite for good
+    // (the welcome can't be restored), so it's the one chat-request action
+    // gated behind a confirm; Archive stays one-click because it's reversible.
+    in-out property <bool> show-block-confirm: false;
+
     // Top-level FocusScope captures Ctrl+K globally. When a modal mounts and
     // calls focus() on its own scope, focus leaves here; on dismiss, focus comes back.
     global-keys := FocusScope {
@@ -561,7 +567,7 @@ export component DarkMatterLinux inherits Window {
                             change-group-image => { root.change-group-image(); }
                             clear-group-image => { root.clear-group-image(); }
                             accept-clicked => { root.accept-chat-request(); }
-                            block-clicked => { root.block-chat-request(); }
+                            block-clicked => { root.show-block-confirm = true; }
                             archive-clicked => { root.archive-chat(); }
                         }
                     }
@@ -749,6 +755,20 @@ export component DarkMatterLinux inherits Window {
         contact-name: root.nickname-contact-name;
         save(n) => { root.set-contact-nickname(n); }
         dismissed => { root.nickname-modal-dismissed(); }
+    }
+
+    if root.show-block-confirm : ConfirmModal {
+        x: 0; y: 0;
+        width: root.width;
+        height: root.height;
+        title: @tr("Block this chat request?");
+        subtitle: @tr("This declines the invite from {}. It can't be restored unless they invite you again.", root.chats[root.active-chat].name);
+        confirm-label: @tr("Block");
+        confirm => {
+            root.show-block-confirm = false;
+            root.block-chat-request();
+        }
+        dismissed => { root.show-block-confirm = false; }
     }
 
     if root.show-palette : CommandPalette {

@@ -115,18 +115,21 @@ export component ChatHeader inherits Rectangle {
 
             Button {
                 label: @tr("Block");
+                focusable: true;
                 y: (parent.height - self.height) / 2;
                 clicked => { root.block-clicked(); }
                 BanIcon { stroke: Palette.text-mid; size: 13px; }
             }
             Button {
                 label: @tr("Archive");
+                focusable: true;
                 y: (parent.height - self.height) / 2;
                 clicked => { root.archive-clicked(); }
                 ArchiveIcon { stroke: Palette.text-mid; }
             }
             Button {
                 label: @tr("Accept");
+                focusable: true;
                 bg-color: Palette.mint;
                 fg: Palette.bubble-out-fg;
                 outline: Palette.mint;

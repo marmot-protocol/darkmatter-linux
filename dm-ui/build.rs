@@ -19,16 +19,17 @@ const TILE: u32 = 72;
 const COLS: u32 = 44;
 
 fn main() {
+    // ui/ and lang/ live at the repo root, one level above this crate.
     println!("cargo:rerun-if-changed=build.rs");
-    println!("cargo:rerun-if-changed=lang");
+    println!("cargo:rerun-if-changed=../lang");
 
     let out_dir = PathBuf::from(env::var_os("OUT_DIR").expect("OUT_DIR set by cargo"));
     let sprite_path = out_dir.join("twemoji_sprite.png");
     let map_path = out_dir.join("emoji_sprite_map.rs");
 
     // Compile the UI with bundled gettext translations from lang/.
-    let config = slint_build::CompilerConfiguration::new().with_bundled_translations("lang");
-    slint_build::compile_with_config("ui/dark-matter-linux.slint", config).unwrap();
+    let config = slint_build::CompilerConfiguration::new().with_bundled_translations("../lang");
+    slint_build::compile_with_config("../ui/dark-matter-linux.slint", config).unwrap();
 
     ensure_emoji_sprite(&sprite_path, &map_path);
 }

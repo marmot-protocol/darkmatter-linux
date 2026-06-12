@@ -13,6 +13,10 @@ export component LineInput inherits Rectangle {
     in property <bool> single-line: true;
     // When true the inner TextInput masks its glyphs (vault password fields).
     in property <bool> password: false;
+    // Enter fires `submit` (Shift+Enter for a newline). Set false on
+    // multi-line fields where Enter should just insert a newline — e.g. the
+    // "one npub per line" members box, which otherwise swallows the key.
+    in property <bool> enter-submits: true;
     out property <bool> has-focus: input.has-focus;
     callback submit;
     // ── Mention autocomplete hooks ──────────────────────────────────────────
@@ -89,7 +93,7 @@ export component LineInput inherits Rectangle {
                     }
                     if (event.text == Key.Escape) { root.dismiss-mention(); return accept; }
                 }
-                if (event.text == Key.Return && !event.modifiers.shift) {
+                if (root.enter-submits && event.text == Key.Return && !event.modifiers.shift) {
                     root.submit();
                     return accept;
                 }

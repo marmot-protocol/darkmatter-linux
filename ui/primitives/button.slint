@@ -27,40 +27,51 @@ export component Button inherits Rectangle {
     in property <color>  hover-outline: root.outline;
     in property <bool>   use-hover: true;
     in property <bool>   has-fill: true;
+    // When false the button dims, drops its hover styling, and swallows no
+    // clicks — callers gate "send with empty draft", "primary while busy", etc.
+    in property <bool>   enabled: true;
+    // Opt-in Tab focusability (modal footers, chat-request actions, Send).
+    // Opt-in rather than default so the tab chain only contains buttons
+    // that make sense to reach from the keyboard.
+    in property <bool>   focusable: false;
     out property <bool> has-hover: touch.has-hover;
     out property <bool> is-primary: root.bg-color == Palette.mint;
+
+    property <bool> hovered: root.enabled && root.use-hover && touch.has-hover;
 
     height: root.button-height;
     min-width: root.button-width > 0px ? root.button-width : root.min-w;
     max-width: root.button-width > 0px ? root.button-width : 100000px;
     border-radius: (root.radius) * Theme.r-scale;
     border-width: root.border-w;
-    border-color: root.use-hover && touch.has-hover ? root.hover-outline : root.outline;
+    border-color: root.hovered ? root.hover-outline : root.outline;
     background: root.selected
         ? root.selected-bg
-        : (root.use-hover && touch.has-hover ? root.hover-bg : root.bg-color);
+        : (root.hovered ? root.hover-bg : root.bg-color);
+    opacity: root.enabled ? 1.0 : 0.5;
+    animate opacity { duration: 120ms; easing: ease-out; }
     drop-shadow-color: Theme.retro && root.has-fill ? Palette.shadow
         : (root.is-primary && root.has-fill ? Palette.mint-glow : transparent);
     // In retro: hover pushes the shadow further (3px) for a "lifted" SNES-button feel.
     drop-shadow-offset-x: Theme.retro && root.has-fill
-        ? (root.use-hover && touch.has-hover ? 3px : 2px)
-        : (root.is-primary && root.has-fill && touch.has-hover ? 0px : 0px);
+        ? (root.hovered ? 3px : 2px)
+        : (root.is-primary && root.has-fill && root.hovered ? 0px : 0px);
     drop-shadow-offset-y: Theme.retro && root.has-fill
-        ? (root.use-hover && touch.has-hover ? 3px : 2px)
+        ? (root.hovered ? 3px : 2px)
         : (root.is-primary && root.has-fill ? 2px : 0px);
     drop-shadow-blur: Theme.retro && root.has-fill ? 0px : (root.is-primary && root.has-fill ? 12px : 0px);
     animate background, border-color { duration: 120ms; easing: ease-out; }
     animate drop-shadow-offset-x, drop-shadow-offset-y { duration: 90ms; easing: ease-out; }
 
     // SNES bevel: bright pixel highlight on top edge, dark shade on bottom.
-    if Theme.retro && root.has-fill && !touch.has-hover : Rectangle {
+    if Theme.retro && root.has-fill && !root.hovered : Rectangle {
         x: root.border-w; y: root.border-w;
         width: parent.width - root.border-w * 2;
         height: 2px;
         background: Palette.bevel-hi;
         opacity: root.selected ? 0.6 : 0.35;
     }
-    if Theme.retro && root.has-fill && !touch.has-hover : Rectangle {
+    if Theme.retro && root.has-fill && !root.hovered : Rectangle {
         x: root.border-w; y: parent.height - root.border-w - 2px;
         width: parent.width - root.border-w * 2;
         height: 2px;
@@ -81,7 +92,7 @@ export component Button inherits Rectangle {
 
         if root.label != "" : Text {
             text: root.label;
-            color: root.use-hover && touch.has-hover ? root.hover-fg : root.fg;
+            color: root.hovered ? root.hover-fg : root.fg;
             font-size: (root.font-size) * Theme.fs-scale;
             font-weight: root.font-weight;
             font-family: Theme.font;
@@ -90,7 +101,37 @@ export component Button inherits Rectangle {
         }
     }
 
-    touch := TouchArea { clicked => { root.clicked(); } }
+    touch := TouchArea {
+        enabled: root.enabled;
+        clicked => { root.clicked(); }
+    }
+
+    // Zero-size FocusScope: participates in the Tab chain but never receives
+    // pointer events, so clicking the button can't pull keyboard focus away
+    // from the composer (a full-size scope grabs focus on click).
+    fs := FocusScope {
+        width: 0px; height: 0px;
+        enabled: root.focusable && root.enabled;
+        key-pressed(event) => {
+            if (event.text == Key.Return || event.text == " ") {
+                root.clicked();
+                return accept;
+            }
+            return reject;
+        }
+    }
+
+    // Focus ring just outside the bounds. Accent for regular buttons; primary
+    // buttons are already accent-filled, so their ring flips to text-hi.
+    if fs.has-focus : Rectangle {
+        x: -3px; y: -3px;
+        width: parent.width + 6px;
+        height: parent.height + 6px;
+        background: transparent;
+        border-radius: (root.radius + 3px) * Theme.r-scale;
+        border-width: 2px;
+        border-color: root.is-primary ? Palette.text-hi : Palette.mint;
+    }
 }
 
 // Small chip-style button (info-row actions in settings/profile/keys/contacts).

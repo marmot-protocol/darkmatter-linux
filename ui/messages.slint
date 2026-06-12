@@ -3,6 +3,7 @@ import { Palette, Theme, ChatMessage } from "tokens.slint";
 import { IncomingRow } from "primitives/incoming-row.slint";
 import { OutgoingRow } from "primitives/outgoing-row.slint";
 import { CypherScroll } from "primitives/cypher-scroll.slint";
+import { ChevronDownIcon } from "icons/chevron-down-icon.slint";
 
 export component MessagesArea inherits Rectangle {
     in property <[ChatMessage]> messages;
@@ -213,6 +214,42 @@ export component MessagesArea inherits Rectangle {
                     attachment-clicked(id) => { root.attachment-clicked(id); }
                 }
             }
+        }
+    }
+
+    // Floating "jump to latest" pill — fades in once the user pages up into
+    // history, snaps the viewport back to the newest message on click.
+    // Always mounted, opacity-gated (an `if`-mounted TouchArea swallows its
+    // first click); the TouchArea is disabled while hidden so it never
+    // intercepts clicks meant for the messages underneath.
+    jump-pill := Rectangle {
+        x: parent.width - self.width - 22px;
+        y: parent.height - self.height - 16px;
+        width: 38px;
+        height: 38px;
+        border-radius: (19px) * Theme.r-scale;
+        background: jump-touch.has-hover ? Palette.field-hover : Palette.elevated;
+        border-width: Theme.retro ? Theme.border-w : 1px;
+        border-color: Palette.elevated-border;
+        drop-shadow-blur: Theme.retro ? 0px : 16px;
+        drop-shadow-color: Theme.retro ? Palette.shadow : (Theme.light ? #1F293744 : #000000A0);
+        drop-shadow-offset-x: Theme.retro ? 3px : 0px;
+        drop-shadow-offset-y: Theme.retro ? 3px : 6px;
+        opacity: root.at-bottom ? 0 : 1;
+        animate opacity { duration: 160ms; easing: ease-out; }
+        animate background { duration: 100ms; }
+
+        ChevronDownIcon {
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            size: 14px;
+            stroke: jump-touch.has-hover ? Palette.text-hi : Palette.text-mid;
+        }
+
+        jump-touch := TouchArea {
+            enabled: !root.at-bottom;
+            mouse-cursor: pointer;
+            clicked => { cs.viewport-y = root.bottom-y; }
         }
     }
 }

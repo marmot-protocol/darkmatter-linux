@@ -1,3 +1,6 @@
+[workspace]
+members = ["dm-ui"]
+
 [package]
 name = "darkmatter-linux"
 version = "0.1.0"
@@ -5,6 +8,9 @@ edition = "2024"
 
 [dependencies]
 slint = "1.8"
+# Owns the Slint compilation + the huge generated UI module, so Rust edits
+# here don't recompile the whole UI tree. See dm-ui/src/lib.rs.
+dm-ui = { path = "dm-ui" }
 nostr = { version = "0.44.2", default-features = false, features = [
   "std",
   "nip59",
@@ -55,15 +61,6 @@ marmot-app = { git = "ssh://git@github.com/marmot-protocol/darkmatter.git", bran
 marmot-account = { git = "ssh://git@github.com/marmot-protocol/darkmatter.git", branch = "master" }
 cgka-traits = { git = "ssh://git@github.com/marmot-protocol/darkmatter.git", branch = "master" }
 
-[build-dependencies]
-slint-build = "1.8"
-# build.rs uses these to compose the Twemoji sprite sheet at compile time.
-twemoji-assets = { version = "1.5", default-features = false, features = [
-  "png",
-] }
-image = { version = "0.25", default-features = false, features = ["png"] }
-emojis = "0.6"
-
 # Dev builds keep our own crate at opt-level 0 (fast incremental compiles) but
 # optimize every dependency. All the heavy lifting — SQLCipher page decryption,
 # MLS/AEAD crypto, Argon2id key derivation, image decoding, markdown parsing —
@@ -76,10 +73,17 @@ opt-level = 3
 # Our own crate gets light optimization too: the chat-row pipeline (markdown
 # flattening, line wrapping, 80+ Slint structs per chat switch) is hot enough
 # that opt-level 0 is visibly slow. Level 1 keeps incremental compiles quick.
+#
+# `line-tables-only` keeps file:line in panics and backtraces but drops
+# variable-level debuginfo. Full `debug = 2` on 900 opt-level-3 crates was the
+# single biggest cost in both compile and link time (and most of target/'s
+# size); flip back to `debug = true` temporarily if you need to inspect
+# variables in a debugger.
 [profile.dev]
 opt-level = 1
+debug = "line-tables-only"
 
-# build.rs composes the Twemoji sprite sheet with the `image` crate; optimize
+# dm-ui/build.rs composes the Twemoji sprite sheet with the `image` crate; optimize
 # build scripts and their deps so that first build doesn't crawl either.
 [profile.dev.build-override]
 opt-level = 3

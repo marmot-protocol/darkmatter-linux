@@ -234,6 +234,11 @@ export component Composer inherits Rectangle {
                 }
                 send-button := Button {
                     label: @tr("Send");
+                    // Rust trims and drops empty sends anyway; disabling here
+                    // makes the affordance honest (no mint hover on a button
+                    // that would do nothing).
+                    enabled: root.draft != "";
+                    focusable: true;
                     clicked => { root.send-clicked(); }
                     button-width: 92px;
                     button-height: 36px;

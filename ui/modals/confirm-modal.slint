@@ -1,0 +1,16 @@
+import { Modal } from "modal.slint";
+
+// Generic confirmation dialog for destructive actions. The explanation rides
+// in Modal's `subtitle`; the primary is danger-styled. Owners set `title`,
+// `subtitle`, and `confirm-label`, then handle `confirm` (the owner closes
+// the modal itself, same as every other dialog).
+export component ConfirmModal inherits Modal {
+    callback confirm;
+    in property <string> confirm-label;
+
+    card-width: 420px;
+    secondary-label: @tr("Cancel");
+    primary-label: root.confirm-label;
+    primary-danger: true;
+    primary => { root.confirm(); }
+}

@@ -25,6 +25,9 @@ export component StartNewChatModal inherits Modal {
         placeholder: @tr("e.g. friday-crew");
         text <=> root.chat-name;
         autofocus: true;
+        submitted => {
+            if (!root.busy) { root.start-chat(root.chat-name, root.members-text); }
+        }
     }
 
     ModalField {

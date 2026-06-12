@@ -385,6 +385,11 @@ fn main() -> Result<(), slint::PlatformError> {
     // async chat-switch completion that installs the watcher after the
     // off-thread snapshot fetch lands.
     let active_message_watcher: Arc<Mutex<Option<JoinHandle<()>>>> = Arc::new(Mutex::new(None));
+    // The chat-list watcher for the *active account*. Its subscription is
+    // bound to the account label it was created with, so on account switch it
+    // must be aborted and re-installed — otherwise the previous account's
+    // chat updates keep flowing into the (now repopulated) models.
+    let chats_watcher: Arc<Mutex<Option<JoinHandle<()>>>> = Arc::new(Mutex::new(None));
 
     // ─── Login gate ────────────────────────────────────────────────────
     // Holds the freshly generated nsec until the user confirms they've saved it.
@@ -403,7 +408,10 @@ fn main() -> Result<(), slint::PlatformError> {
         let group_ids = group_ids.clone();
         let archived_group_ids = archived_group_ids.clone();
         let vault_cell = vault_cell.clone();
-        move |nsec: String, vault: Arc<Mutex<Vault>>| {
+        let chats_watcher = chats_watcher.clone();
+        // `active_hint` names the account (id hex) to display first — the
+        // vault-recorded last-active account on unlock, `None` on first run.
+        move |nsec: String, vault: Arc<Mutex<Vault>>, active_hint: Option<String>| {
             let Some(ui) = weak.upgrade() else { return };
             // Keep the unlocked vault for the rest of the session.
             *vault_cell.lock().unwrap() = Some(vault.clone());
@@ -421,8 +429,12 @@ fn main() -> Result<(), slint::PlatformError> {
             let backend_cell = backend_cell.clone();
             let group_ids = group_ids.clone();
             let archived_group_ids = archived_group_ids.clone();
+            let chats_watcher = chats_watcher.clone();
             std::thread::spawn(move || {
                 let relays = backend::load_relays();
+                // Kept aside for the per-account nsec migration write below —
+                // `secret_store` consumes the primary handle.
+                let vault_for_migrate = vault.clone();
                 // marmot's per-account secret store reads/writes the same vault.
                 let secret_store = Arc::new(vault::VaultSecretStore::new(vault));
                 // Fires when boot's background network phase (directory sync,
@@ -483,54 +495,43 @@ fn main() -> Result<(), slint::PlatformError> {
                         );
                     });
                 };
-                let result = Backend::boot(&nsec, relays, secret_store, on_synced);
+                let result = Backend::boot(&nsec, relays, secret_store, active_hint, on_synced);
                 let _ = slint::invoke_from_event_loop(move || {
                     let Some(ui) = weak_for_worker.upgrade() else { return };
                     match result {
                         Ok(b) => {
                             let b = Arc::new(b);
-                            let t_ui = std::time::Instant::now();
-                            // Every list below is fetched on the backend
-                            // runtime and applied back on the UI thread — the
-                            // boot closure itself does zero sqlite/disk reads.
-                            // The first chat's extras (members panel, has-older,
-                            // avatar fetches) ride the chat-list continuation
-                            // since they need the populated snapshot.
-                            refresh_chats_async(&ui, &b, &group_ids, move |ui, b, snap| {
-                                eprintln!(
-                                    "[boot-timing] ui chat list applied at {:?}",
-                                    t_ui.elapsed()
-                                );
-                                if let Some(first) = snap.records.first() {
-                                    push_group_members_to_ui_async(ui, b, &first.group_id_hex);
-                                    ui.set_messages_has_older(
-                                        snap.first_msgs.len() >= MESSAGE_WINDOW,
-                                    );
-                                    spawn_message_avatar_fetches(ui, b, &snap.first_msgs);
-                                }
-                            });
-                            refresh_contacts_async(&ui, &b, |_| {});
-                            refresh_archived_async(&ui, &b, &archived_group_ids);
-                            populate_profile_async(&ui, &b);
-                            refresh_kp_local_async(&ui, &b);
-                            refresh_network_post_boot(&b, &ui);
-                            // Security & privacy flags live in marmot storage
-                            // (disk) — read them on the runtime too.
-                            {
-                                let weak = ui.as_weak();
-                                let b2 = b.clone();
-                                b.tokio_handle().spawn(async move {
-                                    let telemetry = b2.telemetry_enabled();
-                                    let audit = b2.audit_logs_enabled();
-                                    let _ = slint::invoke_from_event_loop(move || {
-                                        let Some(ui) = weak.upgrade() else { return };
-                                        ui.set_telemetry_enabled(telemetry);
-                                        ui.set_audit_enabled(audit);
-                                    });
+                            // Every list is fetched on the backend runtime and
+                            // applied back on the UI thread — the boot closure
+                            // itself does zero sqlite/disk reads.
+                            populate_models_for_active(&ui, &b, &group_ids, &archived_group_ids);
+                            // The displayed account may be the vault's
+                            // last-active hint rather than the nsec we booted
+                            // with — derive the identity-bound chrome from the
+                            // backend's actual active account.
+                            let active = b.account();
+                            if let Ok(npub) = npub_for_account_id(&active.account_id_hex) {
+                                ui.set_my_qr(qr_image(&format!("nostr:{npub}")));
+                                ui.set_my_npub(npub.into());
+                            }
+                            refresh_accounts_model(&ui, &b);
+                            // Older vaults only carry the bare "nsec" entry —
+                            // backfill the per-account key for the boot
+                            // account so every account is stored uniformly.
+                            if let Ok(keys) = Keys::parse(&nsec) {
+                                let key = vault::nsec_key_for(&keys.public_key().to_hex());
+                                let nsec = nsec.clone();
+                                let vault = vault_for_migrate.clone();
+                                std::thread::spawn(move || {
+                                    let mut v = vault.lock().unwrap();
+                                    if !v.has(&key) {
+                                        if let Err(e) = v.set(&key, &nsec) {
+                                            eprintln!("[vault] migrate {key} failed: {e}");
+                                        }
+                                    }
                                 });
                             }
-                            refresh_audit_files(&ui, &b);
-                            install_chat_watcher(&b, ui.as_weak(), group_ids.clone(), backend_cell.clone());
+                            install_chat_watcher(&b, ui.as_weak(), group_ids.clone(), backend_cell.clone(), &chats_watcher);
                             *backend_cell.lock().unwrap() = Some(b.clone());
                             ui.set_backend_ready(true);
                             ui.set_booting(false);
@@ -575,6 +576,246 @@ fn main() -> Result<(), slint::PlatformError> {
             });
         }
     };
+
+    // ─── Account switching ─────────────────────────────────────────────
+    // Swap the displayed account: stop the per-account watchers, drop the
+    // optimistic overlay and all per-account models *synchronously* (so a
+    // stray send can't resolve an index against the previous account's group
+    // list), then rebuild everything from the new account's snapshots. All
+    // accounts keep their background sessions — this is a view change, not a
+    // re-login. `Arc<dyn Fn + Send + Sync>` (not `Rc`) so the add-account
+    // completion — which hops through a tokio worker before
+    // `invoke_from_event_loop` — can carry a handle; it is only ever
+    // *invoked* on the UI thread.
+    let do_switch_account: Arc<dyn Fn(String) + Send + Sync> = {
+        let weak = ui.as_weak();
+        let backend_cell = backend_cell.clone();
+        let vault_cell = vault_cell.clone();
+        let group_ids = group_ids.clone();
+        let archived_group_ids = archived_group_ids.clone();
+        let pending_state = pending_state.clone();
+        let active_message_watcher = active_message_watcher.clone();
+        let chats_watcher = chats_watcher.clone();
+        Arc::new(move |account_id: String| {
+            let Some(ui) = weak.upgrade() else { return };
+            let Some(backend) = backend_cell.lock().unwrap().clone() else {
+                return;
+            };
+            if backend
+                .account()
+                .account_id_hex
+                .eq_ignore_ascii_case(&account_id)
+            {
+                ui.set_show_account_switcher(false);
+                return;
+            }
+            let summary = match backend.set_active_account(&account_id) {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("[accounts] switch failed: {e:#}");
+                    ui.set_backend_error(format!("switch account: {e:#}").into());
+                    return;
+                }
+            };
+            // Remember the choice for the next unlock.
+            if let Some(vault) = vault_cell.lock().unwrap().clone() {
+                vault_set_async(
+                    &vault,
+                    vault::ACTIVE_ACCOUNT_KEY.to_string(),
+                    summary.account_id_hex.to_ascii_lowercase(),
+                );
+            }
+            // Stop the previous account's streams before the models change
+            // under them, and drop its optimistic overlay outright.
+            if let Some(h) = active_message_watcher.lock().unwrap().take() {
+                h.abort();
+            }
+            if let Some(h) = chats_watcher.lock().unwrap().take() {
+                h.abort();
+            }
+            *pending_state.lock().unwrap() = PendingState::default();
+            // Clear every per-account model + selection synchronously so
+            // nothing can act on stale rows while the rebuild is in flight.
+            group_ids.lock().unwrap().clear();
+            archived_group_ids.lock().unwrap().clear();
+            if let Some(vm) = ui.get_chats().as_any().downcast_ref::<VecModel<ChatMeta>>() {
+                vm.set_vec(Vec::new());
+            }
+            if let Some(vm) = ui
+                .get_chats_messages()
+                .as_any()
+                .downcast_ref::<VecModel<ModelRc<ChatMessage>>>()
+            {
+                vm.set_vec(Vec::new());
+            }
+            if let Some(vm) = ui.get_contacts().as_any().downcast_ref::<VecModel<Contact>>() {
+                vm.set_vec(Vec::new());
+            }
+            if let Some(vm) = ui
+                .get_archived_chats()
+                .as_any()
+                .downcast_ref::<VecModel<ArchivedChat>>()
+            {
+                vm.set_vec(Vec::new());
+            }
+            ui.set_active_chat(0);
+            ui.set_active_contact(0);
+            ui.set_active_archived(0);
+            ui.set_active_page(0);
+            ui.set_show_chat_members(false);
+            ui.set_messages_has_older(false);
+            ui.set_composer_draft(s(""));
+            ui.set_reply_target_id(s(""));
+            ui.set_reply_target_author(s(""));
+            ui.set_reply_target_preview(s(""));
+            ui.set_editing_message_id(s(""));
+            if let Ok(mut slot) = active_group_slot().lock() {
+                slot.clear();
+            }
+            // Identity-bound chrome for the new account.
+            if let Ok(npub) = npub_for_account_id(&summary.account_id_hex) {
+                ui.set_my_qr(qr_image(&format!("nostr:{npub}")));
+                ui.set_my_npub(npub.into());
+            }
+            // Reset the avatar to the new account's deterministic fallback;
+            // populate_profile_async upgrades it once the profile loads.
+            ui.set_my_av_has_picture(false);
+            ui.set_my_av_picture(slint::Image::default());
+            set_my_avatar(&ui, &backend);
+            refresh_breadcrumb_now(&ui);
+            // Rebuild from the new account's snapshots and re-subscribe.
+            populate_models_for_active(&ui, &backend, &group_ids, &archived_group_ids);
+            install_chat_watcher(
+                &backend,
+                ui.as_weak(),
+                group_ids.clone(),
+                backend_cell.clone(),
+                &chats_watcher,
+            );
+            refresh_accounts_model(&ui, &backend);
+            ui.set_show_account_switcher(false);
+        })
+    };
+
+    ui.on_account_switcher_requested({
+        let weak = ui.as_weak();
+        let backend_cell = backend_cell.clone();
+        move || {
+            let Some(ui) = weak.upgrade() else { return };
+            let Some(b) = backend_cell.lock().unwrap().clone() else {
+                return;
+            };
+            refresh_accounts_model(&ui, &b);
+            ui.set_show_account_switcher(true);
+        }
+    });
+
+    ui.on_switch_account({
+        let do_switch = do_switch_account.clone();
+        move |id| do_switch(id.to_string())
+    });
+
+    ui.on_add_account_requested({
+        let weak = ui.as_weak();
+        move || {
+            let Some(ui) = weak.upgrade() else { return };
+            ui.set_show_account_switcher(false);
+            ui.set_add_account_nsec(s(""));
+            ui.set_add_account_status(s(""));
+            ui.set_add_account_generated(false);
+            ui.set_add_account_busy(false);
+            ui.set_show_add_account(true);
+        }
+    });
+
+    ui.on_add_account_dismissed({
+        let weak = ui.as_weak();
+        move || {
+            let Some(ui) = weak.upgrade() else { return };
+            ui.set_show_add_account(false);
+            ui.set_add_account_nsec(s(""));
+            ui.set_add_account_generated(false);
+            ui.set_add_account_status(s(""));
+        }
+    });
+
+    ui.on_generate_add_account_key({
+        let weak = ui.as_weak();
+        move || {
+            let Some(ui) = weak.upgrade() else { return };
+            let keys = Keys::generate();
+            match keys.secret_key().to_bech32() {
+                Ok(nsec) => {
+                    ui.set_add_account_nsec(nsec.into());
+                    ui.set_add_account_generated(true);
+                    ui.set_add_account_status(s(""));
+                }
+                Err(e) => {
+                    ui.set_add_account_status(format!("Failed to encode key: {e}").into())
+                }
+            }
+        }
+    });
+
+    ui.on_add_account({
+        let weak = ui.as_weak();
+        let backend_cell = backend_cell.clone();
+        let vault_cell = vault_cell.clone();
+        let do_switch = do_switch_account.clone();
+        move |nsec_input| {
+            let Some(ui) = weak.upgrade() else { return };
+            let raw = nsec_input.trim().to_string();
+            let Ok(keys) = Keys::parse(&raw) else {
+                ui.set_add_account_status(s("That doesn't look like a valid nsec."));
+                return;
+            };
+            let Some(backend) = backend_cell.lock().unwrap().clone() else {
+                ui.set_add_account_status(s("Backend isn't ready yet."));
+                return;
+            };
+            // Canonical bech32 form for vault storage, whatever was pasted.
+            let nsec = match keys.secret_key().to_bech32() {
+                Ok(n) => n,
+                Err(e) => {
+                    ui.set_add_account_status(format!("Failed to encode key: {e}").into());
+                    return;
+                }
+            };
+            let account_id = keys.public_key().to_hex();
+            ui.set_add_account_busy(true);
+            ui.set_add_account_status(s(""));
+            let weak = ui.as_weak();
+            let vault_cell = vault_cell.clone();
+            let do_switch = do_switch.clone();
+            backend.add_account_async(nsec.clone(), move |result| {
+                let _ = slint::invoke_from_event_loop(move || {
+                    let Some(ui) = weak.upgrade() else { return };
+                    ui.set_add_account_busy(false);
+                    match result {
+                        Ok(summary) => {
+                            // Seal the new key into the session vault so the
+                            // account survives restarts (marmot's own secret
+                            // landed there too, via VaultSecretStore).
+                            if let Some(vault) = vault_cell.lock().unwrap().clone() {
+                                vault_set_async(
+                                    &vault,
+                                    vault::nsec_key_for(&account_id),
+                                    nsec.clone(),
+                                );
+                            }
+                            ui.set_show_add_account(false);
+                            ui.set_add_account_nsec(s(""));
+                            ui.set_add_account_generated(false);
+                            do_switch(summary.account_id_hex);
+                        }
+                        Err(e) => {
+                            ui.set_add_account_status(format!("{e:#}").into());
+                        }
+                    }
+                });
+            });
+        }
+    });
 
     // There is no silent auto-login anymore: secrets live in a password-encrypted
     // vault. If a vault exists, open on the Unlock screen (mode 3); otherwise the
@@ -630,7 +871,7 @@ fn main() -> Result<(), slint::PlatformError> {
                             ui.set_password_input(s(""));
                             ui.set_password_confirm(s(""));
                             ui.set_logged_in(true);
-                            boot(nsec, vault);
+                            boot(nsec, vault, None);
                         }
                         Err(err) => {
                             ui.set_login_error(err.into());
@@ -654,7 +895,7 @@ fn main() -> Result<(), slint::PlatformError> {
             let weak = weak.clone();
             let boot = boot.clone();
             std::thread::spawn(move || {
-                let result = (|| -> Result<(String, String, Arc<Mutex<Vault>>), String> {
+                let result = (|| -> Result<(String, String, Arc<Mutex<Vault>>, Option<String>), String> {
                     let v = Vault::open(&password).map_err(|e| match e {
                         vault::VaultError::WrongPassword => "Wrong password.".to_string(),
                         other => format!("{other}"),
@@ -665,19 +906,22 @@ fn main() -> Result<(), slint::PlatformError> {
                     let keys =
                         Keys::parse(&nsec).map_err(|_| "Stored key is invalid.".to_string())?;
                     let npub = keys.public_key().to_bech32().map_err(|e| e.to_string())?;
-                    Ok((npub, nsec, Arc::new(Mutex::new(v))))
+                    // The account the user last had active — boot displays it
+                    // instead of the primary when it still exists.
+                    let active = v.get(vault::ACTIVE_ACCOUNT_KEY).map(|s| s.to_string());
+                    Ok((npub, nsec, Arc::new(Mutex::new(v)), active))
                 })();
                 let _ = slint::invoke_from_event_loop(move || {
                     let Some(ui) = weak.upgrade() else { return };
                     ui.set_login_busy(false);
                     match result {
-                        Ok((npub, nsec, vault)) => {
+                        Ok((npub, nsec, vault, active)) => {
                             ui.set_login_error(s(""));
                             ui.set_password_input(s(""));
                             ui.set_my_qr(qr_image(&format!("nostr:{npub}")));
                             ui.set_my_npub(npub.into());
                             ui.set_logged_in(true);
-                            boot(nsec, vault);
+                            boot(nsec, vault, active);
                         }
                         Err(err) => {
                             ui.set_login_error(err.into());
@@ -780,7 +1024,7 @@ fn main() -> Result<(), slint::PlatformError> {
                             ui.set_password_input(s(""));
                             ui.set_password_confirm(s(""));
                             ui.set_logged_in(true);
-                            boot(nsec, vault);
+                            boot(nsec, vault, None);
                         }
                         Err(err) => {
                             eprintln!("[login] save failed: {err}");
@@ -1168,7 +1412,7 @@ fn main() -> Result<(), slint::PlatformError> {
             // `boot` re-reads `load_relays()` (already saved below), spawns a
             // fresh runtime, and on success replaces backend_cell + re-pushes
             // the live connection counts via refresh_network_post_boot.
-            boot(nsec, vault);
+            boot(nsec, vault, None);
         })
     };
 
@@ -5159,13 +5403,149 @@ fn merge_chat_list_rows_from(
 ///
 /// The tokio callback can only capture Send data, so we hop into the Slint
 /// event loop and look up the chat models off the UI handle from there.
+/// Everything the UI needs (re)built when an account becomes active — shared
+/// by the boot-success path and the account switcher. Every fetch runs on the
+/// backend runtime and applies on the UI thread; nothing here blocks.
+fn populate_models_for_active(
+    ui: &DarkMatterLinux,
+    backend: &Arc<Backend>,
+    group_ids: &Arc<Mutex<Vec<String>>>,
+    archived_group_ids: &Arc<Mutex<Vec<String>>>,
+) {
+    refresh_chats_async(ui, backend, group_ids, move |ui, b, snap| {
+        // The first chat's extras (members panel, has-older, avatar fetches)
+        // ride the chat-list continuation since they need the snapshot.
+        if let Some(first) = snap.records.first() {
+            push_group_members_to_ui_async(ui, b, &first.group_id_hex);
+            ui.set_messages_has_older(snap.first_msgs.len() >= MESSAGE_WINDOW);
+            spawn_message_avatar_fetches(ui, b, &snap.first_msgs);
+        }
+    });
+    refresh_contacts_async(ui, backend, |_| {});
+    refresh_archived_async(ui, backend, archived_group_ids);
+    populate_profile_async(ui, backend);
+    refresh_kp_local_async(ui, backend);
+    refresh_network_post_boot(backend, ui);
+    // Security & privacy flags live in marmot storage (disk) — read them on
+    // the runtime too.
+    {
+        let weak = ui.as_weak();
+        let b2 = backend.clone();
+        backend.tokio_handle().spawn(async move {
+            let telemetry = b2.telemetry_enabled();
+            let audit = b2.audit_logs_enabled();
+            let _ = slint::invoke_from_event_loop(move || {
+                let Some(ui) = weak.upgrade() else { return };
+                ui.set_telemetry_enabled(telemetry);
+                ui.set_audit_enabled(audit);
+            });
+        });
+    }
+    refresh_audit_files(ui, backend);
+}
+
+/// Rebuild the account-switcher model: one row per local account. Names and
+/// picture URLs resolve from the backend's profile cache on the runtime;
+/// rows apply on the UI thread. Pictures not yet in the process-wide cache
+/// are fetched once, then the model refreshes to pick them up.
+fn refresh_accounts_model(ui: &DarkMatterLinux, backend: &Arc<Backend>) {
+    let weak = ui.as_weak();
+    let b = backend.clone();
+    backend.tokio_handle().spawn(async move {
+        let active_id = b.account().account_id_hex.to_ascii_lowercase();
+        let rows: Vec<(String, String, Option<String>, String)> = b
+            .accounts()
+            .into_iter()
+            .map(|a| {
+                let id = a.account_id_hex.to_ascii_lowercase();
+                let (name, pic) = b.account_name_and_picture(&id);
+                let npub = npub_for_account_id(&id).unwrap_or_else(|_| id.clone());
+                (id, name, pic, npub)
+            })
+            .collect();
+        let b_for_fetch = b.clone();
+        let _ = slint::invoke_from_event_loop(move || {
+            let Some(ui) = weak.upgrade() else { return };
+            let entries: Vec<AccountEntry> = rows
+                .iter()
+                .map(|(id, name, pic, npub)| {
+                    // The active account's cache entry self-names as "You" —
+                    // useless in a list of accounts; use the npub tail. Keep
+                    // the avatar key consistent with `my_avatar_label`.
+                    let unnamed = name.is_empty() || name == "You";
+                    let display = if unnamed { shorten_npub(npub) } else { name.clone() };
+                    let av_key = if unnamed { id.clone() } else { name.clone() };
+                    let (col_a, col_b, init) = avatar_for(&av_key);
+                    let (picture, has_picture) = bind_cached_picture(pic.as_deref());
+                    AccountEntry {
+                        id: s(id),
+                        name: s(&display),
+                        npub_short: s(&shorten_npub(npub)),
+                        av_a: col_a,
+                        av_b: col_b,
+                        av_initials: s(&init),
+                        picture,
+                        has_picture,
+                        active: *id == active_id,
+                    }
+                })
+                .collect();
+            ui.set_accounts(ModelRc::new(VecModel::from(entries)));
+
+            let missing: Vec<String> = rows
+                .iter()
+                .filter_map(|(_, _, pic, _)| pic.as_deref())
+                .map(|u| u.trim().to_string())
+                .filter(|u| !u.is_empty() && !picture_cache_has(u))
+                .collect();
+            if missing.is_empty() {
+                return;
+            }
+            let weak = ui.as_weak();
+            let b = b_for_fetch.clone();
+            b_for_fetch.tokio_handle().spawn(async move {
+                let mut any_cached = false;
+                for url in missing {
+                    let Ok(resp) = reqwest::get(&url).await else { continue };
+                    let Ok(bytes) = resp.bytes().await else { continue };
+                    let Ok(pixels) = decode_avatar_pixels(&bytes) else { continue };
+                    picture_cache_put(url, pixels);
+                    any_cached = true;
+                }
+                // Only re-run when something actually landed — a permanently
+                // failing URL must not loop the refresh forever.
+                if !any_cached {
+                    return;
+                }
+                let _ = slint::invoke_from_event_loop(move || {
+                    let Some(ui) = weak.upgrade() else { return };
+                    refresh_accounts_model(&ui, &b);
+                });
+            });
+        });
+    });
+}
+
+/// Write one vault entry off the UI thread (every mutation re-seals the whole
+/// map and rewrites the file). Best-effort: failures are logged, not surfaced.
+fn vault_set_async(vault: &Arc<Mutex<Vault>>, key: String, value: String) {
+    let vault = vault.clone();
+    std::thread::spawn(move || {
+        let mut v = vault.lock().unwrap();
+        if let Err(e) = v.set(&key, &value) {
+            eprintln!("[vault] set {key} failed: {e}");
+        }
+    });
+}
+
 fn install_chat_watcher(
     backend: &Backend,
     weak: Weak<DarkMatterLinux>,
     group_ids: Arc<Mutex<Vec<String>>>,
     backend_cell: Arc<Mutex<Option<Arc<Backend>>>>,
+    watcher_cell: &Arc<Mutex<Option<JoinHandle<()>>>>,
 ) {
-    backend.watch_chats(move |record| {
+    let handle = backend.watch_chats(move |record| {
         let weak = weak.clone();
         let group_ids = group_ids.clone();
         let backend_cell = backend_cell.clone();
@@ -5214,6 +5594,10 @@ fn install_chat_watcher(
             set_rail_badges(&ui, &chats);
         });
     });
+    // Replace (and stop) any watcher from a previously-active account.
+    if let Some(old) = watcher_cell.lock().unwrap().replace(handle) {
+        old.abort();
+    }
 }
 
 // ─── marmot record → Slint struct converters ──────────────────────────

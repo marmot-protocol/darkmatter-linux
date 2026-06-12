@@ -1,0 +1,26 @@
+import { Palette, Theme } from "../tokens.slint";
+
+// Two overlapping avatar circles — the account-switcher glyph.
+export component AccountsIcon inherits Rectangle {
+    in property <color> stroke: Palette.text-mid;
+    width: 18px; height: 16px;
+    // Back circle, top-left, dimmed.
+    if !Theme.retro : Rectangle {
+        x: 0px; y: 0px;
+        width: 10px; height: 10px;
+        border-radius: 5px;
+        border-width: 1.4px; border-color: root.stroke;
+        opacity: 0.55;
+    }
+    // Front circle, bottom-right, on top.
+    if !Theme.retro : Rectangle {
+        x: 6px; y: 5px;
+        width: 11px; height: 11px;
+        border-radius: 5.5px;
+        border-width: 1.4px; border-color: root.stroke;
+        background: Palette.rail;
+    }
+    // Retro: two offset pixel blocks.
+    if Theme.retro : Rectangle { x: 0px; y: 0px; width: 9px; height: 9px; background: root.stroke; opacity: 0.55; }
+    if Theme.retro : Rectangle { x: 7px; y: 6px; width: 10px; height: 10px; background: root.stroke; }
+}

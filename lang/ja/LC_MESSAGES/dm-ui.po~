@@ -2,7 +2,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-06-12 02:04+0000\n"
+"POT-Creation-Date: 2026-06-12 04:40+0000\n"
 "PO-Revision-Date: 2026-05-27 13:20+0000\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -255,25 +255,25 @@ msgctxt "ContactsSidebar"
 msgid "Search contacts…"
 msgstr "連絡先を検索…"
 
-#: ui/dark-matter-linux.slint:268
+#: ui/dark-matter-linux.slint:270
 msgctxt "DarkMatterLinux"
 msgid "Connecting to relays…"
 msgstr "リレーに接続中…"
 
-#: ui/dark-matter-linux.slint:774
+#: ui/dark-matter-linux.slint:777
 #, fuzzy
 msgctxt "DarkMatterLinux"
 msgid "Block this chat request?"
 msgstr "チャットリクエスト"
 
-#: ui/dark-matter-linux.slint:775
+#: ui/dark-matter-linux.slint:778
 msgctxt "DarkMatterLinux"
 msgid ""
 "This declines the invite from {}. It can't be restored unless they invite "
 "you again."
 msgstr ""
 
-#: ui/dark-matter-linux.slint:776
+#: ui/dark-matter-linux.slint:779
 #, fuzzy
 msgctxt "DarkMatterLinux"
 msgid "Block"
@@ -1154,127 +1154,132 @@ msgctxt "AvatarEditable"
 msgid "Uploading…"
 msgstr "保存中…"
 
-#: ui/profile/profile-page.slint:261
+#: ui/profile/profile-page.slint:263
 msgctxt "ProfilePage"
 msgid "Your profile"
 msgstr "あなたのプロフィール"
 
-#: ui/profile/profile-page.slint:268
+#: ui/profile/profile-page.slint:270
 msgctxt "ProfilePage"
 msgid "EDITING · BROADCAST TO RELAYS ON SAVE"
 msgstr "編集中 · 保存時にリレーへ配信"
 
-#: ui/profile/profile-page.slint:269
+#: ui/profile/profile-page.slint:271
 msgctxt "ProfilePage"
 msgid "VISIBLE TO ANYONE YOU CHAT WITH"
 msgstr "チャット相手全員に公開"
 
-#: ui/profile/profile-page.slint:279
+#: ui/profile/profile-page.slint:281
 msgctxt "ProfilePage"
 msgid "Edit profile"
 msgstr "プロフィールを編集"
 
-#: ui/profile/profile-page.slint:297
+#: ui/profile/profile-page.slint:299
 msgctxt "ProfilePage"
 msgid "Saving…"
 msgstr "保存中…"
 
-#: ui/profile/profile-page.slint:297
+#: ui/profile/profile-page.slint:299
 msgctxt "ProfilePage"
 msgid "Save"
 msgstr "保存"
 
-#: ui/profile/profile-page.slint:308
+#: ui/profile/profile-page.slint:310
 msgctxt "ProfilePage"
 msgid "Cancel"
 msgstr "キャンセル"
 
-#: ui/profile/profile-page.slint:372
+#: ui/profile/profile-page.slint:374
 msgctxt "ProfilePage"
 msgid "(no display name)"
 msgstr "(表示名なし)"
 
-#: ui/profile/profile-page.slint:392
+#: ui/profile/profile-page.slint:394
 msgctxt "ProfilePage"
 msgid "no handle yet"
 msgstr ""
 
-#: ui/profile/profile-page.slint:429
+#: ui/profile/profile-page.slint:431
 msgctxt "ProfilePage"
 msgid "IDENTITY"
 msgstr "ID"
 
-#: ui/profile/profile-page.slint:433
+#: ui/profile/profile-page.slint:435
 msgctxt "ProfilePage"
 msgid "Your public key. Safe to share."
 msgstr "公開鍵。共有して問題ありません。"
 
-#: ui/profile/profile-page.slint:437
+#: ui/profile/profile-page.slint:438
 msgctxt "ProfilePage"
 msgid "Copy"
 msgstr "コピー"
 
-#: ui/profile/profile-page.slint:449
+#: ui/profile/profile-page.slint:470
+msgctxt "ProfilePage"
+msgid "Scan to add me from another device"
+msgstr "別のデバイスからスキャンして追加"
+
+#: ui/profile/profile-page.slint:481
 msgctxt "ProfilePage"
 msgid "EDIT"
 msgstr "編集"
 
-#: ui/profile/profile-page.slint:452
+#: ui/profile/profile-page.slint:484
 msgctxt "ProfilePage"
 msgid "Display name"
 msgstr "表示名"
 
-#: ui/profile/profile-page.slint:453
+#: ui/profile/profile-page.slint:485
 msgctxt "ProfilePage"
 msgid "How your name appears in chats"
 msgstr "チャットでの表示名"
 
-#: ui/profile/profile-page.slint:457 ui/profile/profile-page.slint:490
+#: ui/profile/profile-page.slint:489 ui/profile/profile-page.slint:522
 msgctxt "ProfilePage"
 msgid "Username"
 msgstr "ユーザー名"
 
-#: ui/profile/profile-page.slint:458
+#: ui/profile/profile-page.slint:490
 msgctxt "ProfilePage"
 msgid "Short handle (no spaces)"
 msgstr "短いハンドル（スペース不可）"
 
-#: ui/profile/profile-page.slint:462
+#: ui/profile/profile-page.slint:494
 msgctxt "ProfilePage"
 msgid "About"
 msgstr "自己紹介"
 
-#: ui/profile/profile-page.slint:463
+#: ui/profile/profile-page.slint:495
 msgctxt "ProfilePage"
 msgid "A line or two about you"
 msgstr "自己紹介を1〜2行"
 
-#: ui/profile/profile-page.slint:478
+#: ui/profile/profile-page.slint:510
 msgctxt "ProfilePage"
 msgid "Lightning address (LUD-16)"
 msgstr "Lightning アドレス (LUD-16)"
 
-#: ui/profile/profile-page.slint:487
+#: ui/profile/profile-page.slint:519
 msgctxt "ProfilePage"
 msgid "PROFILE"
 msgstr "プロフィール"
 
-#: ui/profile/profile-page.slint:498
+#: ui/profile/profile-page.slint:530
 msgctxt "ProfilePage"
 msgid "Lightning"
 msgstr "Lightning"
 
-#: ui/profile/profile-page.slint:502
+#: ui/profile/profile-page.slint:534
 msgctxt "ProfilePage"
 msgid "Picture"
 msgstr "画像"
 
-#: ui/profile/profile-page.slint:503
+#: ui/profile/profile-page.slint:535
 msgctxt "ProfilePage"
 msgid "Not set"
 msgstr ""
 
-#: ui/profile/profile-page.slint:503
+#: ui/profile/profile-page.slint:535
 msgctxt "ProfilePage"
 msgid "Set"
 msgstr ""
@@ -1854,10 +1859,6 @@ msgstr "コマンド"
 #~ msgctxt "StartNewChatModal"
 #~ msgid "or"
 #~ msgstr "または"
-
-#~ msgctxt "StartNewChatModal"
-#~ msgid "Scan QR code from device"
-#~ msgstr "デバイスから QR コードをスキャン"
 
 #~ msgctxt "StartNewChatModal"
 #~ msgid "Start chat"

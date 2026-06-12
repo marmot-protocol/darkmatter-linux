@@ -133,6 +133,20 @@ export global Palette {
     out property <color> banner-edge: Theme.light ? #F6F2EA : #0E1418;
 }
 
+// One signed-in account in the account switcher. All accounts stay connected
+// in the background; `active` marks the one the UI is currently displaying.
+export struct AccountEntry {
+    id: string,           // account-id hex — the switch-account callback key
+    name: string,         // display name (published profile, or npub tail)
+    npub-short: string,
+    av-a: color,
+    av-b: color,
+    av-initials: string,
+    picture: image,
+    has-picture: bool,
+    active: bool,
+}
+
 export struct Contact {
     // Resolved display name: the private nickname when set, else the
     // published profile name. `real-name` always holds the published one.

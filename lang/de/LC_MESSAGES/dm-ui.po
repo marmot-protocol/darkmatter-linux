@@ -2,7 +2,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-06-12 04:40+0000\n"
+"POT-Creation-Date: 2026-06-12 05:18+0000\n"
 "PO-Revision-Date: 2026-05-27 13:20+0000\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -255,25 +255,25 @@ msgctxt "ContactsSidebar"
 msgid "Search contacts…"
 msgstr "Kontakte durchsuchen…"
 
-#: ui/dark-matter-linux.slint:270
+#: ui/dark-matter-linux.slint:272
 msgctxt "DarkMatterLinux"
 msgid "Connecting to relays…"
 msgstr "Verbinde mit Relays…"
 
-#: ui/dark-matter-linux.slint:777
+#: ui/dark-matter-linux.slint:821
 #, fuzzy
 msgctxt "DarkMatterLinux"
 msgid "Block this chat request?"
 msgstr "Chat-Anfrage"
 
-#: ui/dark-matter-linux.slint:778
+#: ui/dark-matter-linux.slint:822
 msgctxt "DarkMatterLinux"
 msgid ""
 "This declines the invite from {}. It can't be restored unless they invite "
 "you again."
 msgstr ""
 
-#: ui/dark-matter-linux.slint:779
+#: ui/dark-matter-linux.slint:823
 #, fuzzy
 msgctxt "DarkMatterLinux"
 msgid "Block"
@@ -548,42 +548,47 @@ msgctxt "KeysPage"
 msgid "Rotate"
 msgstr "Rotieren"
 
-#: ui/left-rail/left-rail.slint:147
+#: ui/left-rail/left-rail.slint:148
 #, fuzzy
 msgctxt "ProfileTile"
 msgid "Profile"
 msgstr "Dein Profil"
 
-#: ui/left-rail/left-rail.slint:230
+#: ui/left-rail/left-rail.slint:233
 msgctxt "LeftRail"
 msgid "Chats"
 msgstr ""
 
-#: ui/left-rail/left-rail.slint:243
+#: ui/left-rail/left-rail.slint:246
 #, fuzzy
 msgctxt "LeftRail"
 msgid "Contacts"
 msgstr "Kontakt"
 
-#: ui/left-rail/left-rail.slint:254
+#: ui/left-rail/left-rail.slint:257
 #, fuzzy
 msgctxt "LeftRail"
 msgid "Archive"
 msgstr "Archivieren"
 
-#: ui/left-rail/left-rail.slint:265
+#: ui/left-rail/left-rail.slint:268
 msgctxt "LeftRail"
 msgid "Keys"
 msgstr ""
 
-#: ui/left-rail/left-rail.slint:278
+#: ui/left-rail/left-rail.slint:281
 msgctxt "LeftRail"
 msgid "New chat"
 msgstr ""
 
-#: ui/left-rail/left-rail.slint:300
+#: ui/left-rail/left-rail.slint:303
 msgctxt "LeftRail"
 msgid "Settings"
+msgstr ""
+
+#: ui/left-rail/left-rail.slint:316
+msgctxt "LeftRail"
+msgid "Accounts"
 msgstr ""
 
 #: ui/login/login-screen.slint:161
@@ -911,6 +916,84 @@ msgstr ""
 msgctxt "MessagesArea"
 msgid "Load earlier messages"
 msgstr "Letzte Nachricht"
+
+#: ui/modals/account-switcher-modal.slint:14
+msgctxt "AccountSwitcherModal"
+msgid "Accounts"
+msgstr ""
+
+#: ui/modals/account-switcher-modal.slint:15
+msgctxt "AccountSwitcherModal"
+msgid ""
+"All accounts stay connected. Switching only changes which one you're looking "
+"at."
+msgstr ""
+
+#: ui/modals/account-switcher-modal.slint:16
+msgctxt "AccountSwitcherModal"
+msgid "Close"
+msgstr ""
+
+#: ui/modals/account-switcher-modal.slint:17
+#, fuzzy
+msgctxt "AccountSwitcherModal"
+msgid "Add account"
+msgstr "Kontakt"
+
+#: ui/modals/account-switcher-modal.slint:79
+#, fuzzy
+msgctxt "AccountSwitcherModal"
+msgid "ACTIVE"
+msgstr "AKTIONEN"
+
+#: ui/modals/add-account-modal.slint:15 ui/modals/add-account-modal.slint:18
+#, fuzzy
+msgctxt "AddAccountModal"
+msgid "Add account"
+msgstr "Kontakt"
+
+#: ui/modals/add-account-modal.slint:16
+msgctxt "AddAccountModal"
+msgid ""
+"Paste another secret key, or generate a fresh one. It's sealed into the same "
+"vault and stays signed in alongside your other accounts."
+msgstr ""
+
+#: ui/modals/add-account-modal.slint:17
+#, fuzzy
+msgctxt "AddAccountModal"
+msgid "Cancel"
+msgstr "Abbrechen"
+
+#: ui/modals/add-account-modal.slint:19
+#, fuzzy
+msgctxt "AddAccountModal"
+msgid "Adding…"
+msgstr "Speichere…"
+
+#: ui/modals/add-account-modal.slint:23
+msgctxt "AddAccountModal"
+msgid "SECRET KEY (NSEC)"
+msgstr ""
+
+#: ui/modals/add-account-modal.slint:34
+#, fuzzy
+msgctxt "AddAccountModal"
+msgid "No second key yet?"
+msgstr "Kontakt entfernen"
+
+#: ui/modals/add-account-modal.slint:47
+#, fuzzy
+msgctxt "AddAccountModal"
+msgid "Generate a new key"
+msgstr "Neuen Schlüssel generieren"
+
+#: ui/modals/add-account-modal.slint:59
+msgctxt "AddAccountModal"
+msgid ""
+"This key was just generated and exists nowhere else yet. Copy it somewhere "
+"safe before adding it — there is no recovery."
+msgstr ""
 
 #: ui/modals/add-contact-modal.slint:11 ui/modals/add-contact-modal.slint:14
 #, fuzzy

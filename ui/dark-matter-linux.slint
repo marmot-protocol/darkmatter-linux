@@ -1,7 +1,7 @@
 // darkmatter — the whole system on one page.
 // Root composition: owns state + data, wires sections together.
 
-import { Palette, Theme, ChatMeta, ChatMessage, Contact, ArchivedChat, GroupMember } from "tokens.slint";
+import { Palette, Theme, ChatMeta, ChatMessage, Contact, ArchivedChat, GroupMember, AccountEntry } from "tokens.slint";
 import { TitleBar } from "title-bar.slint";
 import { LeftRail } from "left-rail/left-rail.slint";
 import { ChatListPanel } from "chat-list.slint";
@@ -17,6 +17,8 @@ import { StatusBar } from "status-bar.slint";
 import { StartNewChatModal } from "modals/start-new-chat-modal.slint";
 import { AddContactModal } from "modals/add-contact-modal.slint";
 import { NicknameModal } from "modals/nickname-modal.slint";
+import { AccountSwitcherModal } from "modals/account-switcher-modal.slint";
+import { AddAccountModal } from "modals/add-account-modal.slint";
 import { ConfirmModal } from "modals/confirm-modal.slint";
 import { CommandPalette, PaletteAction } from "modals/command-palette.slint";
 import { LanguagePickerModal } from "modals/language-picker-modal.slint";
@@ -383,6 +385,24 @@ export component DarkMatterLinux inherits Window {
     callback add-contact(string);
     callback add-contact-dismissed();
 
+    // Multi-account: every account in the vault keeps a live background
+    // session; `accounts` lists them for the switcher modal and
+    // `switch-account` changes which one the UI displays. The add-account
+    // modal imports another nsec into the running runtime — no restart.
+    in property <[AccountEntry]> accounts;
+    in-out property <bool> show-account-switcher: false;
+    in-out property <bool> show-add-account: false;
+    in-out property <string> add-account-nsec;
+    in property <bool> add-account-busy: false;
+    in property <string> add-account-status;
+    in property <bool> add-account-generated: false;
+    callback account-switcher-requested();
+    callback switch-account(string);          // account-id hex
+    callback add-account-requested();         // switcher → add-account modal
+    callback add-account(string);             // nsec
+    callback add-account-dismissed();
+    callback generate-add-account-key();
+
     // Nickname modal state — a private, local-only rename of the active
     // contact. Rust prefills the input and owns persistence (settings.json).
     in-out property <bool> show-nickname-modal: false;
@@ -447,6 +467,7 @@ export component DarkMatterLinux inherits Window {
                 plus-clicked => { root.new-chat-requested(); }
                 settings-clicked => { root.nav-requested(4); }
                 profile-clicked => { root.profile-requested(); }
+                accounts-clicked => { root.account-switcher-requested(); }
             }
 
             // page slot — fills the rest, tracks rail width
@@ -758,6 +779,29 @@ export component DarkMatterLinux inherits Window {
         status: root.add-contact-status;
         add-contact(n) => { root.add-contact(n); }
         dismissed => { root.add-contact-dismissed(); }
+    }
+
+    if root.show-account-switcher : AccountSwitcherModal {
+        x: 0; y: 0;
+        width: root.width;
+        height: root.height;
+        accounts: root.accounts;
+        select(id) => { root.switch-account(id); }
+        add-account => { root.add-account-requested(); }
+        dismissed => { root.show-account-switcher = false; }
+    }
+
+    if root.show-add-account : AddAccountModal {
+        x: 0; y: 0;
+        width: root.width;
+        height: root.height;
+        nsec-text <=> root.add-account-nsec;
+        generated: root.add-account-generated;
+        primary-busy: root.add-account-busy;
+        status: root.add-account-status;
+        add(nsec) => { root.add-account(nsec); }
+        generate => { root.generate-add-account-key(); }
+        dismissed => { root.add-account-dismissed(); }
     }
 
     if root.show-nickname-modal : NicknameModal {

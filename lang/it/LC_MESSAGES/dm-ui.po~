@@ -2,7 +2,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-06-12 02:04+0000\n"
+"POT-Creation-Date: 2026-06-12 04:40+0000\n"
 "PO-Revision-Date: 2026-05-27 13:20+0000\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -255,25 +255,25 @@ msgctxt "ContactsSidebar"
 msgid "Search contacts…"
 msgstr "Cerca contatti…"
 
-#: ui/dark-matter-linux.slint:268
+#: ui/dark-matter-linux.slint:270
 msgctxt "DarkMatterLinux"
 msgid "Connecting to relays…"
 msgstr "Connessione ai relay…"
 
-#: ui/dark-matter-linux.slint:774
+#: ui/dark-matter-linux.slint:777
 #, fuzzy
 msgctxt "DarkMatterLinux"
 msgid "Block this chat request?"
 msgstr "Richiesta chat"
 
-#: ui/dark-matter-linux.slint:775
+#: ui/dark-matter-linux.slint:778
 msgctxt "DarkMatterLinux"
 msgid ""
 "This declines the invite from {}. It can't be restored unless they invite "
 "you again."
 msgstr ""
 
-#: ui/dark-matter-linux.slint:776
+#: ui/dark-matter-linux.slint:779
 #, fuzzy
 msgctxt "DarkMatterLinux"
 msgid "Block"
@@ -1154,127 +1154,132 @@ msgctxt "AvatarEditable"
 msgid "Uploading…"
 msgstr "Salvataggio…"
 
-#: ui/profile/profile-page.slint:261
+#: ui/profile/profile-page.slint:263
 msgctxt "ProfilePage"
 msgid "Your profile"
 msgstr "Il tuo profilo"
 
-#: ui/profile/profile-page.slint:268
+#: ui/profile/profile-page.slint:270
 msgctxt "ProfilePage"
 msgid "EDITING · BROADCAST TO RELAYS ON SAVE"
 msgstr "MODIFICA · TRASMETTE AI RELAY AL SALVATAGGIO"
 
-#: ui/profile/profile-page.slint:269
+#: ui/profile/profile-page.slint:271
 msgctxt "ProfilePage"
 msgid "VISIBLE TO ANYONE YOU CHAT WITH"
 msgstr "VISIBILE A CHIUNQUE CHATTI"
 
-#: ui/profile/profile-page.slint:279
+#: ui/profile/profile-page.slint:281
 msgctxt "ProfilePage"
 msgid "Edit profile"
 msgstr "Modifica profilo"
 
-#: ui/profile/profile-page.slint:297
+#: ui/profile/profile-page.slint:299
 msgctxt "ProfilePage"
 msgid "Saving…"
 msgstr "Salvataggio…"
 
-#: ui/profile/profile-page.slint:297
+#: ui/profile/profile-page.slint:299
 msgctxt "ProfilePage"
 msgid "Save"
 msgstr "Salva"
 
-#: ui/profile/profile-page.slint:308
+#: ui/profile/profile-page.slint:310
 msgctxt "ProfilePage"
 msgid "Cancel"
 msgstr "Annulla"
 
-#: ui/profile/profile-page.slint:372
+#: ui/profile/profile-page.slint:374
 msgctxt "ProfilePage"
 msgid "(no display name)"
 msgstr "(nessun nome visualizzato)"
 
-#: ui/profile/profile-page.slint:392
+#: ui/profile/profile-page.slint:394
 msgctxt "ProfilePage"
 msgid "no handle yet"
 msgstr ""
 
-#: ui/profile/profile-page.slint:429
+#: ui/profile/profile-page.slint:431
 msgctxt "ProfilePage"
 msgid "IDENTITY"
 msgstr "IDENTITÀ"
 
-#: ui/profile/profile-page.slint:433
+#: ui/profile/profile-page.slint:435
 msgctxt "ProfilePage"
 msgid "Your public key. Safe to share."
 msgstr "La tua chiave pubblica. Sicura da condividere."
 
-#: ui/profile/profile-page.slint:437
+#: ui/profile/profile-page.slint:438
 msgctxt "ProfilePage"
 msgid "Copy"
 msgstr "Copia"
 
-#: ui/profile/profile-page.slint:449
+#: ui/profile/profile-page.slint:470
+msgctxt "ProfilePage"
+msgid "Scan to add me from another device"
+msgstr "Scansiona per aggiungermi da un altro dispositivo"
+
+#: ui/profile/profile-page.slint:481
 msgctxt "ProfilePage"
 msgid "EDIT"
 msgstr "MODIFICA"
 
-#: ui/profile/profile-page.slint:452
+#: ui/profile/profile-page.slint:484
 msgctxt "ProfilePage"
 msgid "Display name"
 msgstr "Nome visualizzato"
 
-#: ui/profile/profile-page.slint:453
+#: ui/profile/profile-page.slint:485
 msgctxt "ProfilePage"
 msgid "How your name appears in chats"
 msgstr "Come appare il tuo nome nelle chat"
 
-#: ui/profile/profile-page.slint:457 ui/profile/profile-page.slint:490
+#: ui/profile/profile-page.slint:489 ui/profile/profile-page.slint:522
 msgctxt "ProfilePage"
 msgid "Username"
 msgstr "Nome utente"
 
-#: ui/profile/profile-page.slint:458
+#: ui/profile/profile-page.slint:490
 msgctxt "ProfilePage"
 msgid "Short handle (no spaces)"
 msgstr "Handle breve (senza spazi)"
 
-#: ui/profile/profile-page.slint:462
+#: ui/profile/profile-page.slint:494
 msgctxt "ProfilePage"
 msgid "About"
 msgstr "Informazioni"
 
-#: ui/profile/profile-page.slint:463
+#: ui/profile/profile-page.slint:495
 msgctxt "ProfilePage"
 msgid "A line or two about you"
 msgstr "Una riga o due su di te"
 
-#: ui/profile/profile-page.slint:478
+#: ui/profile/profile-page.slint:510
 msgctxt "ProfilePage"
 msgid "Lightning address (LUD-16)"
 msgstr "Indirizzo Lightning (LUD-16)"
 
-#: ui/profile/profile-page.slint:487
+#: ui/profile/profile-page.slint:519
 msgctxt "ProfilePage"
 msgid "PROFILE"
 msgstr "PROFILO"
 
-#: ui/profile/profile-page.slint:498
+#: ui/profile/profile-page.slint:530
 msgctxt "ProfilePage"
 msgid "Lightning"
 msgstr "Lightning"
 
-#: ui/profile/profile-page.slint:502
+#: ui/profile/profile-page.slint:534
 msgctxt "ProfilePage"
 msgid "Picture"
 msgstr "Immagine"
 
-#: ui/profile/profile-page.slint:503
+#: ui/profile/profile-page.slint:535
 msgctxt "ProfilePage"
 msgid "Not set"
 msgstr ""
 
-#: ui/profile/profile-page.slint:503
+#: ui/profile/profile-page.slint:535
 msgctxt "ProfilePage"
 msgid "Set"
 msgstr ""
@@ -1855,10 +1860,6 @@ msgstr "COMANDO"
 #~ msgctxt "StartNewChatModal"
 #~ msgid "or"
 #~ msgstr "oppure"
-
-#~ msgctxt "StartNewChatModal"
-#~ msgid "Scan QR code from device"
-#~ msgstr "Scansiona codice QR dal dispositivo"
 
 #~ msgctxt "StartNewChatModal"
 #~ msgid "Start chat"

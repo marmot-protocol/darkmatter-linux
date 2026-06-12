@@ -6,6 +6,7 @@ import { ArchiveIcon } from "../icons/archive-icon.slint";
 import { KeyIcon } from "../icons/key-icon.slint";
 import { PlusIcon } from "../icons/plus-icon.slint";
 import { SettingsIcon } from "../icons/settings-icon.slint";
+import { AccountsIcon } from "../icons/accounts-icon.slint";
 import { Avatar } from "../primitives/avatar.slint";
 import { MiniBadge } from "../primitives/unread-badge.slint";
 import { Tooltip } from "../primitives/tooltip.slint";
@@ -161,6 +162,7 @@ export component LeftRail inherits Rectangle {
     callback plus-clicked;
     callback settings-clicked;
     callback profile-clicked;
+    callback accounts-clicked;
 
     in property <int> selected-index: 0;
     in property <string> my-initials: "?";
@@ -209,6 +211,7 @@ export component LeftRail inherits Rectangle {
         || nav3.item-hovered
         || nav-new.item-hovered
         || nav-settings.item-hovered
+        || nav-accounts.item-hovered
         || profile.item-hovered;
 
     // Content.
@@ -305,6 +308,18 @@ export component LeftRail inherits Rectangle {
                 stroke: root.selected-index == 4 ? root.selected-glyph : Palette.text-mid;
             }
             clicked => { root.settings-clicked(); }
+        }
+
+        // Account switcher — all accounts stay connected; this picks the
+        // displayed one.
+        nav-accounts := NavItem {
+            label: @tr("Accounts");
+            rail-expanded: root.is-hovered;
+            rail-width: root.width;
+            AccountsIcon {
+                stroke: Palette.text-mid;
+            }
+            clicked => { root.accounts-clicked(); }
         }
 
         Rectangle { vertical-stretch: 1; }

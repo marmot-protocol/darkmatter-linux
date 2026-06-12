@@ -11,7 +11,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 
 use anyhow::{Context, Result, anyhow};
 use cgka_traits::GroupId;
@@ -115,7 +115,12 @@ pub struct Backend {
     app: MarmotApp,
     runtime: MarmotAppRuntime,
     account_home: AccountHome,
-    account: AccountSummary,
+    /// The account whose chats/contacts/profile the UI is currently showing.
+    /// Every account in the home has a running worker (marmot's
+    /// `AccountManager` reconciles one per local-signing account), so all
+    /// accounts keep receiving in the background — this only selects the
+    /// *displayed* one. Swapped by [`Backend::set_active_account`].
+    active: RwLock<AccountSummary>,
     home: PathBuf,
     relays: Vec<String>,
     /// Per-group member lists, refreshed asynchronously. UI-thread reads MUST
@@ -148,10 +153,15 @@ impl Backend {
     /// as soon as local storage is open; the network phase can lag by tens of
     /// seconds when a relay misbehaves (auth failure → full connection
     /// timeout), and the UI must not wait on it.
+    /// `active_account` is a hint (account-id hex) naming which of the home's
+    /// accounts the UI should display first — the last one the user had
+    /// active. Falls back to the `nsec`-derived account when absent or no
+    /// longer present in the home.
     pub fn boot(
         nsec: &str,
         relays: Vec<String>,
         secret_store: Arc<dyn AccountSecretStore>,
+        active_account: Option<String>,
         on_synced: impl FnOnce(Result<()>) + Send + 'static,
     ) -> Result<Self> {
         let t_boot = std::time::Instant::now();
@@ -202,13 +212,24 @@ impl Backend {
             eprintln!("[boot-timing] first-run login done at {:?}", t_boot.elapsed());
         }
 
-        // Resolve the account we'll talk to from this point forward.
-        let account = account_home
-            .accounts()
-            .context("list accounts after login")?
-            .into_iter()
+        // Resolve the account the UI will display first. Every account in
+        // the home gets a running worker regardless; this only picks the
+        // initial view. Prefer the caller's last-active hint when that
+        // account still exists, otherwise the nsec-derived one.
+        let all_accounts = account_home.accounts().context("list accounts after login")?;
+        let account = all_accounts
+            .iter()
             .find(|a| a.account_id_hex == target_id)
+            .cloned()
             .ok_or_else(|| anyhow!("account did not appear in home after login"))?;
+        let account = active_account
+            .and_then(|hint| {
+                all_accounts
+                    .iter()
+                    .find(|a| a.account_id_hex.eq_ignore_ascii_case(&hint))
+                    .cloned()
+            })
+            .unwrap_or(account);
 
         // A low-frequency background poll so invites that arrive while
         // the app is running show up without requiring user action. 15s is
@@ -232,7 +253,7 @@ impl Backend {
             app,
             runtime,
             account_home,
-            account,
+            active: RwLock::new(account),
             home,
             relays,
             members_cache: Arc::new(Mutex::new(HashMap::new())),
@@ -298,7 +319,7 @@ impl Backend {
         let account_home = self.account_home.clone();
         let app = self.app.clone();
         let relays = self.relays.clone();
-        let label = self.account.label.clone();
+        let label = self.active_label();
         std::thread::spawn(move || {
             let t_sync = std::time::Instant::now();
             let result = (|| -> Result<()> {
@@ -409,7 +430,7 @@ impl Backend {
                 endpoint: Some(cfg.goggles_audit_endpoint.clone()),
                 authorization_bearer_token: Some(cfg.goggles_token.clone()),
                 source: AuditLogUploadSource {
-                    account_label: Some(self.account.label.clone()),
+                    account_label: Some(self.active_label()),
                     platform: Some("linux".to_string()),
                     app_version: Some(env!("CARGO_PKG_VERSION").to_string()),
                     ..AuditLogUploadSource::default()
@@ -483,8 +504,150 @@ impl Backend {
         Ok(())
     }
 
-    pub fn account(&self) -> &AccountSummary {
-        &self.account
+    /// Snapshot of the currently-displayed account.
+    pub fn account(&self) -> AccountSummary {
+        self.active.read().unwrap().clone()
+    }
+
+    /// Label of the active account (the key every marmot runtime API takes).
+    fn active_label(&self) -> String {
+        self.active.read().unwrap().label.clone()
+    }
+
+    /// Account-id hex of the active account.
+    fn active_id(&self) -> String {
+        self.active.read().unwrap().account_id_hex.clone()
+    }
+
+    /// All local-signing accounts in the home, in storage order. Every one of
+    /// these has (or is getting) a running background worker.
+    pub fn accounts(&self) -> Vec<AccountSummary> {
+        self.account_home
+            .accounts()
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|a| a.local_signing)
+            .collect()
+    }
+
+    /// Switch the displayed account. Cheap and synchronous: swaps the active
+    /// summary and drops the members/profile caches (they encode the previous
+    /// account's perspective — group membership and the "You" self-name), then
+    /// queues an async re-warm. The UI layer is responsible for rebuilding its
+    /// models and re-subscribing its watchers afterwards.
+    pub fn set_active_account(&self, account_id_hex: &str) -> Result<AccountSummary> {
+        let summary = self
+            .accounts()
+            .into_iter()
+            .find(|a| a.account_id_hex.eq_ignore_ascii_case(account_id_hex))
+            .ok_or_else(|| anyhow!("no account {account_id_hex} in the home"))?;
+        *self.active.write().unwrap() = summary.clone();
+        self.members_cache.lock().unwrap().clear();
+        self.profile_cache.lock().unwrap().clear();
+        self.rewarm_caches_async();
+        Ok(summary)
+    }
+
+    /// Background refill of the members + profile caches for the active
+    /// account — the async sibling of the synchronous boot-time warmers.
+    /// Until it lands, cache misses fall back to hex tails and queue their
+    /// own per-entry refreshes, so this is convergence-speed, not correctness.
+    fn rewarm_caches_async(&self) {
+        let app = self.app.clone();
+        let runtime = self.runtime.clone();
+        let label = self.active_label();
+        let me = self.active_id();
+        let members_cache = self.members_cache.clone();
+        let profile_cache = self.profile_cache.clone();
+        self.tokio.spawn(async move {
+            let groups = app.groups(&label).unwrap_or_default();
+            let mut ids: HashSet<String> = HashSet::new();
+            ids.insert(me.to_ascii_lowercase());
+            for g in &groups {
+                let Ok(group_id) = group_id_from_hex(&g.group_id_hex) else {
+                    continue;
+                };
+                match runtime.group_members(&label, &group_id).await {
+                    Ok(members) => {
+                        for m in &members {
+                            ids.insert(m.member_id_hex.to_ascii_lowercase());
+                        }
+                        members_cache
+                            .lock()
+                            .unwrap()
+                            .insert(g.group_id_hex.clone(), members);
+                    }
+                    Err(e) => {
+                        eprintln!("[backend] rewarm members ({}) failed: {e}", g.group_id_hex)
+                    }
+                }
+            }
+            for id in ids {
+                let v = Self::name_and_picture_direct(&app, &me, &id);
+                profile_cache.lock().unwrap().insert(id, v);
+            }
+        });
+    }
+
+    /// Import another account into the *running* runtime and start its
+    /// worker — marmot's `create_or_import_account` ends with a reconcile, so
+    /// the new account begins receiving immediately, no restart needed.
+    /// Non-blocking: the login round-trip (relay-list + key-package publish)
+    /// runs on the tokio runtime; `on_done` fires on a worker thread with the
+    /// new account's summary. Does NOT change the active account.
+    pub fn add_account_async<F>(&self, nsec: String, on_done: F)
+    where
+        F: FnOnce(Result<AccountSummary>) + Send + 'static,
+    {
+        let target_id = match AccountHome::account_id_for_secret(&nsec) {
+            Ok(id) => id,
+            Err(e) => {
+                on_done(Err(anyhow!("derive account id from nsec: {e}")));
+                return;
+            }
+        };
+        if self
+            .accounts()
+            .iter()
+            .any(|a| a.account_id_hex.eq_ignore_ascii_case(&target_id))
+        {
+            on_done(Err(anyhow!("that account is already added")));
+            return;
+        }
+        let endpoints: Vec<TransportEndpoint> = self
+            .relays
+            .iter()
+            .cloned()
+            .map(TransportEndpoint::from)
+            .collect();
+        let request = AccountSetupRequest {
+            identity: None, // runtime.login() fills this from the nsec
+            default_relays: endpoints.clone(),
+            bootstrap_relays: endpoints,
+            // Same rationale as login_account: only publish when there is
+            // somewhere to publish to.
+            publish_missing_relay_lists: !self.relays.is_empty(),
+            publish_initial_key_package: !self.relays.is_empty(),
+        };
+        let runtime = self.runtime.clone();
+        let account_home = self.account_home.clone();
+        self.tokio.spawn(async move {
+            let result = match runtime.login(nsec, request).await {
+                Ok(_) => account_home
+                    .accounts()
+                    .context("list accounts after login")
+                    .and_then(|accounts| {
+                        accounts
+                            .into_iter()
+                            .find(|a| a.account_id_hex.eq_ignore_ascii_case(&target_id))
+                            .ok_or_else(|| {
+                                anyhow!("account did not appear in home after login")
+                            })
+                    }),
+                Err(e) => Err(anyhow!("login: {e}")),
+            };
+            on_done(result);
+        });
     }
 
     /// Handle to the in-process tokio runtime, so callers can spawn their own
@@ -504,7 +667,7 @@ impl Backend {
         // spawns a live-update forwarder task and a broadcast subscriber per
         // call that we'd immediately throw away.
         self.app
-            .visible_groups(&self.account.label)
+            .visible_groups(&self.active_label())
             .map_err(|e| anyhow!("visible_groups: {e}"))
     }
 
@@ -512,7 +675,7 @@ impl Backend {
     pub fn archived_chats(&self) -> Result<Vec<AppGroupRecord>> {
         Ok(self
             .app
-            .groups(&self.account.label)
+            .groups(&self.active_label())
             .map_err(|e| anyhow!("groups: {e}"))?
             .into_iter()
             .filter(|g| g.archived)
@@ -530,7 +693,7 @@ impl Backend {
         };
         let mut snapshot = self
             .runtime
-            .messages_with_query(&self.account.label, query)
+            .messages_with_query(&self.active_label(), query)
             .ok()?;
         // snapshot is oldest-first; walk back to find the most recent visible
         // entry.
@@ -548,7 +711,7 @@ impl Backend {
     pub fn load_profile(&self) -> Result<Option<UserProfileMetadata>> {
         let entry = self
             .app
-            .directory_entry_for_account_id(&self.account.account_id_hex)
+            .directory_entry_for_account_id(&self.active_id())
             .map_err(|e| anyhow!("directory_entry: {e}"))?;
         Ok(entry.and_then(|e| e.profile))
     }
@@ -568,7 +731,7 @@ impl Backend {
             .map(TransportEndpoint::from)
             .collect();
         let bootstrap = AccountRelayListBootstrap::new(endpoints.clone(), endpoints);
-        let label = self.account.label.clone();
+        let label = self.active_label();
         let runtime = self.runtime.clone();
         self.tokio.block_on(async move {
             runtime
@@ -590,7 +753,7 @@ impl Backend {
     where
         F: FnOnce(Result<String>) + Send + 'static,
     {
-        let keys = match self.account_home.load_signing_keys(&self.account.label) {
+        let keys = match self.account_home.load_signing_keys(&self.active_label()) {
             Ok(keys) => keys,
             Err(e) => {
                 on_done(Err(anyhow!("load signing keys: {e}")));
@@ -610,7 +773,7 @@ impl Backend {
     pub fn follow_list(&self) -> Result<Vec<UserDirectoryRecord>> {
         let me = match self
             .app
-            .directory_entry_for_account_id(&self.account.account_id_hex)
+            .directory_entry_for_account_id(&self.active_id())
             .map_err(|e| anyhow!("directory_entry: {e}"))?
         {
             Some(entry) => entry,
@@ -635,12 +798,12 @@ impl Backend {
         let account_id_hex = nostr::PublicKey::parse(who)
             .map_err(|_| anyhow!("not a valid npub or hex pubkey"))?
             .to_hex();
-        if account_id_hex.eq_ignore_ascii_case(&self.account.account_id_hex) {
+        if account_id_hex.eq_ignore_ascii_case(&self.active_id()) {
             return Err(anyhow!("that's your own key"));
         }
         let mut follows = self
             .app
-            .directory_entry_for_account_id(&self.account.account_id_hex)
+            .directory_entry_for_account_id(&self.active_id())
             .map_err(|e| anyhow!("directory_entry: {e}"))?
             .map(|e| e.follows)
             .unwrap_or_default();
@@ -664,7 +827,7 @@ impl Backend {
             .map(TransportEndpoint::from)
             .collect();
         let bootstrap = AccountRelayListBootstrap::new(endpoints.clone(), endpoints);
-        let label = self.account.label.clone();
+        let label = self.active_label();
         let runtime = self.runtime.clone();
         self.tokio.block_on(async move {
             runtime
@@ -677,7 +840,7 @@ impl Backend {
         // discovery set so the sidebar updates now and the peer's profile/relay
         // lists (possibly only on the whitenoise discovery relays) get cached.
         let app = self.app.clone();
-        let me = self.account.account_id_hex.clone();
+        let me = self.active_id();
         let broad = self.discovery_relays();
         self.tokio
             .block_on(async move { app.refresh_user_directory_for_account_id(&me, broad).await })
@@ -695,7 +858,7 @@ impl Backend {
             limit,
         };
         self.runtime
-            .messages_with_query(&self.account.label, query)
+            .messages_with_query(&self.active_label(), query)
             .map_err(|e| anyhow!("messages_with_query: {e}"))
     }
 
@@ -705,7 +868,7 @@ impl Backend {
     pub fn send_text(&self, group_hex: &str, text: &str) -> Result<SendSummary> {
         let bytes = hex::decode(group_hex).context("decode group id")?;
         let group_id = GroupId::new(bytes);
-        let label = self.account.label.clone();
+        let label = self.active_label();
         let runtime = self.runtime.clone();
         let payload = text.as_bytes().to_vec();
         eprintln!(
@@ -748,7 +911,7 @@ impl Backend {
                 return;
             }
         };
-        let label = self.account.label.clone();
+        let label = self.active_label();
         let runtime = self.runtime.clone();
         let payload = text.as_bytes().to_vec();
         self.tokio.spawn(async move {
@@ -783,7 +946,7 @@ impl Backend {
                 return;
             }
         };
-        let label = self.account.label.clone();
+        let label = self.active_label();
         let runtime = self.runtime.clone();
         let request = MediaUploadRequest {
             attachments: vec![MediaUploadAttachmentRequest {
@@ -825,7 +988,7 @@ impl Backend {
                 return;
             }
         };
-        let label = self.account.label.clone();
+        let label = self.active_label();
         let runtime = self.runtime.clone();
         self.tokio.spawn(async move {
             let res = runtime
@@ -857,7 +1020,7 @@ impl Backend {
                 return;
             }
         };
-        let label = self.account.label.clone();
+        let label = self.active_label();
         let runtime = self.runtime.clone();
         let parent = parent_message_id_hex.to_string();
         let text = text.to_string();
@@ -884,7 +1047,7 @@ impl Backend {
                 return;
             }
         };
-        let label = self.account.label.clone();
+        let label = self.active_label();
         let runtime = self.runtime.clone();
         let target = message_id_hex.to_string();
         let emoji = emoji.to_string();
@@ -916,7 +1079,7 @@ impl Backend {
                 return;
             }
         };
-        let label = self.account.label.clone();
+        let label = self.active_label();
         let runtime = self.runtime.clone();
         let target = message_id_hex.to_string();
         let content = content.to_string();
@@ -941,7 +1104,7 @@ impl Backend {
                 return;
             }
         };
-        let label = self.account.label.clone();
+        let label = self.active_label();
         let runtime = self.runtime.clone();
         let target = message_id_hex.to_string();
         self.tokio.spawn(async move {
@@ -956,7 +1119,7 @@ impl Backend {
     /// Add a reaction (`emoji`) to a message in `group_hex`.
     pub fn react(&self, group_hex: &str, message_id_hex: &str, emoji: &str) -> Result<SendSummary> {
         let group_id = group_id_from_hex(group_hex)?;
-        let label = self.account.label.clone();
+        let label = self.active_label();
         let runtime = self.runtime.clone();
         let target = message_id_hex.to_string();
         let emoji = emoji.to_string();
@@ -972,7 +1135,7 @@ impl Backend {
     /// there's no per-emoji unreact, just a blanket clear).
     pub fn unreact(&self, group_hex: &str, message_id_hex: &str) -> Result<SendSummary> {
         let group_id = group_id_from_hex(group_hex)?;
-        let label = self.account.label.clone();
+        let label = self.active_label();
         let runtime = self.runtime.clone();
         let target = message_id_hex.to_string();
         self.tokio.block_on(async move {
@@ -987,7 +1150,7 @@ impl Backend {
     /// group is a normal active chat.
     pub fn accept_group_invite(&self, group_hex: &str) -> Result<AppGroupRecord> {
         let group_id = group_id_from_hex(group_hex)?;
-        let label = self.account.label.clone();
+        let label = self.active_label();
         let runtime = self.runtime.clone();
         self.tokio.block_on(async move {
             runtime
@@ -1000,7 +1163,7 @@ impl Backend {
     /// Decline a pending chat-request / group invite. Used for "Block".
     pub fn decline_group_invite(&self, group_hex: &str) -> Result<()> {
         let group_id = group_id_from_hex(group_hex)?;
-        let label = self.account.label.clone();
+        let label = self.active_label();
         let runtime = self.runtime.clone();
         self.tokio.block_on(async move {
             runtime
@@ -1014,7 +1177,7 @@ impl Backend {
     /// Toggle the archived flag on a group. Local-only — no relay traffic.
     pub fn set_group_archived(&self, group_hex: &str, archived: bool) -> Result<AppGroupRecord> {
         self.app
-            .set_group_archived(&self.account.label, group_hex, archived)
+            .set_group_archived(&self.active_label(), group_hex, archived)
             .map_err(|e| anyhow!("set_group_archived: {e}"))
     }
 
@@ -1053,7 +1216,7 @@ impl Backend {
                 return;
             }
         }
-        let label = self.account.label.clone();
+        let label = self.active_label();
         let runtime = self.runtime.clone();
         let cache = self.members_cache.clone();
         let inflight = self.members_inflight.clone();
@@ -1078,12 +1241,12 @@ impl Backend {
     /// couple of seconds later.
     fn warm_members_cache(&self) {
         let t = std::time::Instant::now();
-        let groups = self.app.groups(&self.account.label).unwrap_or_default();
+        let groups = self.app.groups(&self.active_label()).unwrap_or_default();
         for g in &groups {
             let Ok(group_id) = group_id_from_hex(&g.group_id_hex) else {
                 continue;
             };
-            let label = self.account.label.clone();
+            let label = self.active_label();
             let rt = self.runtime.clone();
             match self
                 .tokio
@@ -1109,7 +1272,7 @@ impl Backend {
 
     pub fn group_mls_state(&self, group_hex: &str) -> Result<AppGroupMlsState> {
         let group_id = group_id_from_hex(group_hex)?;
-        let label = self.account.label.clone();
+        let label = self.active_label();
         let runtime = self.runtime.clone();
         self.tokio.block_on(async move {
             runtime
@@ -1141,7 +1304,7 @@ impl Backend {
             return v.clone();
         }
         self.refresh_profile_cache_async(account_id_hex);
-        let fallback = if account_id_hex.eq_ignore_ascii_case(&self.account.account_id_hex) {
+        let fallback = if account_id_hex.eq_ignore_ascii_case(&self.active_id()) {
             "You".to_string()
         } else {
             short_account_id(account_id_hex)
@@ -1190,7 +1353,7 @@ impl Backend {
             }
         }
         let app = self.app.clone();
-        let me = self.account.account_id_hex.clone();
+        let me = self.active_id();
         let cache = self.profile_cache.clone();
         let inflight = self.profile_inflight.clone();
         self.tokio.spawn(async move {
@@ -1216,7 +1379,7 @@ impl Backend {
     fn warm_profile_cache(&self) {
         let t = std::time::Instant::now();
         let mut ids: HashSet<String> = HashSet::new();
-        ids.insert(self.account.account_id_hex.to_ascii_lowercase());
+        ids.insert(self.active_id().to_ascii_lowercase());
         for members in self.members_cache.lock().unwrap().values() {
             for m in members {
                 ids.insert(m.member_id_hex.to_ascii_lowercase());
@@ -1229,7 +1392,7 @@ impl Backend {
         }
         let count = ids.len();
         for id in ids {
-            let v = Self::name_and_picture_direct(&self.app, &self.account.account_id_hex, &id);
+            let v = Self::name_and_picture_direct(&self.app, &self.active_id(), &id);
             self.profile_cache.lock().unwrap().insert(id, v);
         }
         eprintln!(
@@ -1243,7 +1406,7 @@ impl Backend {
     /// account isn't cached yet; callers fall back to
     /// [`Backend::fetch_profile_async`].
     pub fn cached_profile(&self, account_id_hex: &str) -> Option<UserProfileMetadata> {
-        if account_id_hex.eq_ignore_ascii_case(&self.account.account_id_hex) {
+        if account_id_hex.eq_ignore_ascii_case(&self.active_id()) {
             return self.load_profile().ok().flatten();
         }
         self.app
@@ -1286,7 +1449,7 @@ impl Backend {
         if members.len() != 2 {
             return None;
         }
-        let me = &self.account.account_id_hex;
+        let me = &self.active_id();
         members
             .into_iter()
             .map(|m| m.member_id_hex)
@@ -1311,7 +1474,7 @@ impl Backend {
         }
         let status = self
             .app
-            .account_relay_list_status_for_account_id(&self.account.account_id_hex)
+            .account_relay_list_status_for_account_id(&self.active_id())
             .map_err(|e| anyhow!("account_relay_list_status: {e}"))?;
         if status.complete {
             return Ok(());
@@ -1322,7 +1485,7 @@ impl Backend {
             .cloned()
             .map(TransportEndpoint::from)
             .collect();
-        let label = self.account.label.clone();
+        let label = self.active_label();
         let runtime = self.runtime.clone();
         let missing = status.missing.clone();
         self.tokio.block_on(async move {
@@ -1363,7 +1526,7 @@ impl Backend {
             .cloned()
             .map(TransportEndpoint::from)
             .collect();
-        let label = self.account.label.clone();
+        let label = self.active_label();
         let runtime = self.runtime.clone();
         let count = self.relays.len();
         self.tokio.block_on(async move {
@@ -1454,7 +1617,7 @@ impl Backend {
         // can be unambiguously attributed to us vs. a peer.
         match self
             .app
-            .account_relay_list_status_for_account_id(&self.account.account_id_hex)
+            .account_relay_list_status_for_account_id(&self.active_id())
         {
             Ok(status) => tracing::info!(
                 target: "backend::create_group",
@@ -1482,7 +1645,7 @@ impl Backend {
             ));
         }
 
-        let label = self.account.label.clone();
+        let label = self.active_label();
         let members = members.to_vec();
         let runtime = self.runtime.clone();
         let name = name.to_string();
@@ -1500,7 +1663,7 @@ impl Backend {
     /// peer's key package off the relay set before committing.
     pub fn invite_members(&self, group_hex: &str, members: &[String]) -> Result<SendSummary> {
         let group_id = group_id_from_hex(group_hex)?;
-        let label = self.account.label.clone();
+        let label = self.active_label();
         let members = members.to_vec();
         let runtime = self.runtime.clone();
         self.tokio.block_on(async move {
@@ -1517,7 +1680,7 @@ impl Backend {
     /// `member_id_hex` from a group-member record works directly.
     pub fn promote_admin(&self, group_hex: &str, member_ref: &str) -> Result<SendSummary> {
         let group_id = group_id_from_hex(group_hex)?;
-        let label = self.account.label.clone();
+        let label = self.active_label();
         let member_ref = member_ref.to_string();
         let runtime = self.runtime.clone();
         self.tokio.block_on(async move {
@@ -1533,7 +1696,7 @@ impl Backend {
     /// npub, hex pubkey, or known account label.
     pub fn demote_admin(&self, group_hex: &str, member_ref: &str) -> Result<SendSummary> {
         let group_id = group_id_from_hex(group_hex)?;
-        let label = self.account.label.clone();
+        let label = self.active_label();
         let member_ref = member_ref.to_string();
         let runtime = self.runtime.clone();
         self.tokio.block_on(async move {
@@ -1547,7 +1710,7 @@ impl Backend {
     /// Relinquish the active account's own admin rights on `group_hex`.
     pub fn self_demote_admin(&self, group_hex: &str) -> Result<SendSummary> {
         let group_id = group_id_from_hex(group_hex)?;
-        let label = self.account.label.clone();
+        let label = self.active_label();
         let runtime = self.runtime.clone();
         self.tokio.block_on(async move {
             runtime
@@ -1563,7 +1726,7 @@ impl Backend {
     /// untouched.
     pub fn rename_group(&self, group_hex: &str, new_name: &str) -> Result<SendSummary> {
         let group_id = group_id_from_hex(group_hex)?;
-        let label = self.account.label.clone();
+        let label = self.active_label();
         let name = new_name.to_string();
         let runtime = self.runtime.clone();
         self.tokio.block_on(async move {
@@ -1594,7 +1757,7 @@ impl Backend {
                 return;
             }
         };
-        let label = self.account.label.clone();
+        let label = self.active_label();
         let runtime = self.runtime.clone();
         self.tokio.spawn(async move {
             let result = runtime
@@ -1619,7 +1782,7 @@ impl Backend {
                 return;
             }
         };
-        let label = self.account.label.clone();
+        let label = self.active_label();
         let runtime = self.runtime.clone();
         self.tokio.spawn(async move {
             let result = runtime
@@ -1661,7 +1824,7 @@ impl Backend {
     /// group's admin policy component; the admins list contains 32-byte hex
     /// pubkeys, identical encoding to `account_id_hex`.
     pub fn is_group_admin(&self, group_hex: &str) -> bool {
-        let me = &self.account.account_id_hex;
+        let me = &self.active_id();
         let Ok(chats) = self.chats() else {
             return false;
         };
@@ -1683,7 +1846,7 @@ impl Backend {
     /// the network-augmented view (local + what's actually on the relay).
     pub fn key_packages_local(&self) -> Vec<marmot_app::AccountKeyPackageRecord> {
         self.app
-            .local_key_package_records(&self.account.label)
+            .local_key_package_records(&self.active_label())
             .unwrap_or_default()
     }
 
@@ -1691,7 +1854,7 @@ impl Backend {
     /// configured key-package relays. Bootstrap relay list is whatever the
     /// account was booted with — empty means use the cached relay list.
     pub fn key_packages_fetch(&self) -> Result<Vec<marmot_app::AccountKeyPackageRecord>> {
-        let label = self.account.label.clone();
+        let label = self.active_label();
         let app = self.app.clone();
         let bootstrap: Vec<TransportEndpoint> = self
             .relays
@@ -1713,7 +1876,7 @@ impl Backend {
     pub fn key_package_relays(&self) -> Vec<String> {
         let nip65 = self
             .app
-            .account_relay_list_status_for_account_id(&self.account.account_id_hex)
+            .account_relay_list_status_for_account_id(&self.active_id())
             .map(|status| status.nip65.relays)
             .unwrap_or_default();
         if nip65.is_empty() {
@@ -1727,7 +1890,7 @@ impl Backend {
     /// of relays that acked the publish. Same call as the runtime worker's
     /// `PublishKeyPackage` command.
     pub fn publish_key_package(&self) -> Result<usize> {
-        let label = self.account.label.clone();
+        let label = self.active_label();
         let runtime = self.runtime.clone();
         self.tokio.block_on(async move {
             runtime
@@ -1741,7 +1904,7 @@ impl Backend {
     /// the relay set) and publish a fresh one. Returns the relay-ack count
     /// for the new publish.
     pub fn rotate_key_package(&self) -> Result<usize> {
-        let label = self.account.label.clone();
+        let label = self.active_label();
         let runtime = self.runtime.clone();
         self.tokio.block_on(async move {
             runtime
@@ -1864,10 +2027,11 @@ impl Backend {
         let chats = self.chats().unwrap_or_default();
         let archived = self.archived_chats().unwrap_or_default();
         let key_packages = read_key_packages_dir(&self.home);
+        let active = self.account();
         let account = json!({
-            "label": self.account.label,
-            "account_id_hex": self.account.account_id_hex,
-            "npub": marmot_app::npub_for_account_id(&self.account.account_id_hex).ok(),
+            "label": active.label,
+            "account_id_hex": active.account_id_hex,
+            "npub": marmot_app::npub_for_account_id(&active.account_id_hex).ok(),
         });
         let group_to_json = |g: &AppGroupRecord| -> Value {
             // MLS internals — the developer/diagnostics view (mirrors the
@@ -1906,15 +2070,21 @@ impl Backend {
         serde_json::to_string_pretty(&dump).unwrap_or_else(|e| format!("serialize error: {e}"))
     }
 
-    /// Pump live chat-list updates onto the Slint event loop.
+    /// Pump live chat-list updates for the active account onto the Slint
+    /// event loop.
     ///
     /// `on_update` is invoked on a tokio worker; it should re-marshal onto the
     /// Slint main thread via `slint::invoke_from_event_loop`.
-    pub fn watch_chats<F>(&self, mut on_update: F)
+    ///
+    /// Returns a `JoinHandle` so the caller can `.abort()` the watcher on
+    /// account switch — the subscription is bound to the label it was created
+    /// with, so a stale watcher would keep pushing the previous account's
+    /// chats into the UI.
+    pub fn watch_chats<F>(&self, mut on_update: F) -> JoinHandle<()>
     where
         F: FnMut(AppGroupRecord) + Send + 'static,
     {
-        let label = self.account.label.clone();
+        let label = self.active_label();
         let runtime = self.runtime.clone();
         self.tokio.spawn(async move {
             let mut sub = match runtime.subscribe_chats(&label, false) {
@@ -1927,7 +2097,7 @@ impl Backend {
             while let Some(update) = sub.recv().await {
                 on_update(update);
             }
-        });
+        })
     }
 
     /// Pump live message updates for a single group. The callback receives a
@@ -1939,7 +2109,7 @@ impl Backend {
     where
         F: FnMut(RuntimeMessageUpdate) + Send + 'static,
     {
-        let label = self.account.label.clone();
+        let label = self.active_label();
         let runtime = self.runtime.clone();
         // The subscription snapshot only seeds marmot's internal "already
         // seen" dedup set — we never read it. `limit: None` would decrypt the

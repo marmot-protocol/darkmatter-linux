@@ -1,0 +1,91 @@
+import { Palette, Theme, AccountEntry } from "../tokens.slint";
+import { Modal } from "modal.slint";
+import { Avatar } from "../primitives/avatar.slint";
+
+// Account switcher. Every listed account has a live background session —
+// selecting a row only changes which one the UI displays. The primary action
+// hands off to the add-account modal.
+export component AccountSwitcherModal inherits Modal {
+    callback select(string);   // account-id hex
+    callback add-account();
+    in property <[AccountEntry]> accounts;
+
+    card-width: 440px;
+    title: @tr("Accounts");
+    subtitle: @tr("All accounts stay connected. Switching only changes which one you're looking at.");
+    secondary-label: @tr("Close");
+    primary-label: @tr("Add account");
+    primary => { root.add-account(); }
+
+    VerticalLayout {
+        spacing: 6px;
+        for acc in root.accounts : Rectangle {
+            height: 56px;
+            border-radius: (10px) * Theme.r-scale;
+            background: acc.active
+                ? Palette.selected
+                : (row-touch.has-hover ? Palette.hover : transparent);
+            border-width: acc.active ? (Theme.retro ? Theme.border-w : 1px) : 0px;
+            border-color: Palette.mint;
+            animate background { duration: 100ms; easing: ease-out; }
+
+            // Wraps the row content so it wins the hit-test over the card's
+            // click-swallower (nested TouchAreas beat outer ones).
+            row-touch := TouchArea {
+                mouse-cursor: pointer;
+                clicked => { root.select(acc.id); }
+
+                HorizontalLayout {
+                    padding-left: 10px;
+                    padding-right: 14px;
+                    spacing: 12px;
+
+                    VerticalLayout {
+                        alignment: center;
+                        Avatar {
+                            size: 36px;
+                            initials: acc.av-initials;
+                            color-a: acc.av-a;
+                            color-b: acc.av-b;
+                            picture: acc.picture;
+                            has-picture: acc.has-picture;
+                        }
+                    }
+
+                    VerticalLayout {
+                        alignment: center;
+                        spacing: 3px;
+                        horizontal-stretch: 1;
+                        Text {
+                            text: acc.name;
+                            color: Palette.text-hi;
+                            font-size: (12px) * Theme.fs-scale;
+                            font-weight: 700;
+                            font-family: Theme.font;
+                            overflow: elide;
+                        }
+                        Text {
+                            text: acc.npub-short;
+                            color: Palette.text-lo;
+                            font-size: (10px) * Theme.fs-scale;
+                            font-family: Theme.font;
+                            overflow: elide;
+                        }
+                    }
+
+                    if acc.active : VerticalLayout {
+                        alignment: center;
+                        Text {
+                            text: @tr("ACTIVE");
+                            color: Theme.retro ? Palette.bubble-out-fg : Palette.mint;
+                            font-size: (9px) * Theme.fs-scale;
+                            font-weight: 800;
+                            font-family: Theme.font;
+                            letter-spacing: 1.2px;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

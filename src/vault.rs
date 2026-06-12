@@ -27,8 +27,23 @@ use zeroize::Zeroizing;
 
 use marmot_account::{AccountHomeError, AccountHomeResult, AccountSecretStore, AccountSummary};
 
-/// Map key under which the account's own nsec lives.
+/// Map key under which the *primary* account's nsec lives — the key the app
+/// boots the runtime with. Kept for compatibility with single-account vaults;
+/// additional accounts get [`nsec_key_for`] entries.
 pub const NSEC_KEY: &str = "nsec";
+
+/// Map key holding the account-id hex of the account the user last had
+/// active, so a restart lands back on it. Not a secret, but it lives here so
+/// the set of accounts isn't readable from plaintext config.
+pub const ACTIVE_ACCOUNT_KEY: &str = "active_account";
+
+/// Per-account nsec backup key. The runtime only needs the marmot secret
+/// (`account:<label>`), but keeping the bech32 nsec per account means the
+/// boot/self-heal path and a future "export key" affordance never have to
+/// re-derive it.
+pub fn nsec_key_for(account_id_hex: &str) -> String {
+    format!("nsec:{}", account_id_hex.to_ascii_lowercase())
+}
 
 const VAULT_VERSION: u32 = 1;
 const SALT_LEN: usize = 16;

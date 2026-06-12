@@ -1,0 +1,65 @@
+import { Palette, Theme } from "../tokens.slint";
+import { Modal, ModalField } from "modal.slint";
+
+// Add another account to the running session. The nsec is sealed into the
+// same password-encrypted vault as everything else; the account is imported
+// into the live runtime (no restart) and the app switches to it on success.
+export component AddAccountModal inherits Modal {
+    callback add(string);   // nsec
+    callback generate();    // Rust fills nsec-text with a fresh key
+    in-out property <string> nsec-text;
+    // True after `generate()` filled the field — shows the backup warning.
+    in property <bool> generated: false;
+
+    card-width: 460px;
+    title: @tr("Add account");
+    subtitle: @tr("Paste another secret key, or generate a fresh one. It's sealed into the same vault and stays signed in alongside your other accounts.");
+    secondary-label: @tr("Cancel");
+    primary-label: @tr("Add account");
+    primary-busy-label: @tr("Adding…");
+    primary => { root.add(root.nsec-text); }
+
+    ModalField {
+        label: @tr("SECRET KEY (NSEC)");
+        placeholder: "nsec1…";
+        text <=> root.nsec-text;
+        autofocus: true;
+        submitted => { root.add(root.nsec-text); }
+    }
+
+    HorizontalLayout {
+        spacing: 6px;
+        alignment: start;
+        Text {
+            text: @tr("No second key yet?");
+            color: Palette.text-lo;
+            font-size: (11px) * Theme.fs-scale;
+            font-family: Theme.font;
+            vertical-alignment: center;
+        }
+        Rectangle {
+            width: gen-label.preferred-width;
+            height: gen-label.preferred-height;
+            gen-touch := TouchArea {
+                mouse-cursor: pointer;
+                clicked => { root.generate(); }
+                gen-label := Text {
+                    text: @tr("Generate a new key");
+                    color: gen-touch.has-hover ? Palette.mint-hi : Palette.mint;
+                    font-size: (11px) * Theme.fs-scale;
+                    font-weight: 700;
+                    font-family: Theme.font;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+
+    if root.generated : Text {
+        text: @tr("This key was just generated and exists nowhere else yet. Copy it somewhere safe before adding it — there is no recovery.");
+        color: Palette.danger;
+        font-size: (10px) * Theme.fs-scale;
+        font-family: Theme.font;
+        wrap: word-wrap;
+    }
+}

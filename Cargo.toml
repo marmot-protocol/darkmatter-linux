@@ -47,6 +47,9 @@ rfd = { version = "0.15", default-features = false, features = [
   "async-std",
 ] }
 mime_guess = "2"
+# Local-timezone rendering of message/KP timestamps. Reads the system tz
+# database (Linux/macOS/FreeBSD), so DST offsets are right per-timestamp.
+jiff = "0.2"
 whitenoise-markdown = { git = "https://github.com/marmot-protocol/whitenoise-rs" }
 marmot-app = { git = "ssh://git@github.com/marmot-protocol/darkmatter.git", branch = "master", features = ["otlp-export"] }
 marmot-account = { git = "ssh://git@github.com/marmot-protocol/darkmatter.git", branch = "master" }

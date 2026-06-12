@@ -6896,45 +6896,32 @@ fn refresh_network_post_boot(backend: &Arc<Backend>, ui: &DarkMatterLinux) {
     });
 }
 
-/// `Mon DD · HH:MM` for KP timestamps. Returns "" for zero (unknown).
+/// `Mon DD · HH:MM` (local time) for KP timestamps. Returns "" for zero (unknown).
 fn format_date_unix(secs: u64) -> String {
     if secs == 0 {
         return String::new();
     }
-    let days_since_epoch = (secs / 86_400) as i64;
-    let (y, m, d) = civil_from_days(days_since_epoch);
+    let z = local_time(secs);
     let months = [
         "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
     ];
-    let mi = (m as usize).saturating_sub(1).min(11);
-    let _ = y;
-    let secs_of_day = secs % 86_400;
-    let h = (secs_of_day / 3600) % 24;
-    let mn = (secs_of_day / 60) % 60;
-    format!("{} {} · {:02}:{:02}", months[mi], d, h, mn)
+    let mi = (z.month() as usize).saturating_sub(1).min(11);
+    format!("{} {} · {:02}:{:02}", months[mi], z.day(), z.hour(), z.minute())
 }
 
-// Howard Hinnant's date algorithm (public domain). days from 1970-01-01.
-fn civil_from_days(days: i64) -> (i32, u32, u32) {
-    let z = days + 719_468;
-    let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
-    let doe = (z - era * 146_097) as u64;
-    let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365;
-    let y = yoe as i64 + era * 400;
-    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
-    let mp = (5 * doy + 2) / 153;
-    let d = doy - (153 * mp + 2) / 5 + 1;
-    let m = if mp < 10 { mp + 3 } else { mp - 9 };
-    let y = if m <= 2 { y + 1 } else { y };
-    (y as i32, m as u32, d as u32)
-}
-
-/// Render a unix-seconds timestamp as `HH:MM` (UTC). Good enough for v1.
+/// Render a unix-seconds timestamp as `HH:MM` in the user's local timezone.
 fn format_unix(secs: u64) -> String {
-    let secs_of_day = secs % 86_400;
-    let h = (secs_of_day / 3600) % 24;
-    let m = (secs_of_day / 60) % 60;
-    format!("{h:02}:{m:02}")
+    let z = local_time(secs);
+    format!("{:02}:{:02}", z.hour(), z.minute())
+}
+
+/// Epoch seconds → civil time in the system timezone. Conversion happens
+/// per-timestamp (not via a cached offset) so messages on either side of a
+/// DST switch each get the offset that was in effect when they were sent.
+fn local_time(secs: u64) -> jiff::Zoned {
+    jiff::Timestamp::from_second(secs.min(i64::MAX as u64) as i64)
+        .unwrap_or_default()
+        .to_zoned(jiff::tz::TimeZone::system())
 }
 
 // ─── Contacts ──────────────────────────────────────────────────────────

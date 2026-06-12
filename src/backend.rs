@@ -1597,7 +1597,7 @@ impl Backend {
         for member in members {
             // Local accounts resolve from disk; no relay lookup needed.
             if self.account_home.account(member).is_ok() {
-                tracing::info!(target: "backend::create_group", member = %member, "member is a local account");
+                tracing::info!(target: "backend::prewarm", member = %member, "member is a local account");
                 continue;
             }
             // marmot's `fetch_latest_key_package_for_account_id` does its relay
@@ -1622,10 +1622,10 @@ impl Backend {
             });
             match result {
                 Ok(_) => {
-                    tracing::info!(target: "backend::create_group", member = %member, "resolved key package via discovery relays");
+                    tracing::info!(target: "backend::prewarm", member = %member, "resolved key package via discovery relays");
                 }
                 Err(e) => {
-                    tracing::warn!(target: "backend::create_group", member = %member, error = %e, "could not resolve member");
+                    tracing::warn!(target: "backend::prewarm", member = %member, error = %e, "could not resolve member");
                     unresolved.push((member.clone(), e.to_string()));
                 }
             }
@@ -1689,6 +1689,25 @@ impl Backend {
     /// peer's key package off the relay set before committing.
     pub fn invite_members(&self, group_hex: &str, members: &[String]) -> Result<SendSummary> {
         let group_id = group_id_from_hex(group_hex)?;
+
+        // Same preflight as create_group: the runtime resolves each invitee's
+        // relay list + key package against only the configured relays, so a
+        // peer who published solely to the discovery indexers fails with the
+        // cryptic `missing account relay lists: ["nip65"]` (the *peer's* list,
+        // not ours). Warm the cache against the broad set and name the peer.
+        self.ensure_account_relay_lists()?;
+        let unresolved = self.prewarm_members(members);
+        if !unresolved.is_empty() {
+            let detail = unresolved
+                .iter()
+                .map(|(m, e)| format!("{m} ({e})"))
+                .collect::<Vec<_>>()
+                .join(", ");
+            return Err(anyhow!(
+                "can't reach these contacts — they haven't published a relay list / key package to any relay we know: {detail}"
+            ));
+        }
+
         let label = self.active_label();
         let members = members.to_vec();
         let runtime = self.runtime.clone();

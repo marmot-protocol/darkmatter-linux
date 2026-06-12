@@ -12,6 +12,7 @@ use nostr::Keys;
 use slint::{Color, Model, ModelRc, SharedString, VecModel, Weak};
 use tokio::task::JoinHandle;
 
+mod animal_avatar;
 mod backend;
 mod blossom;
 mod media_cache;
@@ -395,6 +396,12 @@ fn main() -> Result<(), slint::PlatformError> {
     // Holds the freshly generated nsec until the user confirms they've saved it.
     let pending_generated: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
 
+    // Account id (hex) of a key generated this session whose starter profile
+    // hasn't been published yet. Checked on every boot success — it survives
+    // the relays-added first-run reboot (publishing fails while no relays are
+    // configured) and is cleared only once the kind-0 actually lands.
+    let pending_profile_seed: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
+
     // Boot the backend from an nsec and populate the chat models. Errors are
     // surfaced on the UI's backend-error property; the UI stays logged-in
     // either way so the user can still navigate.
@@ -409,6 +416,7 @@ fn main() -> Result<(), slint::PlatformError> {
         let archived_group_ids = archived_group_ids.clone();
         let vault_cell = vault_cell.clone();
         let chats_watcher = chats_watcher.clone();
+        let pending_profile_seed = pending_profile_seed.clone();
         // `active_hint` names the account (id hex) to display first — the
         // vault-recorded last-active account on unlock, `None` on first run.
         move |nsec: String, vault: Arc<Mutex<Vault>>, active_hint: Option<String>| {
@@ -430,6 +438,7 @@ fn main() -> Result<(), slint::PlatformError> {
             let group_ids = group_ids.clone();
             let archived_group_ids = archived_group_ids.clone();
             let chats_watcher = chats_watcher.clone();
+            let pending_profile_seed = pending_profile_seed.clone();
             std::thread::spawn(move || {
                 let relays = backend::load_relays();
                 // Kept aside for the per-account nsec migration write below —
@@ -535,6 +544,21 @@ fn main() -> Result<(), slint::PlatformError> {
                             *backend_cell.lock().unwrap() = Some(b.clone());
                             ui.set_backend_ready(true);
                             ui.set_booting(false);
+                            // A key generated this session has no kind-0 yet —
+                            // seed it with a random "[Adjective] [Animal]"
+                            // name so the user shows up as something
+                            // friendlier than a hex tail.
+                            let seeding = pending_profile_seed.lock().unwrap().clone();
+                            if seeding.as_deref() == Some(active.account_id_hex.as_str()) {
+                                let cell = pending_profile_seed.clone();
+                                publish_random_profile_async(
+                                    &b,
+                                    active.label.clone(),
+                                    active.account_id_hex.clone(),
+                                    ui.as_weak(),
+                                    move || *cell.lock().unwrap() = None,
+                                );
+                            }
                             // The background sync can take a relay's full
                             // connection timeout (~35s on a misbehaving
                             // relay) to *complete*, but the healthy relays
@@ -782,11 +806,15 @@ fn main() -> Result<(), slint::PlatformError> {
                 }
             };
             let account_id = keys.public_key().to_hex();
+            // A key generated in this dialog can't have a profile yet; a
+            // pasted one may — only generated keys get a random starter name.
+            let generated = ui.get_add_account_generated();
             ui.set_add_account_busy(true);
             ui.set_add_account_status(s(""));
             let weak = ui.as_weak();
             let vault_cell = vault_cell.clone();
             let do_switch = do_switch.clone();
+            let backend_for_seed = backend.clone();
             backend.add_account_async(nsec.clone(), move |result| {
                 let _ = slint::invoke_from_event_loop(move || {
                     let Some(ui) = weak.upgrade() else { return };
@@ -806,6 +834,15 @@ fn main() -> Result<(), slint::PlatformError> {
                             ui.set_show_add_account(false);
                             ui.set_add_account_nsec(s(""));
                             ui.set_add_account_generated(false);
+                            if generated {
+                                publish_random_profile_async(
+                                    &backend_for_seed,
+                                    summary.label.clone(),
+                                    summary.account_id_hex.clone(),
+                                    ui.as_weak(),
+                                    || {},
+                                );
+                            }
                             do_switch(summary.account_id_hex);
                         }
                         Err(e) => {
@@ -980,6 +1017,7 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.on_confirm_saved_key({
         let weak = ui.as_weak();
         let pending = pending_generated.clone();
+        let pending_seed = pending_profile_seed.clone();
         let boot = boot_backend.clone();
         move |password, confirm| {
             eprintln!("[login] confirm_saved_key fired");
@@ -996,26 +1034,31 @@ fn main() -> Result<(), slint::PlatformError> {
             let weak = weak.clone();
             let boot = boot.clone();
             let pending = pending.clone();
+            let pending_seed = pending_seed.clone();
             std::thread::spawn(move || {
-                let result = (|| -> Result<(String, Arc<Mutex<Vault>>), String> {
+                let result = (|| -> Result<(String, String, Arc<Mutex<Vault>>), String> {
                     validate_new_password(&password, confirm.as_str())?;
                     let keys = Keys::parse(&nsec).map_err(|e| format!("parse: {e}"))?;
                     let npub = keys
                         .public_key()
                         .to_bech32()
                         .map_err(|e| format!("npub encode: {e}"))?;
+                    let id_hex = keys.public_key().to_hex();
                     let mut v = Vault::create(&password).map_err(|e| format!("create vault: {e}"))?;
                     v.set(vault::NSEC_KEY, &nsec)
                         .map_err(|e| format!("seal nsec: {e}"))?;
-                    Ok((npub, Arc::new(Mutex::new(v))))
+                    Ok((npub, id_hex, Arc::new(Mutex::new(v))))
                 })();
                 let _ = slint::invoke_from_event_loop(move || {
                     let Some(ui) = weak.upgrade() else { return };
                     ui.set_login_busy(false);
                     match result {
-                        Ok((npub, vault)) => {
+                        Ok((npub, id_hex, vault)) => {
                             eprintln!("[login] sealed nsec into vault, logging in as {npub}");
                             *pending.lock().unwrap() = None;
+                            // Freshly generated key: have boot seed a random
+                            // starter profile once it comes up.
+                            *pending_seed.lock().unwrap() = Some(id_hex);
                             ui.set_login_error(s(""));
                             ui.set_my_qr(qr_image(&format!("nostr:{npub}")));
                             ui.set_my_npub(npub.into());
@@ -5049,6 +5092,124 @@ fn my_avatar_label(backend: &Backend, my_id: &str) -> String {
         my_id.to_string()
     } else {
         name
+    }
+}
+
+/// A random "[Adjective] [Animal]" display name for freshly generated
+/// accounts, e.g. "Spooky Bear".
+fn random_profile_name() -> String {
+    const ADJECTIVES: &[&str] = &[
+        "Spooky", "Cosmic", "Dapper", "Fuzzy", "Sleepy", "Sneaky", "Mighty", "Velvet",
+        "Turbo", "Witty", "Zesty", "Plucky", "Quirky", "Nimble", "Frosty", "Mellow",
+        "Peppy", "Rusty", "Stormy", "Sunny", "Dusty", "Misty", "Jolly", "Groovy",
+        "Snazzy", "Breezy", "Cheeky", "Daring", "Electric", "Golden", "Icy", "Lucky",
+        "Magnetic", "Neon", "Prickly", "Quantum", "Silent", "Vivid", "Wandering", "Wobbly",
+    ];
+    // Animals come from the SVG table so every name that can be generated is
+    // guaranteed to have starter-avatar art.
+    let animals = animal_avatar::ANIMAL_SVGS;
+    let mut buf = [0u8; 8];
+    // RNG failure shouldn't block account creation — buf stays zeroed and the
+    // name degrades to a fixed (still valid) pick.
+    let _ = getrandom::getrandom(&mut buf);
+    let a = u32::from_le_bytes(buf[0..4].try_into().unwrap()) as usize % ADJECTIVES.len();
+    let n = u32::from_le_bytes(buf[4..8].try_into().unwrap()) as usize % animals.len();
+    format!("{} {}", ADJECTIVES[a], animals[n].0)
+}
+
+/// Publish a starter kind-0 profile with a random name for a freshly
+/// generated account. Best-effort: a failure only logs — `on_published`
+/// doesn't run, so the first-run pending-seed cell stays set and the
+/// relays-added reboot retries — and the user can always set a name by hand.
+/// Skips the publish when the directory already knows a profile for the
+/// account (then it still counts as published).
+fn publish_random_profile_async(
+    backend: &Arc<Backend>,
+    label: String,
+    account_id_hex: String,
+    weak: slint::Weak<DarkMatterLinux>,
+    on_published: impl FnOnce() + Send + 'static,
+) {
+    let backend = backend.clone();
+    // The publish is a relay round-trip and `save_profile_for_label` blocks
+    // on the backend runtime — worker thread, same as `on_save_profile`.
+    std::thread::spawn(move || {
+        if backend.cached_profile(&account_id_hex).is_some() {
+            on_published();
+            return;
+        }
+        let name = random_profile_name();
+        // Companion art is best-effort: a render/upload miss just means a
+        // name-only profile.
+        let picture = seed_profile_picture(&backend, &label, &account_id_hex, &name);
+        let profile = UserProfileMetadata {
+            name: Some(name.clone()),
+            display_name: Some(name.clone()),
+            about: None,
+            picture,
+            nip05: None,
+            lud16: None,
+            created_at: 0,
+            source_relays: Vec::new(),
+        };
+        match backend.save_profile_for_label(&label, profile) {
+            Ok(_) => {
+                eprintln!("[profile] seeded fresh account {label} as \"{name}\"");
+                on_published();
+                backend.refresh_profile_cache_async(&account_id_hex);
+                let _ = slint::invoke_from_event_loop(move || {
+                    let Some(ui) = weak.upgrade() else { return };
+                    populate_profile_async(&ui, &backend);
+                });
+            }
+            Err(e) => {
+                eprintln!("[profile] seeding starter profile for {label} failed: {e:#}")
+            }
+        }
+    });
+}
+
+/// Render + upload the seeded profile's picture: the named animal's SVG over
+/// a gradient derived from the account's npub. Returns the public Blossom
+/// URL, or `None` on any failure (the caller publishes a name-only profile).
+/// Blocks the calling thread on the upload — worker threads only.
+fn seed_profile_picture(
+    backend: &Arc<Backend>,
+    label: &str,
+    account_id_hex: &str,
+    name: &str,
+) -> Option<String> {
+    let animal = name.rsplit(' ').next()?;
+    let svg = animal_avatar::svg_for(animal)?;
+    // The npub (not the raw hex) feeds the gradient hash, so the picture's
+    // background is recognizably "theirs" wherever the npub is shown.
+    let npub = npub_for_account_id(account_id_hex).ok()?;
+    let (a, b, _) = avatar_for(&npub);
+    let png = match animal_avatar::render_png(
+        svg,
+        (a.red(), a.green(), a.blue()),
+        (b.red(), b.green(), b.blue()),
+    ) {
+        Ok(png) => png,
+        Err(e) => {
+            eprintln!("[profile] render starter avatar for {animal}: {e:#}");
+            return None;
+        }
+    };
+    let (tx, rx) = std::sync::mpsc::channel();
+    backend.upload_public_blob_for_label_async(label, png, "image/png".to_string(), move |r| {
+        let _ = tx.send(r);
+    });
+    match rx.recv_timeout(std::time::Duration::from_secs(30)) {
+        Ok(Ok(url)) => Some(url),
+        Ok(Err(e)) => {
+            eprintln!("[profile] starter avatar upload failed: {e:#}");
+            None
+        }
+        Err(_) => {
+            eprintln!("[profile] starter avatar upload timed out");
+            None
+        }
     }
 }
 

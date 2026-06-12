@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240">
+  <path id="antler" d="M80 82 q-52 -2 -64 -48 q26 -2 38 12 q-2 -18 8 -34 q14 14 15 36 q10 -10 25 -10 q-4 28 -22 44 Z" fill="#d9a96a"/>
+  <use href="#antler" transform="translate(240 0) scale(-1 1)"/>
+  <ellipse cx="58" cy="108" rx="19" ry="12" fill="#6e4a2e" transform="rotate(-24 58 108)"/>
+  <ellipse cx="182" cy="108" rx="19" ry="12" fill="#6e4a2e" transform="rotate(24 182 108)"/>
+  <ellipse cx="120" cy="132" rx="64" ry="58" fill="#8a5f3e"/>
+  <ellipse cx="120" cy="176" rx="46" ry="32" fill="#6e4a2e"/>
+  <ellipse cx="103" cy="174" rx="6.5" ry="9" fill="#3c2718"/>
+  <ellipse cx="137" cy="174" rx="6.5" ry="9" fill="#3c2718"/>
+  <path d="M106 196 q14 9 28 0" stroke="#3c2718" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+  <circle cx="96" cy="120" r="8.5" fill="#2a2138"/>
+  <circle cx="93.2" cy="117.2" r="3" fill="#fff"/>
+  <circle cx="98.6" cy="122.6" r="1.6" fill="#fff" fill-opacity=".85"/>
+  <circle cx="144" cy="120" r="8.5" fill="#2a2138"/>
+  <circle cx="141.2" cy="117.2" r="3" fill="#fff"/>
+  <circle cx="146.6" cy="122.6" r="1.6" fill="#fff" fill-opacity=".85"/>
+</svg>

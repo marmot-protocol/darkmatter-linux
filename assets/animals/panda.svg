@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240">
+  <circle cx="58" cy="68" r="27" fill="#2b2a33"/>
+  <circle cx="182" cy="68" r="27" fill="#2b2a33"/>
+  <ellipse cx="120" cy="134" rx="80" ry="72" fill="#f7f5f0"/>
+  <ellipse cx="91" cy="124" rx="19" ry="24" fill="#2b2a33" transform="rotate(18 91 124)"/>
+  <ellipse cx="149" cy="124" rx="19" ry="24" fill="#2b2a33" transform="rotate(-18 149 124)"/>
+  <circle cx="94" cy="126" r="8" fill="#fff"/>
+  <circle cx="94" cy="126" r="5.2" fill="#1d1c26"/>
+  <circle cx="92.2" cy="124.2" r="1.9" fill="#fff"/>
+  <circle cx="95.8" cy="127.8" r="1.1" fill="#fff" fill-opacity=".85"/>
+  <circle cx="146" cy="126" r="8" fill="#fff"/>
+  <circle cx="146" cy="126" r="5.2" fill="#1d1c26"/>
+  <circle cx="144.2" cy="124.2" r="1.9" fill="#fff"/>
+  <circle cx="147.8" cy="127.8" r="1.1" fill="#fff" fill-opacity=".85"/>
+  <ellipse cx="120" cy="158" rx="11" ry="8" fill="#2b2a33"/>
+  <path d="M120 166 v6 M120 172 q-7 6 -15 1 M120 172 q7 6 15 1" stroke="#2b2a33" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+</svg>

@@ -56,6 +56,9 @@ rfd = { version = "0.15", default-features = false, features = [
   "async-std",
 ] }
 mime_guess = "2"
+# Rasterizes the assets/animals/*.svg starter avatars over an npub-derived
+# gradient (animal_avatar.rs). Shape rendering only — no text/font features.
+resvg = { version = "0.45", default-features = false }
 # Local-timezone rendering of message/KP timestamps. Reads the system tz
 # database (Linux/macOS/FreeBSD), so DST offsets are right per-timestamp.
 jiff = "0.2"

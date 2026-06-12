@@ -719,6 +719,17 @@ impl Backend {
     /// Publish a new profile (Nostr kind-0 metadata event) and remember it in
     /// the directory cache. Requires at least one relay to be configured.
     pub fn save_profile(&self, profile: UserProfileMetadata) -> Result<UserProfileMetadata> {
+        self.save_profile_for_label(&self.active_label(), profile)
+    }
+
+    /// Like [`Backend::save_profile`] but for an explicit account label —
+    /// used to seed a starter profile on a freshly generated account that
+    /// isn't (yet) the active one.
+    pub fn save_profile_for_label(
+        &self,
+        label: &str,
+        profile: UserProfileMetadata,
+    ) -> Result<UserProfileMetadata> {
         if self.relays.is_empty() {
             return Err(anyhow!(
                 "no relays configured — set ~/.config/darkmatter-linux/relays.json first"
@@ -731,7 +742,7 @@ impl Backend {
             .map(TransportEndpoint::from)
             .collect();
         let bootstrap = AccountRelayListBootstrap::new(endpoints.clone(), endpoints);
-        let label = self.active_label();
+        let label = label.to_string();
         let runtime = self.runtime.clone();
         self.tokio.block_on(async move {
             runtime
@@ -753,7 +764,22 @@ impl Backend {
     where
         F: FnOnce(Result<String>) + Send + 'static,
     {
-        let keys = match self.account_home.load_signing_keys(&self.active_label()) {
+        self.upload_public_blob_for_label_async(&self.active_label(), bytes, content_type, on_done)
+    }
+
+    /// Like [`Backend::upload_public_blob_async`] but signs with an explicit
+    /// account label — used to host the seeded starter avatar for a freshly
+    /// generated account that isn't (yet) the active one.
+    pub fn upload_public_blob_for_label_async<F>(
+        &self,
+        label: &str,
+        bytes: Vec<u8>,
+        content_type: String,
+        on_done: F,
+    ) where
+        F: FnOnce(Result<String>) + Send + 'static,
+    {
+        let keys = match self.account_home.load_signing_keys(label) {
             Ok(keys) => keys,
             Err(e) => {
                 on_done(Err(anyhow!("load signing keys: {e}")));

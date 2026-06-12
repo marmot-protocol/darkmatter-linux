@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240">
+  <path id="horn" d="M60 102 q-34 -8 -36 -42 q28 0 46 22 q4 12 -10 20 Z" fill="#d9c9a8"/>
+  <use href="#horn" transform="translate(240 0) scale(-1 1)"/>
+  <ellipse cx="120" cy="136" rx="76" ry="68" fill="#5e4330"/>
+  <ellipse cx="120" cy="86" rx="58" ry="30" fill="#4a3322"/>
+  <circle cx="74" cy="94" r="16" fill="#4a3322"/>
+  <circle cx="98" cy="78" r="16" fill="#4a3322"/>
+  <circle cx="142" cy="78" r="16" fill="#4a3322"/>
+  <circle cx="166" cy="94" r="16" fill="#4a3322"/>
+  <ellipse cx="120" cy="178" rx="40" ry="26" fill="#4a3626"/>
+  <ellipse cx="105" cy="176" rx="5.5" ry="8" fill="#2a1d12"/>
+  <ellipse cx="135" cy="176" rx="5.5" ry="8" fill="#2a1d12"/>
+  <path d="M108 196 q12 8 24 0" stroke="#2a1d12" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+  <circle cx="90" cy="128" r="8.5" fill="#1f1825"/>
+  <circle cx="87.2" cy="125.2" r="3" fill="#fff"/>
+  <circle cx="92.6" cy="130.6" r="1.6" fill="#fff" fill-opacity=".85"/>
+  <circle cx="150" cy="128" r="8.5" fill="#1f1825"/>
+  <circle cx="147.2" cy="125.2" r="3" fill="#fff"/>
+  <circle cx="152.6" cy="130.6" r="1.6" fill="#fff" fill-opacity=".85"/>
+</svg>

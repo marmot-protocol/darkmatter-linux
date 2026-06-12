@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240">
+  <path id="yhorn" d="M64 90 q-40 -2 -46 -40 q30 -8 50 18 q6 12 -4 22 Z" fill="#d9c9a8"/>
+  <use href="#yhorn" transform="translate(240 0) scale(-1 1)"/>
+  <ellipse cx="120" cy="132" rx="72" ry="64" fill="#4a342a"/>
+  <path d="M52 108 Q52 64 120 64 Q188 64 188 108 q-13 18 -27 2 q-13 16 -27 2 q-13 16 -27 2 q-13 16 -27 2 q-13 16 -27 0 Z" fill="#3a2820"/>
+  <ellipse cx="120" cy="174" rx="38" ry="24" fill="#8a715c"/>
+  <ellipse cx="106" cy="172" rx="5" ry="7" fill="#2a1d12"/>
+  <ellipse cx="134" cy="172" rx="5" ry="7" fill="#2a1d12"/>
+  <path d="M108 190 q12 8 24 0" stroke="#2a1d12" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+  <circle cx="92" cy="132" r="8.5" fill="#1f1825"/>
+  <circle cx="89.2" cy="129.2" r="3" fill="#fff"/>
+  <circle cx="94.6" cy="134.6" r="1.6" fill="#fff" fill-opacity=".85"/>
+  <circle cx="148" cy="132" r="8.5" fill="#1f1825"/>
+  <circle cx="145.2" cy="129.2" r="3" fill="#fff"/>
+  <circle cx="150.6" cy="134.6" r="1.6" fill="#fff" fill-opacity=".85"/>
+</svg>

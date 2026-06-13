@@ -1,27 +1,156 @@
 import { Modal } from "modal.slint";
+import { Palette, Theme } from "../tokens.slint";
 
-// Full-window lightbox for an image attachment, built on Modal's bare mode:
+// Full-window lightbox for image attachments, built on Modal's bare mode:
 // the backdrop darkens the whole app and the image is letterboxed
 // (`image-fit: contain`) into ~90% of the window so any aspect ratio fits
 // without cropping. Backdrop click, the floating ✕, and Esc all dismiss;
 // tapping the image itself is swallowed so it doesn't bubble to the backdrop.
+//
+// Slideshow: when the chat holds more than one image attachment, `count` > 1
+// turns on the prev/next chevrons, a "n / N" counter, and ←/→ key navigation.
+// Rust owns the ordered list and swaps `source` (and toggles `loading` while a
+// not-yet-decoded image downloads).
 export component ImageViewerModal inherits Modal {
     in property <image> source;
+    // Total image attachments in the chat, and the 1-based position of the
+    // currently shown one. `count <= 1` hides all slideshow chrome.
+    in property <int> count: 1;
+    in property <int> index: 1;
+    // True while the next/prev target is still downloading + decoding.
+    in property <bool> loading: false;
+    callback prev;
+    callback next;
+
+    property <bool> has-prev: root.index > 1;
+    property <bool> has-next: root.index < root.count;
 
     bare: true;
     // Lightboxes want a real darken, unlike the subtle scrim card modals use.
     background: #000000E6;
+    // Own the keyboard via the nested FocusScope below (←/→ navigation); the
+    // base Modal otherwise grabs focus for Esc. Esc still works: keys this
+    // scope rejects bubble up to the base esc-scope.
+    grab-focus: false;
 
+    // Single non-layout child so the image and the overlay controls stack
+    // (a VerticalLayout — the bare content zone — would tile them instead).
     Rectangle {
-        Image {
+        nav-scope := FocusScope {
+            width: 100%;
+            height: 100%;
+            init => { self.focus(); }
+            key-pressed(event) => {
+                if (event.text == Key.LeftArrow && root.has-prev) {
+                    root.prev();
+                    return accept;
+                }
+                if (event.text == Key.RightArrow && root.has-next) {
+                    root.next();
+                    return accept;
+                }
+                return reject;
+            }
+
+            Image {
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+                width: parent.width * 0.9;
+                height: parent.height * 0.9;
+                source: root.source;
+                image-fit: contain;
+                // Swallow taps on the image so they don't reach the backdrop.
+                TouchArea { }
+            }
+        }
+
+        // "Loading…" pill while a navigated-to image downloads.
+        if root.loading : Rectangle {
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
-            width: parent.width * 0.9;
-            height: parent.height * 0.9;
-            source: root.source;
-            image-fit: contain;
-            // Swallow taps on the image so they don't reach the backdrop.
-            TouchArea { }
+            width: load-text.preferred-width + 32px;
+            height: 40px;
+            border-radius: (10px) * Theme.r-scale;
+            background: #000000AA;
+            load-text := Text {
+                text: @tr("Loading…");
+                color: #FFFFFF;
+                font-size: (13px) * Theme.fs-scale;
+                font-family: Theme.font;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+
+        // Prev chevron.
+        if root.count > 1 && root.has-prev : Rectangle {
+            x: 24px;
+            y: (parent.height - self.height) / 2;
+            width: 48px;
+            height: 48px;
+            border-radius: (24px) * Theme.r-scale;
+            background: prev-touch.has-hover ? #000000B0 : #00000055;
+            animate background { duration: 100ms; }
+            border-width: Theme.retro ? Theme.border-w : 0px;
+            border-color: Palette.border-2;
+            Text {
+                text: "‹";
+                color: #FFFFFF;
+                font-size: (34px) * Theme.fs-scale;
+                font-family: Theme.font;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+            prev-touch := TouchArea {
+                mouse-cursor: pointer;
+                clicked => { root.prev(); }
+            }
+        }
+
+        // Next chevron.
+        if root.count > 1 && root.has-next : Rectangle {
+            x: parent.width - self.width - 24px;
+            y: (parent.height - self.height) / 2;
+            width: 48px;
+            height: 48px;
+            border-radius: (24px) * Theme.r-scale;
+            background: next-touch.has-hover ? #000000B0 : #00000055;
+            animate background { duration: 100ms; }
+            border-width: Theme.retro ? Theme.border-w : 0px;
+            border-color: Palette.border-2;
+            Text {
+                text: "›";
+                color: #FFFFFF;
+                font-size: (34px) * Theme.fs-scale;
+                font-family: Theme.font;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+            next-touch := TouchArea {
+                mouse-cursor: pointer;
+                clicked => { root.next(); }
+            }
+        }
+
+        // "n / N" counter pill, bottom-center.
+        if root.count > 1 : Rectangle {
+            x: (parent.width - self.width) / 2;
+            y: parent.height - self.height - 30px;
+            width: counter-text.preferred-width + 26px;
+            height: 30px;
+            border-radius: (15px) * Theme.r-scale;
+            background: #000000AA;
+            border-width: Theme.retro ? Theme.border-w : 0px;
+            border-color: Palette.border-2;
+            counter-text := Text {
+                text: root.index + " / " + root.count;
+                color: #FFFFFF;
+                font-size: (12px) * Theme.fs-scale;
+                font-family: Theme.font;
+                font-weight: 700;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
         }
     }
 }

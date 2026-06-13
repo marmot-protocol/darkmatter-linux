@@ -1,4 +1,4 @@
-import { Palette , Theme} from "../tokens.slint";
+import { Palette , Theme, StagedAttachment } from "../tokens.slint";
 import { PaperclipIcon } from "../icons/paperclip-icon.slint";
 import { SmileyIcon } from "../icons/smiley-icon.slint";
 import { SendIcon } from "../icons/send-icon.slint";
@@ -27,6 +27,14 @@ export component Composer inherits Rectangle {
     callback cancel-reply();
     callback cancel-edit();
     callback attach-clicked();
+    // Paste shortcut pressed in the input — Rust probes the clipboard and
+    // stages an image attachment if one is there (text paste stays native).
+    callback paste-image();
+    // Attachments queued for the next send. They render as a chip row above
+    // the input (thumbnail for images) so the user confirms what goes out by
+    // pressing Send; ✕ on a chip drops it before anything is uploaded.
+    in property <[StagedAttachment]> staged: [];
+    callback remove-staged(int);
     // Open the emoji picker anchored at (x, y) in window coords; the picked
     // emoji is appended to the draft rather than sent as a reaction.
     callback emoji-clicked(length, length);
@@ -35,8 +43,10 @@ export component Composer inherits Rectangle {
     property <length> max-row-h: 132px;
     property <length> row-h: clamp(composer-input.preferred-height + 20px, root.min-row-h, root.max-row-h);
     property <length> chip-h: (root.reply-target-id == "" && root.editing-message-id == "") ? 0px : 30px;
+    property <length> staged-h: root.staged.length == 0 ? 0px : 58px;
+    property <bool> can-send: root.draft != "" || root.staged.length > 0;
 
-    height: root.row-h + 26px + root.chip-h;
+    height: root.row-h + 26px + root.chip-h + root.staged-h;
     background: Palette.bg;
 
     VerticalLayout {
@@ -156,6 +166,97 @@ export component Composer inherits Rectangle {
         }
     }
 
+    // Staged-attachment chips — the "are you sure" step. Everything queued
+    // here is visible (with a thumbnail for images) and removable before
+    // Send fires the uploads.
+    if root.staged.length > 0 : Rectangle {
+        height: root.staged-h;
+        background: Palette.bg;
+        staged-flick := Flickable {
+            x: 18px;
+            width: parent.width - 36px;
+            height: parent.height;
+            viewport-width: max(self.width, staged-row.preferred-width);
+            viewport-height: self.height;
+            staged-row := HorizontalLayout {
+                padding-top: 9px;
+                padding-bottom: 9px;
+                spacing: 8px;
+                alignment: start;
+                for att[att-i] in root.staged : Rectangle {
+                    width: 192px;
+                    height: 40px;
+                    border-radius: (8px) * Theme.r-scale;
+                    background: Palette.panel;
+                    border-width: 1px;
+                    border-color: Palette.border-2;
+                    HorizontalLayout {
+                        padding-left: 6px;
+                        padding-right: 4px;
+                        spacing: 8px;
+                        alignment: stretch;
+                        Rectangle {
+                            width: 28px;
+                            height: 28px;
+                            y: (parent.height - self.height) / 2;
+                            border-radius: (5px) * Theme.r-scale;
+                            background: Palette.panel-2;
+                            clip: true;
+                            if att.has-thumb : Image {
+                                width: parent.width;
+                                height: parent.height;
+                                source: att.thumb;
+                                image-fit: cover;
+                            }
+                            if !att.has-thumb : PaperclipIcon {
+                                stroke: Palette.text-lo;
+                                x: (parent.width - self.width) / 2;
+                                y: (parent.height - self.height) / 2;
+                            }
+                        }
+                        VerticalLayout {
+                            alignment: center;
+                            horizontal-stretch: 1;
+                            Text {
+                                text: att.name;
+                                color: Palette.text-hi;
+                                font-size: (11px) * Theme.fs-scale;
+                                font-family: Theme.font;
+                                overflow: elide;
+                            }
+                            Text {
+                                text: att.size-label;
+                                color: Palette.text-lo;
+                                font-size: (10px) * Theme.fs-scale;
+                                font-family: Theme.font;
+                                overflow: elide;
+                            }
+                        }
+                        Rectangle {
+                            width: 22px;
+                            height: 22px;
+                            y: (parent.height - self.height) / 2;
+                            border-radius: (4px) * Theme.r-scale;
+                            background: staged-x-touch.has-hover ? Palette.panel-2 : transparent;
+                            animate background { duration: 100ms; }
+                            Text {
+                                text: "✕";
+                                color: staged-x-touch.has-hover ? Palette.text-hi : Palette.text-mid;
+                                font-size: (12px) * Theme.fs-scale;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                            staged-x-touch := TouchArea {
+                                mouse-cursor: pointer;
+                                clicked => { root.remove-staged(att-i); }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     HorizontalLayout {
         padding-left: 18px; padding-right: 18px;
         padding-top: 12px; padding-bottom: 14px;
@@ -202,6 +303,7 @@ export component Composer inherits Rectangle {
                     horizontal-stretch: 1;
                     capture-nav: root.mention-active;
                     submit => { root.send-clicked(); }
+                    paste-image => { root.paste-image(); }
                     caret-moved(c) => { root.caret-moved(c); }
                     nav(d) => { root.mention-nav(d); }
                     commit-mention => { root.mention-commit(); }
@@ -236,8 +338,9 @@ export component Composer inherits Rectangle {
                     label: @tr("Send");
                     // Rust trims and drops empty sends anyway; disabling here
                     // makes the affordance honest (no mint hover on a button
-                    // that would do nothing).
-                    enabled: root.draft != "";
+                    // that would do nothing). Staged attachments count as
+                    // sendable content even with an empty draft.
+                    enabled: root.can-send;
                     focusable: true;
                     clicked => { root.send-clicked(); }
                     button-width: 92px;
@@ -248,17 +351,17 @@ export component Composer inherits Rectangle {
                     pad-right: 14px;
                     spacing: 8px;
                     use-hover: true;
-                    bg-color: root.draft != "" ? Palette.mint : Palette.panel-2;
+                    bg-color: root.can-send ? Palette.mint : Palette.panel-2;
                     hover-bg: Palette.mint-hi;
-                    outline: root.draft != "" ? Palette.mint : Palette.border;
+                    outline: root.can-send ? Palette.mint : Palette.border;
                     hover-outline: Palette.mint-hi;
-                    fg: root.draft != "" ? Palette.bubble-out-fg : Palette.text-hi;
+                    fg: root.can-send ? Palette.bubble-out-fg : Palette.text-hi;
                     hover-fg: Palette.bubble-out-fg;
                     animate bg-color, outline, fg { duration: 140ms; easing: ease-out; }
                     Rectangle {
                         width: 14px;
                         SendIcon {
-                            fill-color: (send-button.has-hover || root.draft != "")
+                            fill-color: (send-button.has-hover || root.can-send)
                                 ? Palette.bubble-out-fg
                                 : Palette.text-mid;
                             size: 14px;

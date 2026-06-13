@@ -32,6 +32,7 @@ import { MessageContextMenu } from "primitives/context-menu.slint";
 import { EmojiEntry, EmojiSheet, Linkout, ProfileSink } from "tokens.slint";
 import { EditVersion } from "tokens.slint";
 import { AuditLogEntry } from "tokens.slint";
+import { StagedAttachment } from "tokens.slint";
 // Re-export so Rust can do `ui.global::<EmojiSheet>().set_sprite(...)`.
 // Slint only generates a Rust binding for a global when the entry file
 // exports it (or names it in the component tree).
@@ -84,6 +85,10 @@ export component DarkMatterLinux inherits Window {
 
     // Composer state + send wiring (real chat send through marmot-app).
     in-out property <string> composer-draft;
+    // Attachments staged for the next send (file picker or clipboard paste).
+    // Rust owns the bytes; this model only carries the chip-row display data.
+    in property <[StagedAttachment]> composer-staged;
+    callback remove-staged(int); // ✕ on a staged chip (index into composer-staged)
     // Reply target — set by Rust when the user taps a bubble's reply button,
     // cleared on send or cancel. Drives the composer's "Replying to …" chip
     // and tells Rust to send the next message as a kind-9 reply (e+q tags).
@@ -109,13 +114,23 @@ export component DarkMatterLinux inherits Window {
     callback show-edit-history(string);               // message_id
     callback dismiss-edit-history();
     callback attach-file(); // composer paperclip → open file picker
+    callback paste-image(); // composer paste shortcut → probe clipboard for an image, send it
     callback attachment-clicked(string); // bubble attachment tapped (message_id)
+    callback album-cell-clicked(string); // album grid cell tapped (image key) → slideshow
 
     // Image lightbox — opened by Rust when an already-decoded image attachment
-    // is tapped; shows it full-window over a darkened backdrop.
+    // is tapped; shows it full-window over a darkened backdrop. When the chat
+    // holds more than one image attachment it becomes a slideshow: `count`/
+    // `index` drive the chevrons + counter and `prev`/`next` ask Rust to swap
+    // `image-viewer-image` (toggling `loading` while a fresh one downloads).
     in-out property <bool> image-viewer-open: false;
     in property <image> image-viewer-image;
+    in property <int> image-viewer-count: 1;
+    in property <int> image-viewer-index: 1;
+    in property <bool> image-viewer-loading: false;
     callback dismiss-image-viewer();
+    callback image-viewer-prev();
+    callback image-viewer-next();
 
     // Peer-profile modal — opened by tapping an @mention or any avatar (Rust
     // binds ProfileSink.open and the nostr: link interception). The `peer-`
@@ -565,10 +580,14 @@ export component DarkMatterLinux inherits Window {
                             show-history(id) => { root.show-edit-history(id); }
                             retry(id) => { root.retry-message(id); }
                             attach-clicked => { root.attach-file(); }
+                            paste-image => { root.paste-image(); }
+                            staged: root.composer-staged;
+                            remove-staged(i) => { root.remove-staged(i); }
                             // Sentinel target id routes the picked emoji into
                             // the composer draft instead of a kind-7 reaction.
                             emoji-clicked(ax, ay) => { root.emoji-picker-requested("\u{1}composer", ax, ay); }
                             attachment-clicked(id) => { root.attachment-clicked(id); }
+                            album-cell-clicked(key) => { root.album-cell-clicked(key); }
                             is-group: root.chat-is-group;
                             can-show-members: root.chat-can-show-members;
                             member-count: root.chat-member-count;
@@ -895,7 +914,12 @@ export component DarkMatterLinux inherits Window {
         width: root.width;
         height: root.height;
         source: root.image-viewer-image;
+        count: root.image-viewer-count;
+        index: root.image-viewer-index;
+        loading: root.image-viewer-loading;
         dismissed => { root.dismiss-image-viewer(); }
+        prev => { root.image-viewer-prev(); }
+        next => { root.image-viewer-next(); }
     }
 
     if root.peer-profile-open : ProfileModal {

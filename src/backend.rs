@@ -18,15 +18,17 @@ use cgka_traits::GroupId;
 use cgka_traits::TransportEndpoint;
 use marmot_account::{AccountHome, AccountSecretStore, AccountSummary};
 use marmot_app::{
-    AccountRelayListBootstrap, AccountSetupRequest, AppGroupMemberRecord, AppGroupMlsState,
-    AppGroupRecord, AppMessageQuery, AppMessageRecord, AuditLogFile, AuditLogSettings,
-    AuditLogTrackerConfig,
-    AuditLogUploadSource, MarmotApp, MarmotAppRuntime, MediaAttachmentReference,
+    AccountRelayListBootstrap, AccountSetupRequest, AppBlobEndpoint, AppGroupMemberRecord,
+    AppGroupMlsState, AppGroupRecord, AppMessageQuery, AppMessageRecord, AuditLogFile,
+    AuditLogSettings, AuditLogTrackerConfig,
+    AuditLogUploadSource, DEFAULT_BLOSSOM_SERVER_URL, MarmotApp, MarmotAppRuntime,
+    MediaAttachmentReference,
     MediaDownloadResult, MediaUploadAttachmentRequest, MediaUploadRequest, MediaUploadResult,
     RelayTelemetryResource, RelayTelemetryRuntimeConfig, RelayTelemetrySettings,
     RuntimeMessageUpdate, RuntimeMessagesSubscription, SendSummary, UserDirectoryRecord,
     UserProfileMetadata,
 };
+use cgka_traits::app_components::BLOSSOM_LOCATOR_KIND_V1;
 use tokio::runtime::Runtime as TokioRuntime;
 use tokio::task::JoinHandle;
 
@@ -40,15 +42,15 @@ pub const DEFAULT_ACCOUNT_LABEL: &str = "default";
 /// published their NIP-65 list to relays the user doesn't write to (this is the
 /// norm — there is no overlap guarantee between two users' relay sets), so
 /// resolving members against only the local configured set silently fails to
-/// find perfectly reachable peers. These are the common public indexers/relays
-/// that aggregate kind-10002 lists broadly.
+/// find perfectly reachable peers.
+///
+/// DEV POLICY: while in development we restrict this to the whitenoise
+/// official relays only (the ones the mobile apps publish to). Before release,
+/// re-add the broad public indexers (relay.ditto.pub, relay.primal.net,
+/// relay.damus.io, nos.lol) so discovery works beyond the whitenoise fleet.
 const DISCOVERY_RELAYS: &[&str] = &[
     "wss://relay.eu.whitenoise.chat",
     "wss://relay.us.whitenoise.chat",
-    "wss://relay.ditto.pub",
-    "wss://relay.primal.net",
-    "wss://relay.damus.io",
-    "wss://nos.lol",
 ];
 
 /// Capture a helper command's stdout, trimmed. `None` on spawn failure or
@@ -987,11 +989,49 @@ impl Backend {
             blossom_server: None,
         };
         self.tokio.spawn(async move {
-            let res = runtime
-                .upload_media(&label, &group_id, request)
-                .await
-                .map_err(|e| anyhow!("upload_media: {e}"));
-            on_done(res);
+            on_done(upload_media_with_heal(runtime, label, group_id, request).await);
+        });
+    }
+
+    /// Non-blocking album upload + send: all images go out as **one** kind-9
+    /// message carrying one `imeta` tag per image (so the UI renders them as a
+    /// single grid bubble). Each item is `(file_name, media_type, plaintext,
+    /// dim)`, where `dim` is `"WxH"` so receivers can lay out the grid without
+    /// decoding. Shares the same self-heal-and-retry as [`upload_media_async`].
+    pub fn upload_album_async<F>(
+        &self,
+        group_hex: &str,
+        items: Vec<(String, String, Vec<u8>, Option<String>)>,
+        on_done: F,
+    ) where
+        F: FnOnce(Result<MediaUploadResult>) + Send + 'static,
+    {
+        let group_id = match group_id_from_hex(group_hex) {
+            Ok(g) => g,
+            Err(e) => {
+                on_done(Err(e));
+                return;
+            }
+        };
+        let label = self.active_label();
+        let runtime = self.runtime.clone();
+        let request = MediaUploadRequest {
+            attachments: items
+                .into_iter()
+                .map(|(file_name, media_type, plaintext, dim)| MediaUploadAttachmentRequest {
+                    file_name,
+                    media_type,
+                    plaintext,
+                    dim,
+                    thumbhash: None,
+                })
+                .collect(),
+            caption: None,
+            send: true,
+            blossom_server: None,
+        };
+        self.tokio.spawn(async move {
+            on_done(upload_media_with_heal(runtime, label, group_id, request).await);
         });
     }
 
@@ -2231,6 +2271,70 @@ pub fn default_home() -> PathBuf {
 fn group_id_from_hex(group_hex: &str) -> Result<GroupId> {
     let bytes = hex::decode(group_hex).context("decode group id")?;
     Ok(GroupId::new(bytes))
+}
+
+/// Whether an `upload_media` error means the group's encrypted-media policy
+/// component is unusable (stale pre-#319 encoding that no longer decodes, or
+/// absent/disabled) rather than a transient failure. These are the cases a
+/// re-publish of the policy via `replace_encrypted_media_blob_endpoints` can
+/// fix; anything else (network, encryption, send) must not trigger a heal.
+fn is_stale_encrypted_media_policy(msg: &str) -> bool {
+    msg.contains("encrypted media format must be")
+        || msg.contains("encrypted media policy has no default endpoint")
+        || msg.contains("group does not require encrypted media")
+}
+
+/// Run an `upload_media` request, transparently self-healing a group whose
+/// encrypted-media policy component predates darkmatter #319 (the endpoint
+/// byte-layout change). Such components no longer decode under the strict
+/// decoder — the policy reads back with an empty `media_format` and the upload
+/// fails with "encrypted media format must be encrypted-media-v1". On that
+/// class of failure we re-publish the policy with the current encoding (an MLS
+/// commit — needs admin rights) and retry the upload once. Best-effort: if the
+/// heal or retry fails we surface the original error. Shared by the single-file
+/// and album upload paths.
+async fn upload_media_with_heal(
+    runtime: MarmotAppRuntime,
+    label: String,
+    group_id: GroupId,
+    request: MediaUploadRequest,
+) -> Result<MediaUploadResult> {
+    match runtime.upload_media(&label, &group_id, request.clone()).await {
+        Ok(r) => Ok(r),
+        Err(e) => {
+            let msg = e.to_string();
+            if is_stale_encrypted_media_policy(&msg) {
+                tracing::warn!(
+                    target: "backend::upload_media",
+                    error = %msg,
+                    "encrypted-media policy is stale (pre-#319 layout); re-publishing endpoints and retrying"
+                );
+                let endpoints = vec![AppBlobEndpoint {
+                    locator_kind: BLOSSOM_LOCATOR_KIND_V1.to_owned(),
+                    base_url: DEFAULT_BLOSSOM_SERVER_URL.to_owned(),
+                }];
+                match runtime
+                    .replace_encrypted_media_blob_endpoints(&label, &group_id, endpoints)
+                    .await
+                {
+                    Ok(_) => runtime
+                        .upload_media(&label, &group_id, request)
+                        .await
+                        .map_err(|e| anyhow!("upload_media (after policy heal): {e}")),
+                    Err(heal) => {
+                        tracing::warn!(
+                            target: "backend::upload_media",
+                            error = %heal,
+                            "could not re-publish encrypted-media policy (not admin?)"
+                        );
+                        Err(anyhow!("upload_media: {e}"))
+                    }
+                }
+            } else {
+                Err(anyhow!("upload_media: {e}"))
+            }
+        }
+    }
 }
 
 fn short_account_id(account_id_hex: &str) -> String {

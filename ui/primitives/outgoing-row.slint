@@ -1,4 +1,4 @@
-import { Palette, Theme, Reaction, MessageLine, ProfileSink } from "../tokens.slint";
+import { Palette, Theme, Reaction, MessageLine, ProfileSink, AlbumCell } from "../tokens.slint";
 import { Avatar } from "avatar.slint";
 import { MessageBubble } from "message-bubble.slint";
 import { ReactionChips, HoverActions } from "reactions-row.slint";
@@ -36,9 +36,13 @@ export component OutgoingRow inherits VerticalLayout {
     in property <bool> att-has-image: false;
     in property <bool> att-loading: false;
     in property <bool> att-failed: false;
+    in property <[AlbumCell]> album: [];
+    in property <length> album-w;
+    in property <length> album-h;
     in property <bool> edited: false;
     in property <int> edit-count: 0;
     in property <bool> can-edit: false;
+    callback album-cell-clicked(string);
     callback react(string, string);
     callback unreact(string);
     callback request-picker(string, length, length);
@@ -118,10 +122,14 @@ export component OutgoingRow inherits VerticalLayout {
                     att-has-image: root.att-has-image;
                     att-loading: root.att-loading;
                     att-failed: root.att-failed;
+                    album: root.album;
+                    album-w: root.album-w;
+                    album-h: root.album-h;
                     edited: root.edited;
                     edit-count: root.edit-count;
                     retry-clicked => { root.retry(); }
                     attachment-clicked => { root.attachment-clicked(root.message-id); }
+                    album-cell-clicked(key) => { root.album-cell-clicked(key); }
                     show-history-clicked => { root.show-history(root.message-id); }
                     context-menu-requested(ax, ay) => {
                         // Same gate as the hover toolbar: confirmed rows only.

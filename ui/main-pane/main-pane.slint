@@ -1,4 +1,4 @@
-import { Palette, ChatMeta, ChatMessage, GroupMember } from "../tokens.slint";
+import { Palette, ChatMeta, ChatMessage, GroupMember, StagedAttachment } from "../tokens.slint";
 import { MessagesArea } from "../messages.slint";
 import { ChatHeader } from "chat-header.slint";
 import { EncryptionBanner } from "encryption-banner.slint";
@@ -66,8 +66,12 @@ export component MainPane inherits Rectangle {
     callback cancel-reply();
     callback cancel-edit();
     callback attach-clicked();
+    callback paste-image();
+    in property <[StagedAttachment]> staged;
+    callback remove-staged(int);
     callback emoji-clicked(length, length);
     callback attachment-clicked(string);
+    callback album-cell-clicked(string);
     callback react(string, string);
     callback unreact(string);
     callback request-picker(string, length, length);
@@ -133,6 +137,7 @@ export component MainPane inherits Rectangle {
                 show-history(id) => { root.show-history(id); }
                 retry(id) => { root.retry(id); }
                 attachment-clicked(id) => { root.attachment-clicked(id); }
+                album-cell-clicked(key) => { root.album-cell-clicked(key); }
             }
             composer := Composer {
                 reply-target-id: root.reply-target-id;
@@ -144,6 +149,9 @@ export component MainPane inherits Rectangle {
                 cancel-reply => { root.cancel-reply(); }
                 cancel-edit => { root.cancel-edit(); }
                 attach-clicked => { root.attach-clicked(); }
+                paste-image => { root.paste-image(); }
+                staged: root.staged;
+                remove-staged(i) => { root.remove-staged(i); }
                 emoji-clicked(ax, ay) => { root.emoji-clicked(ax, ay); }
                 caret-moved(c) => { root.caret-moved(c); }
                 mention-nav(d) => { root.mention-nav(d); }

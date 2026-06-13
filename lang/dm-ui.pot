@@ -2,7 +2,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-06-12 05:18+0000\n"
+"POT-Creation-Date: 2026-06-13 03:49+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -249,24 +249,24 @@ msgctxt "ContactsSidebar"
 msgid "Search contacts…"
 msgstr ""
 
-#: ui/dark-matter-linux.slint:272
+#: ui/dark-matter-linux.slint:286
 msgctxt "DarkMatterLinux"
 msgid "Connecting to relays…"
 msgstr ""
 
-#: ui/dark-matter-linux.slint:821
+#: ui/dark-matter-linux.slint:838
 msgctxt "DarkMatterLinux"
 msgid "Block this chat request?"
 msgstr ""
 
-#: ui/dark-matter-linux.slint:822
+#: ui/dark-matter-linux.slint:839
 msgctxt "DarkMatterLinux"
 msgid ""
 "This declines the invite from {}. It can't be restored unless they invite "
 "you again."
 msgstr ""
 
-#: ui/dark-matter-linux.slint:823
+#: ui/dark-matter-linux.slint:840
 msgctxt "DarkMatterLinux"
 msgid "Block"
 msgstr ""
@@ -727,32 +727,32 @@ msgctxt "ChatRequestBanner"
 msgid "session."
 msgstr ""
 
-#: ui/main-pane/composer.slint:66
+#: ui/main-pane/composer.slint:76
 msgctxt "Composer"
 msgid "Editing message  ·  Enter to save"
 msgstr ""
 
-#: ui/main-pane/composer.slint:119
+#: ui/main-pane/composer.slint:129
 msgctxt "Composer"
 msgid "Replying to message:"
 msgstr ""
 
-#: ui/main-pane/composer.slint:120
+#: ui/main-pane/composer.slint:130
 msgctxt "Composer"
 msgid "Replying to {}:"
 msgstr ""
 
-#: ui/main-pane/composer.slint:197
+#: ui/main-pane/composer.slint:298
 msgctxt "Composer"
 msgid "Send a message  ·  encrypted with"
 msgstr ""
 
-#: ui/main-pane/composer.slint:197
+#: ui/main-pane/composer.slint:298
 msgctxt "Composer"
 msgid "for newline"
 msgstr ""
 
-#: ui/main-pane/composer.slint:236
+#: ui/main-pane/composer.slint:338
 msgctxt "Composer"
 msgid "Send"
 msgstr ""
@@ -861,12 +861,12 @@ msgctxt "GroupMembersPanel"
 msgid "Invite"
 msgstr ""
 
-#: ui/main-pane/main-pane.slint:114
+#: ui/main-pane/main-pane.slint:117
 msgctxt "MainPane"
 msgid "CHAT REQUEST"
 msgstr ""
 
-#: ui/main-pane/main-pane.slint:115
+#: ui/main-pane/main-pane.slint:118
 msgctxt "MainPane"
 msgid "SESSION ESTABLISHED"
 msgstr ""
@@ -997,6 +997,11 @@ msgstr ""
 #: ui/modals/edit-history-modal.slint:12
 msgctxt "EditHistoryModal"
 msgid "Edit history"
+msgstr ""
+
+#: ui/modals/image-viewer-modal.slint:76
+msgctxt "ImageViewerModal"
+msgid "Loading…"
 msgstr ""
 
 #: ui/modals/language-picker-modal.slint:53

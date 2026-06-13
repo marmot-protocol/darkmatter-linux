@@ -58,10 +58,11 @@ struct PendingSend {
     // event carries `e`+`q` tags. The triple is (parent_id_hex, author_label,
     // preview_text) — same values we render in the chip + quoted block.
     reply_to: Option<(String, String, String)>,
-    // When `Some`, this is a media upload + send. The optimistic bubble renders
-    // the attachment chip/preview while we wait for the encrypt+blossom+publish
-    // round-trip to resolve.
-    media: Option<PendingMedia>,
+    // Media upload + send. Empty for a plain text send; one entry for a single
+    // attachment (chip/image preview); 2+ for an album (rendered as a grid).
+    // The optimistic bubble renders straight from the local previews while the
+    // encrypt+blossom+publish round-trip resolves.
+    media: Vec<PendingMedia>,
 }
 
 #[derive(Clone)]
@@ -73,6 +74,25 @@ struct PendingMedia {
     // Local pixels for instant image preview while the upload is in flight.
     // None for non-image attachments.
     local_preview: Option<PicturePixels>,
+}
+
+/// One attachment queued in the composer (paperclip picker or clipboard
+/// paste) but not yet sent. The bytes stay Rust-side; the UI only gets a
+/// `StagedAttachment` chip row built by [`refresh_staged_ui`]. Nothing
+/// uploads until the user presses Send — the visible chips *are* the
+/// confirmation step.
+#[derive(Clone)]
+struct StagedFile {
+    file_name: String,
+    media_type: String,
+    bytes: Vec<u8>,
+    is_image: bool,
+    // Full-resolution decode, reused as the optimistic bubble preview and
+    // seeded into the attachment image cache once the upload confirms.
+    preview: Option<PicturePixels>,
+    // Small (≤96px) decode for the chip thumbnail, so rebuilding the chip
+    // model never copies full screenshots around.
+    thumb: Option<PicturePixels>,
 }
 
 #[derive(Clone)]
@@ -380,6 +400,21 @@ fn main() -> Result<(), slint::PlatformError> {
     // tokio worker thread and need to mutate it before hopping back to the
     // Slint event loop via `invoke_from_event_loop` (which requires Send).
     let pending_state: Arc<Mutex<PendingState>> = Arc::new(Mutex::new(PendingState::default()));
+    // Attachments queued in the composer, awaiting an explicit Send. Global
+    // like the draft itself (survives chat switches, cleared on account
+    // switch); the chip row keeps it visible wherever the composer is.
+    let staged_files: Arc<Mutex<Vec<StagedFile>>> = Arc::new(Mutex::new(Vec::new()));
+
+    // Stash the handles album auto-load needs so the (pure) row builders can
+    // kick off downloads for not-yet-cached album images. Set once, read only
+    // on the UI thread — see `maybe_autoload_album`.
+    set_album_load_ctx(AlbumLoadCtx {
+        weak: ui.as_weak(),
+        backend_cell: backend_cell.clone(),
+        vault_cell: vault_cell.clone(),
+        group_ids: group_ids.clone(),
+        pending_state: pending_state.clone(),
+    });
     // Currently-active per-chat message watcher. Aborted and replaced when the
     // user switches chats so we never leak background tasks.
     // `Arc<Mutex>` (not `Rc<RefCell>`) so the handle cell can ride into the
@@ -618,6 +653,7 @@ fn main() -> Result<(), slint::PlatformError> {
         let group_ids = group_ids.clone();
         let archived_group_ids = archived_group_ids.clone();
         let pending_state = pending_state.clone();
+        let staged_files = staged_files.clone();
         let active_message_watcher = active_message_watcher.clone();
         let chats_watcher = chats_watcher.clone();
         Arc::new(move |account_id: String| {
@@ -689,6 +725,8 @@ fn main() -> Result<(), slint::PlatformError> {
             ui.set_show_chat_members(false);
             ui.set_messages_has_older(false);
             ui.set_composer_draft(s(""));
+            staged_files.lock().unwrap().clear();
+            refresh_staged_ui(&ui, &[]);
             ui.set_reply_target_id(s(""));
             ui.set_reply_target_author(s(""));
             ui.set_reply_target_preview(s(""));
@@ -3105,6 +3143,7 @@ fn main() -> Result<(), slint::PlatformError> {
         let group_ids = group_ids.clone();
         let chats_messages = chats_messages.clone();
         let pending_state = pending_state.clone();
+        let staged_files = staged_files.clone();
         let dispatch_send = dispatch_send.clone();
         let edit_op = edit_op.clone();
         move |text| {
@@ -3112,17 +3151,21 @@ fn main() -> Result<(), slint::PlatformError> {
             // A send closes the mention picker; the draft is about to clear.
             ui.set_mention_active(false);
             let text = text.trim().to_string();
-            if text.is_empty() {
-                return;
-            }
             // Edit mode: when an edit target is set, this "send" rewrites that
             // message via a kind-1010 instead of posting a new one. Clear the
             // edit state + composer first so the banner drops immediately.
+            // (Staged attachments stay queued — an edit never sends them.)
             let editing_id = ui.get_editing_message_id().to_string();
             if !editing_id.is_empty() {
+                if text.is_empty() {
+                    return;
+                }
                 ui.set_editing_message_id(s(""));
                 ui.set_composer_draft(s(""));
                 edit_op(editing_id, text);
+                return;
+            }
+            if text.is_empty() && staged_files.lock().unwrap().is_empty() {
                 return;
             }
             let idx = ui.get_active_chat() as usize;
@@ -3135,53 +3178,112 @@ fn main() -> Result<(), slint::PlatformError> {
                 return;
             };
 
-            // Snapshot + clear the reply target (if any) so this send goes
-            // out as a reply once and only once. The chip disappears as soon
-            // as the user presses send — matches Telegram / Slack feel.
-            let reply_target_id = ui.get_reply_target_id().to_string();
-            let reply_to = if reply_target_id.is_empty() {
-                None
+            if !text.is_empty() {
+                // Snapshot + clear the reply target (if any) so this send goes
+                // out as a reply once and only once. The chip disappears as soon
+                // as the user presses send — matches Telegram / Slack feel.
+                let reply_target_id = ui.get_reply_target_id().to_string();
+                let reply_to = if reply_target_id.is_empty() {
+                    None
+                } else {
+                    Some((
+                        reply_target_id.clone(),
+                        ui.get_reply_target_author().to_string(),
+                        ui.get_reply_target_preview().to_string(),
+                    ))
+                };
+                if reply_to.is_some() {
+                    ui.set_reply_target_id(s(""));
+                    ui.set_reply_target_author(s(""));
+                    ui.set_reply_target_preview(s(""));
+                }
+
+                // 1. Insert pending bubble + clear the composer. Surgical push —
+                //    no full rebuild, no neighbour remount.
+                let temp_id = next_temp_id();
+                let send = PendingSend {
+                    temp_id: temp_id.clone(),
+                    text: text.clone(),
+                    failed: false,
+                    reply_to: reply_to.clone(),
+                    media: Vec::new(),
+                };
+                {
+                    let mut overlay = pending_state.lock().unwrap();
+                    overlay.add_send(&group_hex, send.clone());
+                }
+                let my_id = backend.account().account_id_hex.clone();
+                let my_label = my_avatar_label(backend, &my_id);
+                let pending_row = pending_chat_message(&send, &my_id, &my_label);
+                with_inner_messages(&chats_messages, idx, |vm| push_message_grouped(vm, pending_row));
+                ui.set_composer_draft(s(""));
+                // Force-scroll to the new bubble. The MessagesArea watches this
+                // tick and animates viewport-y to the bottom — so the user sees
+                // their message even if they were paged up reading history.
+                ui.set_messages_scroll_tick(ui.get_messages_scroll_tick() + 1);
+                drop(guard);
+
+                // 2. Dispatch the real send in the background.
+                let parent_id = reply_to.as_ref().map(|(id, _, _)| id.clone());
+                dispatch_send(group_hex.clone(), text, temp_id, parent_id);
             } else {
-                Some((
-                    reply_target_id.clone(),
-                    ui.get_reply_target_author().to_string(),
-                    ui.get_reply_target_preview().to_string(),
-                ))
-            };
-            if reply_to.is_some() {
-                ui.set_reply_target_id(s(""));
-                ui.set_reply_target_author(s(""));
-                ui.set_reply_target_preview(s(""));
+                drop(guard);
             }
 
-            // 1. Insert pending bubble + clear the composer. Surgical push —
-            //    no full rebuild, no neighbour remount.
-            let temp_id = next_temp_id();
-            let send = PendingSend {
-                temp_id: temp_id.clone(),
-                text: text.clone(),
-                failed: false,
-                reply_to: reply_to.clone(),
-                media: None,
-            };
-            {
-                let mut overlay = pending_state.lock().unwrap();
-                overlay.add_send(&group_hex, send.clone());
+            // 3. Flush the staged attachments. Multiple images go out as one
+            //    kind-9 album (one bubble, rendered as a grid); a lone image or
+            //    any non-image file goes out as its own message. Chips clear
+            //    immediately; a failed upload surfaces on its bubble (red, tap
+            //    to retry) like any other send. Telegram caps an album at 10.
+            let staged_now: Vec<StagedFile> =
+                std::mem::take(&mut *staged_files.lock().unwrap());
+            if !staged_now.is_empty() {
+                refresh_staged_ui(&ui, &[]);
+                let (images, others): (Vec<StagedFile>, Vec<StagedFile>) =
+                    staged_now.into_iter().partition(|f| f.is_image);
+                // Images: one album per chunk of 10; a single leftover image
+                // falls through to the single-attachment path.
+                for chunk in images.chunks(10) {
+                    if chunk.len() == 1 {
+                        let f = chunk[0].clone();
+                        spawn_attachment_send(
+                            weak.clone(),
+                            backend_cell.clone(),
+                            group_ids.clone(),
+                            pending_state.clone(),
+                            group_hex.clone(),
+                            f.file_name,
+                            f.media_type,
+                            f.bytes,
+                            f.is_image,
+                            f.preview,
+                        );
+                    } else {
+                        spawn_album_send(
+                            weak.clone(),
+                            backend_cell.clone(),
+                            group_ids.clone(),
+                            pending_state.clone(),
+                            group_hex.clone(),
+                            chunk.to_vec(),
+                        );
+                    }
+                }
+                for f in others {
+                    spawn_attachment_send(
+                        weak.clone(),
+                        backend_cell.clone(),
+                        group_ids.clone(),
+                        pending_state.clone(),
+                        group_hex.clone(),
+                        f.file_name,
+                        f.media_type,
+                        f.bytes,
+                        f.is_image,
+                        f.preview,
+                    );
+                }
             }
-            let my_id = backend.account().account_id_hex.clone();
-            let my_label = my_avatar_label(backend, &my_id);
-            let pending_row = pending_chat_message(&send, &my_id, &my_label);
-            with_inner_messages(&chats_messages, idx, |vm| push_message_grouped(vm, pending_row));
-            ui.set_composer_draft(s(""));
-            // Force-scroll to the new bubble. The MessagesArea watches this
-            // tick and animates viewport-y to the bottom — so the user sees
-            // their message even if they were paged up reading history.
-            ui.set_messages_scroll_tick(ui.get_messages_scroll_tick() + 1);
-            drop(guard);
-
-            // 2. Dispatch the real send in the background.
-            let parent_id = reply_to.as_ref().map(|(id, _, _)| id.clone());
-            dispatch_send(group_hex, text, temp_id, parent_id);
         }
     });
 
@@ -3241,36 +3343,23 @@ fn main() -> Result<(), slint::PlatformError> {
 
     // ─── Attach file ───────────────────────────────────────────────────
     //
-    // Composer paperclip → portal file picker → encrypted Blossom upload →
-    // kind-9 publish, all in one async flow. Mirrors `send_text_async`'s
-    // optimistic-overlay pattern: insert a pending bubble (with the local
-    // bytes already decoded as a preview for images), kick off the upload
-    // off-UI, then reconcile the pending row when the round-trip resolves.
-    //
-    // Thread-safety: `ModelRc` is `!Send`, so we never carry it across the
-    // tokio boundary — every closure that hops back to the UI re-fetches
-    // the model via `ui.get_chats_messages()`.
+    // Composer paperclip → portal file picker → *staged* attachment chips.
+    // Nothing uploads here: picked files (multi-select) are read + decoded
+    // off-UI and appended to `staged_files`; the chip row above the input
+    // is the user's confirmation, and `on_send_message` flushes the queue
+    // through `spawn_attachment_send` when Send is pressed.
     ui.on_attach_file({
         let weak = ui.as_weak();
         let backend_cell = backend_cell.clone();
-        let group_ids = group_ids.clone();
-        let pending_state = pending_state.clone();
+        let staged_files = staged_files.clone();
         move || {
-            let Some(ui) = weak.upgrade() else { return };
-            let idx = ui.get_active_chat() as usize;
-            let Some(group_hex) = group_ids.lock().unwrap().get(idx).cloned() else {
-                return;
-            };
             let guard = backend_cell.lock().unwrap();
             let Some(backend) = guard.as_ref() else { return };
             let tokio_handle = backend.tokio_handle();
             drop(guard);
 
             let weak_t = weak.clone();
-            let backend_cell_t = backend_cell.clone();
-            let group_ids_t = group_ids.clone();
-            let pending_state_t = pending_state.clone();
-            let group_hex_t = group_hex.clone();
+            let staged_t = staged_files.clone();
 
             // rfd's xdg-portal backend drives ashpd/zbus. We use the
             // async-std executor flavor of zbus (not tokio) so zbus's own
@@ -3280,8 +3369,8 @@ fn main() -> Result<(), slint::PlatformError> {
             tokio_handle.spawn(async move {
                 let picked = match tokio::task::spawn_blocking(move || {
                     rfd::FileDialog::new()
-                        .set_title("Attach file")
-                        .pick_file()
+                        .set_title("Attach files")
+                        .pick_files()
                 })
                 .await
                 {
@@ -3292,242 +3381,537 @@ fn main() -> Result<(), slint::PlatformError> {
                         return;
                     }
                 };
-                let path = picked;
-                let file_name = path
-                    .file_name()
-                    .map(|n| n.to_string_lossy().into_owned())
-                    .unwrap_or_else(|| "attachment".to_string());
-                let path_for_read = path.clone();
-                let bytes = match tokio::task::spawn_blocking(move || {
-                    std::fs::read(&path_for_read)
-                })
-                .await
-                {
-                    Ok(Ok(b)) => b,
-                    Ok(Err(e)) => {
-                        eprintln!("[attach] read {}: {e:#}", path.display());
-                        return;
-                    }
-                    Err(e) => {
-                        eprintln!("[attach] read join: {e:#}");
-                        return;
-                    }
-                };
-                let media_type = mime_guess::from_path(&path)
-                    .first_or_octet_stream()
-                    .essence_str()
-                    .to_string();
-                let size_bytes = bytes.len() as u64;
-                let is_image = mime_is_image(&media_type);
-                let local_preview: Option<PicturePixels> = if is_image {
-                    image::load_from_memory(&bytes).ok().map(|img| {
-                        let rgba = img.to_rgba8();
-                        let (w, h) = (rgba.width(), rgba.height());
-                        PicturePixels {
-                            w,
-                            h,
-                            rgba: rgba.into_raw(),
-                        }
+                let mut new_files: Vec<StagedFile> = Vec::new();
+                for path in picked {
+                    let file_name = path
+                        .file_name()
+                        .map(|n| n.to_string_lossy().into_owned())
+                        .unwrap_or_else(|| "attachment".to_string());
+                    let media_type = mime_guess::from_path(&path)
+                        .first_or_octet_stream()
+                        .essence_str()
+                        .to_string();
+                    let path_for_read = path.clone();
+                    // Read + image decode on a blocking thread; a file that
+                    // fails to read is skipped, not fatal to the batch.
+                    match tokio::task::spawn_blocking(move || {
+                        std::fs::read(&path_for_read)
+                            .map(|bytes| staged_file_from_bytes(file_name, media_type, bytes))
                     })
-                } else {
-                    None
-                };
-
-                let weak2 = weak_t.clone();
-                let backend_cell2 = backend_cell_t.clone();
-                let group_ids2 = group_ids_t.clone();
-                let pending_state2 = pending_state_t.clone();
-                let group_hex2 = group_hex_t.clone();
-                let file_name_u = file_name.clone();
-                let media_type_u = media_type.clone();
-                let _ = slint::invoke_from_event_loop(move || {
-                    let Some(ui) = weak2.upgrade() else { return };
-                    let chats_messages = ui.get_chats_messages();
-                    let ids = group_ids2.lock().unwrap();
-                    let Some(idx) = ids.iter().position(|g| g == &group_hex2) else {
-                        return;
-                    };
-                    drop(ids);
-                    let guard = backend_cell2.lock().unwrap();
-                    let Some(backend) = guard.as_ref() else { return };
-
-                    let temp_id = next_temp_id();
-                    let send = PendingSend {
-                        temp_id: temp_id.clone(),
-                        text: String::new(),
-                        failed: false,
-                        reply_to: None,
-                        media: Some(PendingMedia {
-                            file_name: file_name_u.clone(),
-                            media_type: media_type_u.clone(),
-                            size_bytes,
-                            is_image,
-                            local_preview: local_preview.clone(),
-                        }),
-                    };
+                    .await
                     {
-                        let mut overlay = pending_state2.lock().unwrap();
-                        overlay.add_send(&group_hex2, send.clone());
+                        Ok(Ok(f)) => new_files.push(f),
+                        Ok(Err(e)) => eprintln!("[attach] read {}: {e:#}", path.display()),
+                        Err(e) => eprintln!("[attach] read join: {e:#}"),
                     }
-                    let my_id = backend.account().account_id_hex.clone();
-                    let my_label = my_avatar_label(backend, &my_id);
-                    let pending_row = pending_chat_message(&send, &my_id, &my_label);
-                    with_inner_messages(&chats_messages, idx, |vm| push_message_grouped(vm, pending_row));
-                    ui.set_messages_scroll_tick(ui.get_messages_scroll_tick() + 1);
-
-                    let weak3 = weak2.clone();
-                    let backend_cell3 = backend_cell2.clone();
-                    let group_ids3 = group_ids2.clone();
-                    let pending_state3 = pending_state2.clone();
-                    let group_hex3 = group_hex2.clone();
-                    let temp_id3 = temp_id.clone();
-                    let local_preview_done = local_preview.clone();
-                    backend.upload_media_async(
-                        &group_hex2,
-                        file_name,
-                        media_type,
-                        bytes,
-                        None,
-                        move |result| {
-                            let weak = weak3.clone();
-                            let backend_cell = backend_cell3.clone();
-                            let group_ids = group_ids3.clone();
-                            let pending_state = pending_state3.clone();
-                            let group_hex = group_hex3.clone();
-                            let temp_id = temp_id3.clone();
-                            let local_preview = local_preview_done.clone();
-                            // Tokio worker — read the refreshed window HERE
-                            // so the invoke closure never touches sqlite.
-                            let all: Vec<AppMessageRecord> = if result.is_ok() {
-                                backend_cell
-                                    .lock()
-                                    .unwrap()
-                                    .as_ref()
-                                    .map(|b| {
-                                        b.messages(&group_hex, Some(msg_window_for(&group_hex)))
-                                            .unwrap_or_default()
-                                    })
-                                    .unwrap_or_default()
-                            } else {
-                                Vec::new()
-                            };
-                            let _ = slint::invoke_from_event_loop(move || {
-                                let Some(ui) = weak.upgrade() else { return };
-                                let chats_messages = ui.get_chats_messages();
-                                let ids = group_ids.lock().unwrap();
-                                let Some(idx) =
-                                    ids.iter().position(|g| g == &group_hex)
-                                else {
-                                    return;
-                                };
-                                drop(ids);
-
-                                match result {
-                                    Ok(upload) => {
-                                        pending_state
-                                            .lock()
-                                            .unwrap()
-                                            .drop_send(&group_hex, &temp_id);
-                                        let guard = backend_cell.lock().unwrap();
-                                        let Some(backend) = guard.as_ref() else { return };
-                                        let real_id = upload
-                                            .sent
-                                            .as_ref()
-                                            .and_then(|s| s.message_ids.first().cloned());
-                                        if let (Some(id), Some(p)) =
-                                            (real_id.as_ref(), local_preview.as_ref())
-                                        {
-                                            if is_image {
-                                                attachment_image_cache_put(
-                                                    id.clone(),
-                                                    p.clone(),
-                                                );
-                                            }
-                                        }
-                                        let confirmed_row: Option<ChatMessage> = real_id
-                                            .as_deref()
-                                            .and_then(|id| {
-                                                let rec = all
-                                                    .iter()
-                                                    .find(|m| m.message_id_hex == id)
-                                                    .cloned()?;
-                                                let overlay = pending_state.lock().unwrap();
-                                                let my_id =
-                                                    backend.account().account_id_hex.clone();
-                                                let my_label =
-                                                    my_avatar_label(backend, &my_id);
-                                                Some(build_one_message_row(
-                                                    &rec, &all, &my_id, &my_label,
-                                                    &group_hex, &overlay, backend,
-                                                ))
-                                            });
-                                        let swapped = with_inner_messages(
-                                            &chats_messages,
-                                            idx,
-                                            |vm| {
-                                                let Some(pos) =
-                                                    find_message_row(vm, &temp_id)
-                                                else {
-                                                    return false;
-                                                };
-                                                if let Some(mut row) = confirmed_row {
-                                                    preserve_grouping_flags(vm, pos, &mut row);
-                                                    vm.set_row_data(pos, row);
-                                                } else {
-                                                    vm.remove(pos);
-                                                }
-                                                true
-                                            },
-                                        );
-                                        if swapped != Some(true) {
-                                            let overlay = pending_state.lock().unwrap();
-                                            rebuild_chat_messages_from(
-                                                backend,
-                                                &overlay,
-                                                &chats_messages,
-                                                idx,
-                                                &group_hex,
-                                                &all,
-                                            );
-                                        }
-                                    }
-                                    Err(e) => {
-                                        eprintln!("[attach] upload: {e:#}");
-                                        let mut overlay = pending_state.lock().unwrap();
-                                        overlay.mark_send_failed(&group_hex, &temp_id);
-                                        let failed =
-                                            overlay.find_send(&group_hex, &temp_id);
-                                        drop(overlay);
-                                        if let Some(failed) = failed {
-                                            let guard = backend_cell.lock().unwrap();
-                                            let Some(backend) = guard.as_ref() else { return };
-                                            let my_id =
-                                                backend.account().account_id_hex.clone();
-                                            let my_label = my_avatar_label(backend, &my_id);
-                                            let _ = with_inner_messages(
-                                                &chats_messages,
-                                                idx,
-                                                |vm| {
-                                                    if let Some(pos) =
-                                                        find_message_row(vm, &temp_id)
-                                                    {
-                                                        vm.set_row_data(
-                                                            pos,
-                                                            pending_chat_message(
-                                                                &failed, &my_id, &my_label,
-                                                            ),
-                                                        );
-                                                    }
-                                                },
-                                            );
-                                        }
-                                    }
-                                }
-                            });
-                        },
-                    );
+                }
+                if new_files.is_empty() {
+                    return;
+                }
+                let _ = slint::invoke_from_event_loop(move || {
+                    let Some(ui) = weak_t.upgrade() else { return };
+                    let mut staged = staged_t.lock().unwrap();
+                    staged.extend(new_files);
+                    refresh_staged_ui(&ui, &staged);
                 });
             });
+        }
+    });
+
+    // ─── Attachment send (shared tail) ─────────────────────────────────
+    //
+    // Called by `on_send_message` for each staged attachment: insert the
+    // optimistic pending bubble, run the encrypted Blossom upload + kind-9
+    // publish, reconcile the bubble when the round-trip resolves. A nested
+    // item (captures nothing) so it lives next to the flows that feed it.
+    //
+    // Thread-safety: `ModelRc` is `!Send`, so we never carry it across the
+    // tokio boundary — every closure that hops back to the UI re-fetches
+    // the model via `ui.get_chats_messages()`.
+    #[allow(clippy::too_many_arguments)]
+    fn spawn_attachment_send(
+        weak: slint::Weak<DarkMatterLinux>,
+        backend_cell: Arc<Mutex<Option<Arc<Backend>>>>,
+        group_ids: Arc<Mutex<Vec<String>>>,
+        pending_state: Arc<Mutex<PendingState>>,
+        group_hex: String,
+        file_name: String,
+        media_type: String,
+        bytes: Vec<u8>,
+        is_image: bool,
+        local_preview: Option<PicturePixels>,
+    ) {
+        let size_bytes = bytes.len() as u64;
+        let weak2 = weak;
+        let backend_cell2 = backend_cell;
+        let group_ids2 = group_ids;
+        let pending_state2 = pending_state;
+        let group_hex2 = group_hex;
+        let file_name_u = file_name.clone();
+        let media_type_u = media_type.clone();
+        let _ = slint::invoke_from_event_loop(move || {
+            let Some(ui) = weak2.upgrade() else { return };
+            let chats_messages = ui.get_chats_messages();
+            let ids = group_ids2.lock().unwrap();
+            let Some(idx) = ids.iter().position(|g| g == &group_hex2) else {
+                return;
+            };
+            drop(ids);
+            let guard = backend_cell2.lock().unwrap();
+            let Some(backend) = guard.as_ref() else { return };
+
+            let temp_id = next_temp_id();
+            let send = PendingSend {
+                temp_id: temp_id.clone(),
+                text: String::new(),
+                failed: false,
+                reply_to: None,
+                media: vec![PendingMedia {
+                    file_name: file_name_u.clone(),
+                    media_type: media_type_u.clone(),
+                    size_bytes,
+                    is_image,
+                    local_preview: local_preview.clone(),
+                }],
+            };
+            {
+                let mut overlay = pending_state2.lock().unwrap();
+                overlay.add_send(&group_hex2, send.clone());
+            }
+            let my_id = backend.account().account_id_hex.clone();
+            let my_label = my_avatar_label(backend, &my_id);
+            let pending_row = pending_chat_message(&send, &my_id, &my_label);
+            with_inner_messages(&chats_messages, idx, |vm| push_message_grouped(vm, pending_row));
+            ui.set_messages_scroll_tick(ui.get_messages_scroll_tick() + 1);
+
+            let weak3 = weak2.clone();
+            let backend_cell3 = backend_cell2.clone();
+            let group_ids3 = group_ids2.clone();
+            let pending_state3 = pending_state2.clone();
+            let group_hex3 = group_hex2.clone();
+            let temp_id3 = temp_id.clone();
+            let local_preview_done = local_preview.clone();
+            backend.upload_media_async(
+                &group_hex2,
+                file_name,
+                media_type,
+                bytes,
+                None,
+                move |result| {
+                    let weak = weak3.clone();
+                    let backend_cell = backend_cell3.clone();
+                    let group_ids = group_ids3.clone();
+                    let pending_state = pending_state3.clone();
+                    let group_hex = group_hex3.clone();
+                    let temp_id = temp_id3.clone();
+                    let local_preview = local_preview_done.clone();
+                    // Tokio worker — read the refreshed window HERE
+                    // so the invoke closure never touches sqlite.
+                    let all: Vec<AppMessageRecord> = if result.is_ok() {
+                        backend_cell
+                            .lock()
+                            .unwrap()
+                            .as_ref()
+                            .map(|b| {
+                                b.messages(&group_hex, Some(msg_window_for(&group_hex)))
+                                    .unwrap_or_default()
+                            })
+                            .unwrap_or_default()
+                    } else {
+                        Vec::new()
+                    };
+                    let _ = slint::invoke_from_event_loop(move || {
+                        let Some(ui) = weak.upgrade() else { return };
+                        let chats_messages = ui.get_chats_messages();
+                        let ids = group_ids.lock().unwrap();
+                        let Some(idx) =
+                            ids.iter().position(|g| g == &group_hex)
+                        else {
+                            return;
+                        };
+                        drop(ids);
+
+                        match result {
+                            Ok(upload) => {
+                                pending_state
+                                    .lock()
+                                    .unwrap()
+                                    .drop_send(&group_hex, &temp_id);
+                                let guard = backend_cell.lock().unwrap();
+                                let Some(backend) = guard.as_ref() else { return };
+                                let real_id = upload
+                                    .sent
+                                    .as_ref()
+                                    .and_then(|s| s.message_ids.first().cloned());
+                                if let (Some(id), Some(p)) =
+                                    (real_id.as_ref(), local_preview.as_ref())
+                                {
+                                    if is_image {
+                                        attachment_image_cache_put(
+                                            id.clone(),
+                                            p.clone(),
+                                        );
+                                    }
+                                }
+                                let confirmed_row: Option<ChatMessage> = real_id
+                                    .as_deref()
+                                    .and_then(|id| {
+                                        let rec = all
+                                            .iter()
+                                            .find(|m| m.message_id_hex == id)
+                                            .cloned()?;
+                                        let overlay = pending_state.lock().unwrap();
+                                        let my_id =
+                                            backend.account().account_id_hex.clone();
+                                        let my_label =
+                                            my_avatar_label(backend, &my_id);
+                                        Some(build_one_message_row(
+                                            &rec, &all, &my_id, &my_label,
+                                            &group_hex, &overlay, backend,
+                                        ))
+                                    });
+                                let swapped = with_inner_messages(
+                                    &chats_messages,
+                                    idx,
+                                    |vm| {
+                                        let Some(pos) =
+                                            find_message_row(vm, &temp_id)
+                                        else {
+                                            return false;
+                                        };
+                                        if let Some(mut row) = confirmed_row {
+                                            preserve_grouping_flags(vm, pos, &mut row);
+                                            vm.set_row_data(pos, row);
+                                        } else {
+                                            vm.remove(pos);
+                                        }
+                                        true
+                                    },
+                                );
+                                if swapped != Some(true) {
+                                    let overlay = pending_state.lock().unwrap();
+                                    rebuild_chat_messages_from(
+                                        backend,
+                                        &overlay,
+                                        &chats_messages,
+                                        idx,
+                                        &group_hex,
+                                        &all,
+                                    );
+                                }
+                            }
+                            Err(e) => {
+                                eprintln!("[attach] upload: {e:#}");
+                                let mut overlay = pending_state.lock().unwrap();
+                                overlay.mark_send_failed(&group_hex, &temp_id);
+                                let failed =
+                                    overlay.find_send(&group_hex, &temp_id);
+                                drop(overlay);
+                                if let Some(failed) = failed {
+                                    let guard = backend_cell.lock().unwrap();
+                                    let Some(backend) = guard.as_ref() else { return };
+                                    let my_id =
+                                        backend.account().account_id_hex.clone();
+                                    let my_label = my_avatar_label(backend, &my_id);
+                                    let _ = with_inner_messages(
+                                        &chats_messages,
+                                        idx,
+                                        |vm| {
+                                            if let Some(pos) =
+                                                find_message_row(vm, &temp_id)
+                                            {
+                                                vm.set_row_data(
+                                                    pos,
+                                                    pending_chat_message(
+                                                        &failed, &my_id, &my_label,
+                                                    ),
+                                                );
+                                            }
+                                        },
+                                    );
+                                }
+                            }
+                        }
+                    });
+                },
+            );
+        });
+    }
+
+    // Album send: all the images go out as ONE kind-9 message (multiple imeta
+    // tags) so the confirmed bubble renders a grid. Optimistic pending bubble
+    // shows the grid immediately from local previews; on ack we seed the
+    // attachment cache (per image, under `real_id#index`) so the confirmed grid
+    // shows the same pixels without a re-download, then swap the row. Mirrors
+    // `spawn_attachment_send`'s reconcile, generalized to N images.
+    #[allow(clippy::too_many_arguments)]
+    fn spawn_album_send(
+        weak: slint::Weak<DarkMatterLinux>,
+        backend_cell: Arc<Mutex<Option<Arc<Backend>>>>,
+        group_ids: Arc<Mutex<Vec<String>>>,
+        pending_state: Arc<Mutex<PendingState>>,
+        group_hex: String,
+        files: Vec<StagedFile>,
+    ) {
+        let _ = slint::invoke_from_event_loop(move || {
+            let Some(ui) = weak.upgrade() else { return };
+            let chats_messages = ui.get_chats_messages();
+            let Some(idx) = group_ids
+                .lock()
+                .unwrap()
+                .iter()
+                .position(|g| g == &group_hex)
+            else {
+                return;
+            };
+            let guard = backend_cell.lock().unwrap();
+            let Some(backend) = guard.as_ref() else { return };
+
+            let temp_id = next_temp_id();
+            let media: Vec<PendingMedia> = files
+                .iter()
+                .map(|f| PendingMedia {
+                    file_name: f.file_name.clone(),
+                    media_type: f.media_type.clone(),
+                    size_bytes: f.bytes.len() as u64,
+                    is_image: true,
+                    local_preview: f.preview.clone(),
+                })
+                .collect();
+            let send = PendingSend {
+                temp_id: temp_id.clone(),
+                text: String::new(),
+                failed: false,
+                reply_to: None,
+                media,
+            };
+            pending_state.lock().unwrap().add_send(&group_hex, send.clone());
+            let my_id = backend.account().account_id_hex.clone();
+            let my_label = my_avatar_label(backend, &my_id);
+            let pending_row = pending_chat_message(&send, &my_id, &my_label);
+            with_inner_messages(&chats_messages, idx, |vm| push_message_grouped(vm, pending_row));
+            ui.set_messages_scroll_tick(ui.get_messages_scroll_tick() + 1);
+
+            // Previews (kept in image order) seed the cache under the real id on
+            // ack; `items` carry the dim "WxH" so receivers lay out the grid.
+            let previews: Vec<Option<PicturePixels>> =
+                files.iter().map(|f| f.preview.clone()).collect();
+            let items: Vec<(String, String, Vec<u8>, Option<String>)> = files
+                .into_iter()
+                .map(|f| {
+                    let dim = f.preview.as_ref().map(|p| format!("{}x{}", p.w, p.h));
+                    (f.file_name, f.media_type, f.bytes, dim)
+                })
+                .collect();
+
+            let weak3 = weak.clone();
+            let backend_cell3 = backend_cell.clone();
+            let group_ids3 = group_ids.clone();
+            let pending_state3 = pending_state.clone();
+            let group_hex3 = group_hex.clone();
+            let temp_id3 = temp_id.clone();
+            backend.upload_album_async(&group_hex, items, move |result| {
+                let weak = weak3.clone();
+                let backend_cell = backend_cell3.clone();
+                let group_ids = group_ids3.clone();
+                let pending_state = pending_state3.clone();
+                let group_hex = group_hex3.clone();
+                let temp_id = temp_id3.clone();
+                let all: Vec<AppMessageRecord> = if result.is_ok() {
+                    backend_cell
+                        .lock()
+                        .unwrap()
+                        .as_ref()
+                        .map(|b| {
+                            b.messages(&group_hex, Some(msg_window_for(&group_hex)))
+                                .unwrap_or_default()
+                        })
+                        .unwrap_or_default()
+                } else {
+                    Vec::new()
+                };
+                let _ = slint::invoke_from_event_loop(move || {
+                    let Some(ui) = weak.upgrade() else { return };
+                    let chats_messages = ui.get_chats_messages();
+                    let Some(idx) = group_ids
+                        .lock()
+                        .unwrap()
+                        .iter()
+                        .position(|g| g == &group_hex)
+                    else {
+                        return;
+                    };
+                    match result {
+                        Ok(upload) => {
+                            pending_state
+                                .lock()
+                                .unwrap()
+                                .drop_send(&group_hex, &temp_id);
+                            let guard = backend_cell.lock().unwrap();
+                            let Some(backend) = guard.as_ref() else { return };
+                            let real_id = upload
+                                .sent
+                                .as_ref()
+                                .and_then(|s| s.message_ids.first().cloned());
+                            if let Some(id) = real_id.as_ref() {
+                                for (i, p) in previews.iter().enumerate() {
+                                    if let Some(px) = p {
+                                        attachment_image_cache_put(att_key(id, i), px.clone());
+                                    }
+                                }
+                            }
+                            let confirmed_row: Option<ChatMessage> =
+                                real_id.as_deref().and_then(|id| {
+                                    let rec =
+                                        all.iter().find(|m| m.message_id_hex == id).cloned()?;
+                                    let overlay = pending_state.lock().unwrap();
+                                    let my_id = backend.account().account_id_hex.clone();
+                                    let my_label = my_avatar_label(backend, &my_id);
+                                    Some(build_one_message_row(
+                                        &rec, &all, &my_id, &my_label, &group_hex, &overlay,
+                                        backend,
+                                    ))
+                                });
+                            let swapped = with_inner_messages(&chats_messages, idx, |vm| {
+                                let Some(pos) = find_message_row(vm, &temp_id) else {
+                                    return false;
+                                };
+                                if let Some(mut row) = confirmed_row {
+                                    preserve_grouping_flags(vm, pos, &mut row);
+                                    vm.set_row_data(pos, row);
+                                } else {
+                                    vm.remove(pos);
+                                }
+                                true
+                            });
+                            if swapped != Some(true) {
+                                let overlay = pending_state.lock().unwrap();
+                                rebuild_chat_messages_from(
+                                    backend,
+                                    &overlay,
+                                    &chats_messages,
+                                    idx,
+                                    &group_hex,
+                                    &all,
+                                );
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("[album] upload: {e:#}");
+                            let mut overlay = pending_state.lock().unwrap();
+                            overlay.mark_send_failed(&group_hex, &temp_id);
+                            let failed = overlay.find_send(&group_hex, &temp_id);
+                            drop(overlay);
+                            if let Some(failed) = failed {
+                                let guard = backend_cell.lock().unwrap();
+                                let Some(backend) = guard.as_ref() else { return };
+                                let my_id = backend.account().account_id_hex.clone();
+                                let my_label = my_avatar_label(backend, &my_id);
+                                let _ = with_inner_messages(&chats_messages, idx, |vm| {
+                                    if let Some(pos) = find_message_row(vm, &temp_id) {
+                                        vm.set_row_data(
+                                            pos,
+                                            pending_chat_message(&failed, &my_id, &my_label),
+                                        );
+                                    }
+                                });
+                            }
+                        }
+                    }
+                });
+            });
+        });
+    }
+
+    // ─── Paste image (composer paste shortcut) ─────────────────────────
+    //
+    // The composer fires this on Ctrl/Cmd+V and Shift+Insert *in addition
+    // to* the native text paste (which still runs). We probe the system
+    // clipboard off-thread; image-intent content (an image target offered,
+    // no plain-text target) is staged as an attachment chip — never
+    // auto-sent.
+    ui.on_paste_image({
+        let weak = ui.as_weak();
+        let staged_files = staged_files.clone();
+        move || {
+            let weak = weak.clone();
+            let staged_files = staged_files.clone();
+            // Throwaway thread, same rationale as `copy_to_clipboard_async`:
+            // CLI helpers and arboard can block on the display server.
+            std::thread::spawn(move || {
+                let Some((bytes, media_type)) = paste_image_from_clipboard() else {
+                    return;
+                };
+                let ext = media_type
+                    .strip_prefix("image/")
+                    .and_then(|s| s.split('+').next())
+                    .unwrap_or("png")
+                    .to_string();
+                let file =
+                    staged_file_from_bytes(format!("pasted-image.{ext}"), media_type, bytes);
+                let _ = slint::invoke_from_event_loop(move || {
+                    let Some(ui) = weak.upgrade() else { return };
+                    let mut staged = staged_files.lock().unwrap();
+                    staged.push(file);
+                    refresh_staged_ui(&ui, &staged);
+                });
+            });
+        }
+    });
+
+    // ─── Remove a staged attachment chip ───────────────────────────────
+    ui.on_remove_staged({
+        let weak = ui.as_weak();
+        let staged_files = staged_files.clone();
+        move |idx| {
+            let Some(ui) = weak.upgrade() else { return };
+            let mut staged = staged_files.lock().unwrap();
+            let idx = idx as usize;
+            if idx < staged.len() {
+                staged.remove(idx);
+            }
+            refresh_staged_ui(&ui, &staged);
+        }
+    });
+
+    // ─── Album cell tapped → open the slideshow at that image ──────────
+    // The key is `message_id#index`. Pending album cells (temp ids start with
+    // "pending:") aren't sent yet, so they don't open the viewer. Otherwise we
+    // open the lightbox and let the slideshow builder load the tapped image
+    // (cache hit → instant; miss → downloads) and wire up prev/next.
+    ui.on_album_cell_clicked({
+        let weak = ui.as_weak();
+        let backend_cell = backend_cell.clone();
+        let group_ids = group_ids.clone();
+        move |key| {
+            let Some(ui) = weak.upgrade() else { return };
+            let key = key.to_string();
+            if key.is_empty() || key.starts_with("pending:") {
+                return;
+            }
+            let idx = ui.get_active_chat() as usize;
+            let Some(group_hex) = group_ids.lock().unwrap().get(idx).cloned() else {
+                return;
+            };
+            // Show the cached pixels immediately if we have them, else open on
+            // the loading pill while the builder fetches the image.
+            match attachment_image_cache_get(&key) {
+                Some(px) => {
+                    ui.set_image_viewer_image(image_from_pixels(&px));
+                    ui.set_image_viewer_loading(false);
+                }
+                None => ui.set_image_viewer_loading(true),
+            }
+            ui.set_image_viewer_count(1);
+            ui.set_image_viewer_index(1);
+            ui.set_image_viewer_open(true);
+            build_viewer_slideshow(
+                ui.as_weak(),
+                backend_cell.clone(),
+                group_ids.clone(),
+                group_hex,
+                key,
+            );
         }
     });
 
@@ -3550,10 +3934,24 @@ fn main() -> Result<(), slint::PlatformError> {
                 return;
             }
             // Already decoded → tapping expands it into the full-window
-            // lightbox instead of re-downloading.
+            // lightbox instead of re-downloading. Also (re)build the slideshow
+            // list so the chevrons can flip through the chat's other images.
             if let Some(img) = cached_attachment_image(&mid) {
                 ui.set_image_viewer_image(img);
+                ui.set_image_viewer_loading(false);
+                ui.set_image_viewer_count(1);
+                ui.set_image_viewer_index(1);
                 ui.set_image_viewer_open(true);
+                let idx = ui.get_active_chat() as usize;
+                if let Some(group_hex) = group_ids.lock().unwrap().get(idx).cloned() {
+                    build_viewer_slideshow(
+                        ui.as_weak(),
+                        backend_cell.clone(),
+                        group_ids.clone(),
+                        group_hex,
+                        mid.clone(),
+                    );
+                }
                 return;
             }
             {
@@ -3927,6 +4325,51 @@ fn main() -> Result<(), slint::PlatformError> {
         move || {
             if let Some(ui) = weak.upgrade() {
                 ui.set_image_viewer_open(false);
+                ui.set_image_viewer_loading(false);
+            }
+            VIEWER_SLIDESHOW.with(|s| *s.borrow_mut() = ViewerSlideshow::default());
+        }
+    });
+
+    // ─── Lightbox slideshow nav ────────────────────────────────────────
+    // Step the position and load that image (cache hit → instant; miss →
+    // download with the loading pill up). `prev`/`next` are no-ops at the
+    // ends — the UI hides the chevron there, but a stray ←/→ key is harmless.
+    ui.on_image_viewer_prev({
+        let weak = ui.as_weak();
+        let backend_cell = backend_cell.clone();
+        let group_ids = group_ids.clone();
+        move || {
+            let Some(ui) = weak.upgrade() else { return };
+            let target = VIEWER_SLIDESHOW.with(|s| {
+                let mut s = s.borrow_mut();
+                if s.pos > 0 {
+                    s.pos -= 1;
+                }
+                s.items.get(s.pos).map(|it| (s.pos, it.clone()))
+            });
+            if let Some((pos, item)) = target {
+                ui.set_image_viewer_index((pos + 1) as i32);
+                load_viewer_image(&ui, &backend_cell, &group_ids, pos, item);
+            }
+        }
+    });
+    ui.on_image_viewer_next({
+        let weak = ui.as_weak();
+        let backend_cell = backend_cell.clone();
+        let group_ids = group_ids.clone();
+        move || {
+            let Some(ui) = weak.upgrade() else { return };
+            let target = VIEWER_SLIDESHOW.with(|s| {
+                let mut s = s.borrow_mut();
+                if s.pos + 1 < s.items.len() {
+                    s.pos += 1;
+                }
+                s.items.get(s.pos).map(|it| (s.pos, it.clone()))
+            });
+            if let Some((pos, item)) = target {
+                ui.set_image_viewer_index((pos + 1) as i32);
+                load_viewer_image(&ui, &backend_cell, &group_ids, pos, item);
             }
         }
     });
@@ -4940,6 +5383,169 @@ fn image_from_pixels(pixels: &PicturePixels) -> slint::Image {
     slint::Image::from_rgba8(buffer)
 }
 
+/// One image in the lightbox slideshow. `cache_key` is the shared attachment
+/// cache handle (bare message id for a lone image, `id#index` for an album
+/// member) — the same key the bubble renders from. `reference` is pre-resolved
+/// so prev/next never re-reads sqlite to find what to download.
+#[derive(Clone)]
+struct ViewerItem {
+    cache_key: String,
+    reference: MediaAttachmentReference,
+}
+
+/// Every image in the chat window as an ordered slideshow list — one item per
+/// image, expanding albums into their members. `cache_key` matches the render
+/// path: a lone image keeps the bare message id; album members get `id#index`.
+fn build_viewer_items(all: &[AppMessageRecord]) -> Vec<ViewerItem> {
+    let mut items = Vec::new();
+    for m in all {
+        let imgs: Vec<MediaAttachmentReference> =
+            parse_all_media_references(&m.tags, m.source_epoch)
+                .into_iter()
+                .filter(|r| mime_is_image(&r.media_type))
+                .collect();
+        if imgs.len() == 1 {
+            items.push(ViewerItem {
+                cache_key: m.message_id_hex.clone(),
+                reference: imgs.into_iter().next().unwrap(),
+            });
+        } else {
+            for (i, reference) in imgs.into_iter().enumerate() {
+                items.push(ViewerItem {
+                    cache_key: att_key(&m.message_id_hex, i),
+                    reference,
+                });
+            }
+        }
+    }
+    items
+}
+
+/// Ordered image attachments for the open lightbox + the current position.
+/// UI-thread-only state (the lightbox and its callbacks all run there), held
+/// in a thread-local so download-completion closures — which must be `Send`
+/// to cross `invoke_from_event_loop` and so can't capture an `Rc` — can still
+/// reach it once they hop back onto the event loop.
+#[derive(Default)]
+struct ViewerSlideshow {
+    items: Vec<ViewerItem>,
+    pos: usize,
+}
+
+thread_local! {
+    static VIEWER_SLIDESHOW: std::cell::RefCell<ViewerSlideshow> =
+        std::cell::RefCell::new(ViewerSlideshow::default());
+}
+
+/// Build the slideshow list for the open lightbox: every image attachment in
+/// the chat window, in message order, with the tapped one selected. The
+/// sqlite read + tag parse run on the backend runtime; the result (which is
+/// `Send`) hops back to store the list and seed the counter.
+fn build_viewer_slideshow(
+    weak: slint::Weak<DarkMatterLinux>,
+    backend_cell: Arc<Mutex<Option<Arc<Backend>>>>,
+    group_ids: Arc<Mutex<Vec<String>>>,
+    group_hex: String,
+    current_key: String,
+) {
+    let Some(backend) = backend_cell.lock().unwrap().clone() else {
+        return;
+    };
+    let handle = backend.tokio_handle();
+    handle.spawn(async move {
+        let all = backend
+            .messages(&group_hex, Some(msg_window_for(&group_hex)))
+            .unwrap_or_default();
+        let items = build_viewer_items(&all);
+        let pos = items
+            .iter()
+            .position(|it| it.cache_key == current_key)
+            .unwrap_or(0);
+        let count = items.len();
+        let _ = slint::invoke_from_event_loop(move || {
+            let Some(ui) = weak.upgrade() else { return };
+            // Store the list, then load the selected image (cache hit → instant,
+            // miss → loading pill + download).
+            let current = VIEWER_SLIDESHOW.with(|s| {
+                *s.borrow_mut() = ViewerSlideshow { items, pos };
+                s.borrow().items.get(pos).cloned()
+            });
+            ui.set_image_viewer_count(count as i32);
+            ui.set_image_viewer_index((pos + 1) as i32);
+            if let Some(item) = current {
+                load_viewer_image(&ui, &backend_cell, &group_ids, pos, item);
+            } else {
+                ui.set_image_viewer_loading(false);
+            }
+        });
+    });
+}
+
+/// Show the image at slideshow position `pos` in the lightbox. Cache hit →
+/// swap instantly; miss → flip on the loading pill and download+decode, then
+/// swap *only if* the viewer is still parked on the same image (the user may
+/// have clicked past it). The decoded pixels seed the shared attachment cache
+/// so the bubble row and a re-open are both free afterwards.
+fn load_viewer_image(
+    ui: &DarkMatterLinux,
+    backend_cell: &Arc<Mutex<Option<Arc<Backend>>>>,
+    group_ids: &Arc<Mutex<Vec<String>>>,
+    pos: usize,
+    item: ViewerItem,
+) {
+    if let Some(pixels) = attachment_image_cache_get(&item.cache_key) {
+        ui.set_image_viewer_image(image_from_pixels(&pixels));
+        ui.set_image_viewer_loading(false);
+        return;
+    }
+    ui.set_image_viewer_loading(true);
+    let idx = ui.get_active_chat() as usize;
+    let Some(group_hex) = group_ids.lock().unwrap().get(idx).cloned() else {
+        return;
+    };
+    let Some(backend) = backend_cell.lock().unwrap().clone() else {
+        return;
+    };
+    let weak = ui.as_weak();
+    let mid = item.cache_key.clone();
+    backend.download_media_async(&group_hex, item.reference, move |result| {
+        // Runs on the backend runtime. Decode here, hop to the UI thread to
+        // build the (!Send) Image and apply it.
+        let pixels = match result {
+            Ok(dl) => image::load_from_memory(&dl.plaintext).ok().map(|img| {
+                let rgba = img.to_rgba8();
+                PicturePixels {
+                    w: rgba.width(),
+                    h: rgba.height(),
+                    rgba: rgba.into_raw(),
+                }
+            }),
+            Err(e) => {
+                eprintln!("[viewer] download {mid}: {e:#}");
+                None
+            }
+        };
+        if let Some(px) = &pixels {
+            attachment_image_cache_put(mid.clone(), px.clone());
+        }
+        let _ = slint::invoke_from_event_loop(move || {
+            let Some(ui) = weak.upgrade() else { return };
+            // Drop the result if the user navigated on while we downloaded.
+            let still_current = VIEWER_SLIDESHOW.with(|s| {
+                let s = s.borrow();
+                s.pos == pos && s.items.get(pos).is_some_and(|it| it.cache_key == mid)
+            });
+            if !still_current {
+                return;
+            }
+            if let Some(px) = pixels {
+                ui.set_image_viewer_image(image_from_pixels(&px));
+            }
+            ui.set_image_viewer_loading(false);
+        });
+    });
+}
+
 /// Resolve a chat record's NIP-92 `imeta` tag into a [`MediaAttachmentReference`]
 /// (encrypted-media v1). The tag carries repeatable `locator <kind> <value>`
 /// entries plus `ciphertext_sha256` / `plaintext_sha256` / `nonce` / `m` /
@@ -4951,9 +5557,30 @@ fn parse_media_reference_from_tags(
     tags: &[Vec<String>],
     source_epoch: Option<u64>,
 ) -> Option<MediaAttachmentReference> {
-    let tag = tags
-        .iter()
-        .find(|t| t.first().map(String::as_str) == Some("imeta"))?;
+    tags.iter()
+        .find(|t| t.first().map(String::as_str) == Some("imeta"))
+        .and_then(|t| parse_one_imeta(t, source_epoch))
+}
+
+/// Every `imeta` reference on a record, in tag order. A multi-image message
+/// (album) carries one `imeta` tag per image; the single-attachment path only
+/// ever looks at the first via [`parse_media_reference_from_tags`].
+fn parse_all_media_references(
+    tags: &[Vec<String>],
+    source_epoch: Option<u64>,
+) -> Vec<MediaAttachmentReference> {
+    tags.iter()
+        .filter(|t| t.first().map(String::as_str) == Some("imeta"))
+        .filter_map(|t| parse_one_imeta(t, source_epoch))
+        .collect()
+}
+
+/// Parse a single `imeta` tag (already known to start with "imeta") into a
+/// [`MediaAttachmentReference`]. Returns None when a required field is absent.
+fn parse_one_imeta(tag: &[String], source_epoch: Option<u64>) -> Option<MediaAttachmentReference> {
+    if tag.first().map(String::as_str) != Some("imeta") {
+        return None;
+    }
     let mut locators = Vec::new();
     let mut fields: HashMap<String, String> = HashMap::new();
     for field in tag.iter().skip(1) {
@@ -4989,6 +5616,460 @@ fn parse_media_reference_from_tags(
 
 fn mime_is_image(mime: &str) -> bool {
     mime.starts_with("image/")
+}
+
+// ─── Album (multi-image) layout + cells ────────────────────────────────────
+
+/// Per-image cache/slideshow key. A lone attachment keeps the bare message id
+/// (back-compat with the single-image path); album images are `id#index`.
+fn att_key(message_id: &str, index: usize) -> String {
+    format!("{message_id}#{index}")
+}
+
+/// Aspect ratio (w/h) from an `imeta` `dim "WxH"` field, if present + valid.
+fn parse_dim_ar(dim: &Option<String>) -> Option<f32> {
+    let d = dim.as_ref()?;
+    let (w, h) = d.split_once(['x', 'X'])?;
+    let w: f32 = w.trim().parse().ok()?;
+    let h: f32 = h.trim().parse().ok()?;
+    (w > 0.0 && h > 0.0).then_some(w / h)
+}
+
+const ALBUM_GAP: f32 = 3.0;
+const ALBUM_MAX_H: f32 = 460.0;
+
+/// Telegram-style aspect-aware grid. Given each image's aspect ratio, lay the
+/// album into a box `max_w` wide and return per-cell px rects `(x, y, w, h)`
+/// plus the total height. Special cases for 2/3 images (the eye-catching
+/// arrangements); a balanced justified-rows fallback for 4+. The whole grid is
+/// scaled down if it would exceed `ALBUM_MAX_H`.
+fn album_layout(aspects: &[f32], max_w: f32, sp: f32) -> (Vec<(f32, f32, f32, f32)>, f32) {
+    let n = aspects.len();
+    // Clamp extreme panoramas/strips so one wild image can't wreck the grid.
+    let ar: Vec<f32> = aspects.iter().map(|a| a.clamp(0.5, 2.4)).collect();
+    let (mut out, total_h): (Vec<(f32, f32, f32, f32)>, f32) = match n {
+        0 => (vec![], 0.0),
+        1 => {
+            let h = (max_w / ar[0]).clamp(max_w * 0.5, max_w * 1.4);
+            (vec![(0.0, 0.0, max_w, h)], h)
+        }
+        2 if ar[0] > 1.2 && ar[1] > 1.2 => {
+            // Two wide images read best stacked full-width.
+            let h0 = max_w / ar[0];
+            let h1 = max_w / ar[1];
+            (
+                vec![(0.0, 0.0, max_w, h0), (0.0, h0 + sp, max_w, h1)],
+                h0 + sp + h1,
+            )
+        }
+        2 => {
+            // Two equal-height columns filling the width.
+            let h = (max_w - sp) / (ar[0] + ar[1]);
+            let w0 = h * ar[0];
+            (
+                vec![(0.0, 0.0, w0, h), (w0 + sp, 0.0, (max_w - sp) - w0, h)],
+                h,
+            )
+        }
+        3 if ar[0] >= 1.0 => {
+            // One wide image on top, two columns below.
+            let h0 = (max_w / ar[0]).clamp(max_w * 0.4, max_w * 0.9);
+            let hb = (max_w - sp) / (ar[1] + ar[2]);
+            let w1 = hb * ar[1];
+            (
+                vec![
+                    (0.0, 0.0, max_w, h0),
+                    (0.0, h0 + sp, w1, hb),
+                    (w1 + sp, h0 + sp, (max_w - sp) - w1, hb),
+                ],
+                h0 + sp + hb,
+            )
+        }
+        3 => {
+            // One tall image on the left, two stacked on the right.
+            let inv = 1.0 / ar[1] + 1.0 / ar[2];
+            let wr = ((max_w - sp - ar[0] * sp) / (ar[0] * inv + 1.0)).clamp(50.0, max_w - 70.0);
+            let wl = max_w - sp - wr;
+            let big_h = wl / ar[0];
+            let h1 = (wr / ar[1]).min(big_h - sp - 20.0).max(20.0);
+            let h2 = (big_h - sp - h1).max(20.0);
+            (
+                vec![
+                    (0.0, 0.0, wl, big_h),
+                    (wl + sp, 0.0, wr, h1),
+                    (wl + sp, h1 + sp, wr, h2),
+                ],
+                big_h,
+            )
+        }
+        _ => {
+            // Balanced justified rows: split into ~sqrt(n) rows, earlier rows
+            // take the remainder, each row justified to fill `max_w`.
+            let rows = ((n as f32).sqrt().round() as usize).clamp(2, n);
+            let base = n / rows;
+            let extra = n % rows;
+            let mut sizes = vec![base; rows];
+            for s in sizes.iter_mut().take(extra) {
+                *s += 1;
+            }
+            let mut rects = Vec::with_capacity(n);
+            let (mut y, mut idx) = (0.0_f32, 0usize);
+            for &k in &sizes {
+                let row_ar: f32 = (0..k).map(|j| ar[idx + j]).sum();
+                let avail = max_w - sp * ((k as f32) - 1.0);
+                let h = avail / row_ar;
+                let mut x = 0.0_f32;
+                for j in 0..k {
+                    // Last cell absorbs rounding so the row fills exactly.
+                    let w = if j == k - 1 { max_w - x } else { h * ar[idx + j] };
+                    rects.push((x, y, w, h));
+                    x += w + sp;
+                }
+                y += h + sp;
+                idx += k;
+            }
+            (rects, (y - sp).max(0.0))
+        }
+    };
+    if total_h > ALBUM_MAX_H && total_h > 0.0 {
+        let scale = ALBUM_MAX_H / total_h;
+        for r in out.iter_mut() {
+            r.0 *= scale;
+            r.1 *= scale;
+            r.2 *= scale;
+            r.3 *= scale;
+        }
+        return (out, ALBUM_MAX_H);
+    }
+    (out, total_h)
+}
+
+/// Album width for a bubble (outgoing bubbles are narrower than incoming).
+fn album_box_w(outgoing: bool) -> f32 {
+    if outgoing {
+        360.0
+    } else {
+        380.0
+    }
+}
+
+/// Build the grid cells for a confirmed album message: geometry from each
+/// image's `dim` (or cached pixels, or square), images from the attachment
+/// cache (placeholder until a cell decodes).
+fn build_album_cells(
+    references: &[MediaAttachmentReference],
+    message_id: &str,
+    outgoing: bool,
+) -> (Vec<AlbumCell>, f32, f32) {
+    let max_w = album_box_w(outgoing);
+    let aspects: Vec<f32> = references
+        .iter()
+        .enumerate()
+        .map(|(i, r)| {
+            parse_dim_ar(&r.dim)
+                .or_else(|| {
+                    attachment_image_cache_get(&att_key(message_id, i))
+                        .map(|p| p.w as f32 / (p.h.max(1) as f32))
+                })
+                .unwrap_or(1.0)
+        })
+        .collect();
+    let (rects, total_h) = album_layout(&aspects, max_w, ALBUM_GAP);
+    let cells = references
+        .iter()
+        .enumerate()
+        .map(|(i, _)| {
+            let key = att_key(message_id, i);
+            let (image, has_image) = match attachment_image_cache_get(&key) {
+                Some(p) => (image_from_pixels(&p), true),
+                None => (slint::Image::default(), false),
+            };
+            let loading = attachment_in_flight()
+                .lock()
+                .map(|s| s.contains(&key))
+                .unwrap_or(false);
+            let (x, y, w, h) = rects[i];
+            AlbumCell {
+                x,
+                y,
+                w,
+                h,
+                image,
+                has_image,
+                loading,
+                key: key.into(),
+            }
+        })
+        .collect();
+    (cells, max_w, total_h)
+}
+
+/// Build the grid cells for a pending (optimistic) album from the local
+/// previews the user picked — always rendered, no download needed.
+fn pending_album_cells(
+    media: &[PendingMedia],
+    temp_id: &str,
+    outgoing: bool,
+) -> (Vec<AlbumCell>, f32, f32) {
+    let max_w = album_box_w(outgoing);
+    let aspects: Vec<f32> = media
+        .iter()
+        .map(|m| {
+            m.local_preview
+                .as_ref()
+                .map(|p| p.w as f32 / (p.h.max(1) as f32))
+                .unwrap_or(1.0)
+        })
+        .collect();
+    let (rects, total_h) = album_layout(&aspects, max_w, ALBUM_GAP);
+    let cells = media
+        .iter()
+        .enumerate()
+        .map(|(i, m)| {
+            let (image, has_image) = match &m.local_preview {
+                Some(p) => (image_from_pixels(p), true),
+                None => (slint::Image::default(), false),
+            };
+            let (x, y, w, h) = rects[i];
+            AlbumCell {
+                x,
+                y,
+                w,
+                h,
+                image,
+                has_image,
+                loading: false,
+                key: att_key(temp_id, i).into(),
+            }
+        })
+        .collect();
+    (cells, max_w, total_h)
+}
+
+/// Empty album fields for the common non-album row.
+fn no_album() -> (ModelRc<AlbumCell>, f32, f32) {
+    (
+        ModelRc::new(VecModel::from(Vec::<AlbumCell>::new())),
+        0.0,
+        0.0,
+    )
+}
+
+/// Handles album auto-load needs, stashed once at startup. UI-thread-only
+/// (a thread-local), so the otherwise-pure row builders can trigger
+/// background image fetches without threading these through every signature.
+#[derive(Clone)]
+struct AlbumLoadCtx {
+    weak: Weak<DarkMatterLinux>,
+    backend_cell: Arc<Mutex<Option<Arc<Backend>>>>,
+    vault_cell: Arc<Mutex<Option<Arc<Mutex<Vault>>>>>,
+    group_ids: Arc<Mutex<Vec<String>>>,
+    pending_state: Arc<Mutex<PendingState>>,
+}
+
+thread_local! {
+    static ALBUM_LOAD_CTX: std::cell::RefCell<Option<AlbumLoadCtx>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+fn set_album_load_ctx(ctx: AlbumLoadCtx) {
+    ALBUM_LOAD_CTX.with(|c| *c.borrow_mut() = Some(ctx));
+}
+
+/// For an album record (2+ images), kick off background download+decode for
+/// any cell that isn't already cached — so incoming albums, and our own
+/// albums after a restart cleared the in-memory cache, fill their grid in
+/// instead of showing placeholders. No-op for cached/in-flight cells. Each
+/// finished cell seeds the in-memory + disk caches and refreshes its row.
+/// Reads through the encrypted disk cache before paying for a download.
+fn maybe_autoload_album(group_hex: &str, record: &AppMessageRecord) {
+    let images: Vec<MediaAttachmentReference> =
+        parse_all_media_references(&record.tags, record.source_epoch)
+            .into_iter()
+            .filter(|r| mime_is_image(&r.media_type))
+            .collect();
+    if images.len() < 2 {
+        return;
+    }
+    // Which cells still need fetching? Cheap checks only — the attachment
+    // cache + in-flight set are independent mutexes. Crucially we do NOT lock
+    // `backend_cell` here: this runs from the row builders, which are usually
+    // called while the caller already holds that guard, and `std::sync::Mutex`
+    // is non-reentrant — re-locking it on the same thread would deadlock.
+    let needed: Vec<(usize, MediaAttachmentReference)> = images
+        .into_iter()
+        .enumerate()
+        .filter(|(i, _)| {
+            let key = att_key(&record.message_id_hex, *i);
+            attachment_image_cache_get(&key).is_none()
+                && !attachment_in_flight()
+                    .lock()
+                    .map(|s| s.contains(&key))
+                    .unwrap_or(true)
+        })
+        .collect();
+    if needed.is_empty() {
+        return;
+    }
+    // Defer the backend acquisition + downloads to a fresh event-loop turn so
+    // any `backend_cell` guard held by the current row build is released first.
+    let group_hex = group_hex.to_string();
+    let mid = record.message_id_hex.clone();
+    let _ = slint::invoke_from_event_loop(move || autoload_album_cells(group_hex, mid, needed));
+}
+
+/// Backend half of [`maybe_autoload_album`], run on its own event-loop turn so
+/// no row-builder `backend_cell` guard is in scope. Disk read-through →
+/// download → seed caches → refresh the row, per still-missing cell.
+fn autoload_album_cells(
+    group_hex: String,
+    mid: String,
+    needed: Vec<(usize, MediaAttachmentReference)>,
+) {
+    let Some(ctx) = ALBUM_LOAD_CTX.with(|c| c.borrow().clone()) else {
+        return;
+    };
+    let Some(backend) = ctx.backend_cell.lock().unwrap().clone() else {
+        return;
+    };
+    let vault = ctx.vault_cell.lock().unwrap().clone();
+    for (i, reference) in needed {
+        let key = att_key(&mid, i);
+        if attachment_image_cache_get(&key).is_some() {
+            continue;
+        }
+        {
+            let Ok(mut set) = attachment_in_flight().lock() else {
+                continue;
+            };
+            if set.contains(&key) {
+                continue;
+            }
+            set.insert(key.clone());
+        }
+        let backend = backend.clone();
+        let vault = vault.clone();
+        let group_hex = group_hex.clone();
+        let mid = mid.clone();
+        let weak = ctx.weak.clone();
+        let group_ids = ctx.group_ids.clone();
+        let pending_state = ctx.pending_state.clone();
+        let hash = reference.ciphertext_sha256.clone();
+        backend.tokio_handle().spawn({
+            let backend = backend.clone();
+            async move {
+                // Disk read-through: skip the network if we cached the bytes.
+                if let Some(px) = vault
+                    .as_ref()
+                    .and_then(|v| media_cache::get(v, &hash))
+                    .and_then(|plain| decode_avatar_pixels(&plain).ok())
+                {
+                    attachment_image_cache_put(key.clone(), px);
+                    attachment_in_flight().lock().ok().map(|mut s| s.remove(&key));
+                    refresh_one_message_row_async(
+                        &backend,
+                        weak,
+                        pending_state,
+                        group_ids,
+                        group_hex,
+                        mid,
+                    );
+                    return;
+                }
+                let backend_cb = backend.clone();
+                let group_hex_cb = group_hex.clone();
+                backend.download_media_async(&group_hex, reference, move |result| {
+                    let pixels = match result {
+                        Ok(dl) => {
+                            if let Some(v) = &vault {
+                                media_cache::put(v, &hash, &dl.plaintext);
+                            }
+                            decode_avatar_pixels(&dl.plaintext).ok()
+                        }
+                        Err(e) => {
+                            eprintln!("[album] autoload {key}: {e:#}");
+                            None
+                        }
+                    };
+                    let ok = pixels.is_some();
+                    if let Some(px) = pixels {
+                        attachment_image_cache_put(key.clone(), px);
+                    }
+                    attachment_in_flight().lock().ok().map(|mut s| s.remove(&key));
+                    if ok {
+                        refresh_one_message_row_async(
+                            &backend_cb,
+                            weak,
+                            pending_state,
+                            group_ids,
+                            group_hex_cb,
+                            mid,
+                        );
+                    }
+                });
+            }
+        });
+    }
+}
+
+/// Build a [`StagedFile`] from raw bytes: full-resolution decode for the
+/// optimistic bubble preview plus a ≤96px thumbnail for the composer chip.
+/// Blocking image decode — call off the UI thread.
+fn staged_file_from_bytes(file_name: String, media_type: String, bytes: Vec<u8>) -> StagedFile {
+    let is_image = mime_is_image(&media_type);
+    let (preview, thumb) = if is_image {
+        match image::load_from_memory(&bytes) {
+            Ok(img) => {
+                let t = img.thumbnail(96, 96).to_rgba8();
+                let thumb = PicturePixels {
+                    w: t.width(),
+                    h: t.height(),
+                    rgba: t.into_raw(),
+                };
+                let rgba = img.to_rgba8();
+                let (w, h) = (rgba.width(), rgba.height());
+                (
+                    Some(PicturePixels {
+                        w,
+                        h,
+                        rgba: rgba.into_raw(),
+                    }),
+                    Some(thumb),
+                )
+            }
+            Err(_) => (None, None),
+        }
+    } else {
+        (None, None)
+    };
+    StagedFile {
+        file_name,
+        media_type,
+        bytes,
+        is_image,
+        preview,
+        thumb,
+    }
+}
+
+/// Rebuild the composer's staged-attachment chip row from the queue. UI
+/// thread only — it constructs `slint::Image` thumbnails.
+fn refresh_staged_ui(ui: &DarkMatterLinux, staged: &[StagedFile]) {
+    let rows: Vec<StagedAttachment> = staged
+        .iter()
+        .map(|f| StagedAttachment {
+            name: f.file_name.clone().into(),
+            size_label: human_bytes(f.bytes.len() as u64).into(),
+            is_image: f.is_image,
+            thumb: f
+                .thumb
+                .as_ref()
+                .map(image_from_pixels)
+                .unwrap_or_default(),
+            has_thumb: f.thumb.is_some(),
+        })
+        .collect();
+    ui.set_composer_staged(ModelRc::new(VecModel::from(rows)));
 }
 
 /// Compact byte-size label for attachment chips. KB/MB rounded to one decimal.
@@ -5915,9 +6996,27 @@ fn chat_message_from_with_reactions(
     let bubble_max = if outgoing { 440.0 } else { 560.0 };
     let lines = build_message_lines(display_text, bubble_max);
 
-    // Attachment fields. Parse the NIP-92 `imeta` tag (if present) and look
-    // up any decoded preview pixels we cached from a prior tap.
-    let media_ref = parse_media_reference_from_tags(&record.tags, record.source_epoch);
+    // Attachment fields. Parse the NIP-92 `imeta` tags. Two or more image
+    // attachments in one message render as an album grid; otherwise the first
+    // reference drives the single chip/image-tile path.
+    let all_refs = parse_all_media_references(&record.tags, record.source_epoch);
+    let image_refs: Vec<MediaAttachmentReference> = all_refs
+        .iter()
+        .filter(|r| mime_is_image(&r.media_type))
+        .cloned()
+        .collect();
+    let is_album = image_refs.len() >= 2;
+    let (album, album_w, album_h) = if is_album {
+        let (cells, w, h) = build_album_cells(&image_refs, &record.message_id_hex, outgoing);
+        (ModelRc::new(VecModel::from(cells)), w, h)
+    } else {
+        no_album()
+    };
+    let media_ref = if is_album {
+        None
+    } else {
+        all_refs.into_iter().next()
+    };
     let (
         has_attachment,
         att_name,
@@ -5995,6 +7094,9 @@ fn chat_message_from_with_reactions(
         reply_to_text: s(&reply_text),
         reply_to_author: s(&reply_author),
         has_attachment,
+        album,
+        album_w,
+        album_h,
         att_name: s(&att_name),
         att_mime: s(&att_mime),
         att_size_label: s(&att_size_label),
@@ -6087,9 +7189,16 @@ fn pending_chat_message(
     let bubble_max = 440.0_f32;
     let lines = build_message_lines(&pending.text, bubble_max);
 
-    // Pending media optimistic-render. While the upload is in flight we
-    // render the chip / image preview straight from the local bytes the user
-    // picked, so the bubble doesn't pop in once the real record lands.
+    // Pending media optimistic-render. While the upload is in flight we render
+    // the chip / image preview / album grid straight from the local bytes the
+    // user picked, so the bubble doesn't pop in once the real record lands.
+    let is_album = pending.media.len() >= 2;
+    let (album, album_w, album_h) = if is_album {
+        let (cells, w, h) = pending_album_cells(&pending.media, &pending.temp_id, true);
+        (ModelRc::new(VecModel::from(cells)), w, h)
+    } else {
+        no_album()
+    };
     let (
         has_attachment,
         att_name,
@@ -6099,8 +7208,8 @@ fn pending_chat_message(
         att_image,
         att_has_image,
         att_loading,
-    ) = match &pending.media {
-        Some(m) => {
+    ) = match (is_album, pending.media.first()) {
+        (false, Some(m)) => {
             let (image, has_image) = match &m.local_preview {
                 Some(p) => (image_from_pixels(p), true),
                 None => (slint::Image::default(), false),
@@ -6116,7 +7225,7 @@ fn pending_chat_message(
                 !pending.failed,
             )
         }
-        None => (
+        _ => (
             false,
             String::new(),
             String::new(),
@@ -6162,6 +7271,9 @@ fn pending_chat_message(
         reply_to_text: s(&reply_text),
         reply_to_author: s(&reply_author),
         has_attachment,
+        album,
+        album_w,
+        album_h,
         att_name: s(&att_name),
         att_mime: s(&att_mime),
         att_size_label: s(&att_size_label),
@@ -6425,6 +7537,7 @@ fn build_one_message_row(
     overlay: &PendingState,
     backend: &Backend,
 ) -> ChatMessage {
+    maybe_autoload_album(group_hex, record);
     let mut reactions = aggregate_reactions(all_records, my_id);
     apply_reaction_overlay(&mut reactions, group_hex, overlay);
     let r = reactions
@@ -6578,6 +7691,7 @@ fn rebuild_chat_messages_from(
         .iter()
         .filter(|m| is_visible_chat_message(m))
         .map(|m| {
+            maybe_autoload_album(group_hex, m);
             let r = reactions
                 .get(&m.message_id_hex)
                 .cloned()
@@ -7778,6 +8892,140 @@ fn copy_via_command(cmd: &str, args: &[&str], text: &str) -> Result<(), String> 
     Ok(())
 }
 
+/// Choose an image MIME target from a clipboard target list, applying the
+/// image-intent rule: any plain-text target wins (returns `None` — the
+/// native text paste already handled it, and sources that offer *both*
+/// mean text), otherwise `image/png` is preferred over whatever other
+/// `image/*` target comes first.
+fn pick_image_target(types: &[&str]) -> Option<String> {
+    let has_text = types
+        .iter()
+        .any(|t| *t == "UTF8_STRING" || *t == "STRING" || t.starts_with("text/plain"));
+    if has_text {
+        return None;
+    }
+    if types.iter().any(|t| *t == "image/png") {
+        return Some("image/png".to_string());
+    }
+    types
+        .iter()
+        .find(|t| t.starts_with("image/"))
+        .map(|t| t.to_string())
+}
+
+/// Read image bytes off the system clipboard, but only when the clipboard
+/// looks image-intent (see [`pick_image_target`]). Mirrors
+/// [`copy_to_clipboard`]'s platform ladder: `wl-paste` on Wayland,
+/// `xclip` on X11, arboard as the fallback everywhere and the primary
+/// path on macOS (`pbpaste` is text-only). Blocking — subprocess /
+/// display-server round-trips — so never call on the UI thread. Returns
+/// `(bytes, media_type)`.
+fn paste_image_from_clipboard() -> Option<(Vec<u8>, String)> {
+    #[cfg(not(target_os = "macos"))]
+    {
+        if std::env::var_os("WAYLAND_DISPLAY").is_some() {
+            match paste_via_command("wl-paste", &["--list-types"]) {
+                Ok(out) => {
+                    let listing = String::from_utf8_lossy(&out).into_owned();
+                    let types: Vec<&str> = listing.lines().map(str::trim).collect();
+                    // wl-paste answered: it owns the truth about this
+                    // clipboard, so no image target (or text intent) is a
+                    // final no — don't fall through to arboard.
+                    let mime = pick_image_target(&types)?;
+                    return match paste_via_command(
+                        "wl-paste",
+                        &["--no-newline", "--type", &mime],
+                    ) {
+                        Ok(bytes) if !bytes.is_empty() => {
+                            eprintln!(
+                                "[clipboard] image via wl-paste ({mime}, {} bytes)",
+                                bytes.len()
+                            );
+                            Some((bytes, mime))
+                        }
+                        Ok(_) => None,
+                        Err(e) => {
+                            eprintln!("[clipboard] wl-paste read failed: {e}");
+                            None
+                        }
+                    };
+                }
+                Err(e) => eprintln!("[clipboard] wl-paste list-types failed: {e}"),
+            }
+        }
+        if std::env::var_os("DISPLAY").is_some() {
+            match paste_via_command("xclip", &["-selection", "clipboard", "-t", "TARGETS", "-o"])
+            {
+                Ok(out) => {
+                    let listing = String::from_utf8_lossy(&out).into_owned();
+                    let types: Vec<&str> = listing.lines().map(str::trim).collect();
+                    let mime = pick_image_target(&types)?;
+                    return match paste_via_command(
+                        "xclip",
+                        &["-selection", "clipboard", "-t", &mime, "-o"],
+                    ) {
+                        Ok(bytes) if !bytes.is_empty() => {
+                            eprintln!(
+                                "[clipboard] image via xclip ({mime}, {} bytes)",
+                                bytes.len()
+                            );
+                            Some((bytes, mime))
+                        }
+                        Ok(_) => None,
+                        Err(e) => {
+                            eprintln!("[clipboard] xclip read failed: {e}");
+                            None
+                        }
+                    };
+                }
+                Err(e) => eprintln!("[clipboard] xclip targets failed: {e}"),
+            }
+        }
+    }
+
+    // arboard fallback. It hands back raw RGBA, so re-encode as PNG for the
+    // upload path (which wants original compressed bytes).
+    let mut cb = match arboard::Clipboard::new() {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("[clipboard] arboard init failed: {e}");
+            return None;
+        }
+    };
+    if matches!(cb.get_text(), Ok(t) if !t.is_empty()) {
+        return None; // text intent — native paste already handled it
+    }
+    let img = cb.get_image().ok()?;
+    let (w, h) = (img.width as u32, img.height as u32);
+    let rgba = image::RgbaImage::from_raw(w, h, img.bytes.into_owned())?;
+    let mut png = Vec::new();
+    if let Err(e) = image::DynamicImage::ImageRgba8(rgba)
+        .write_to(&mut std::io::Cursor::new(&mut png), image::ImageFormat::Png)
+    {
+        eprintln!("[clipboard] png encode failed: {e}");
+        return None;
+    }
+    eprintln!("[clipboard] image via arboard ({w}x{h})");
+    Some((png, "image/png".to_string()))
+}
+
+/// Run a CLI clipboard *reader* and capture its stdout bytes. Unlike the
+/// copy helpers these don't fork into the background, so a plain
+/// `output()` is safe.
+fn paste_via_command(cmd: &str, args: &[&str]) -> Result<Vec<u8>, String> {
+    use std::process::{Command, Stdio};
+    let out = Command::new(cmd)
+        .args(args)
+        .stdin(Stdio::null())
+        .stderr(Stdio::inherit())
+        .output()
+        .map_err(|e| format!("spawn: {e}"))?;
+    if !out.status.success() {
+        return Err(format!("{cmd} exited {}", out.status));
+    }
+    Ok(out.stdout)
+}
+
 // ─── Keys & key packages ───────────────────────────────────────────────
 
 fn kp_to_ui(rec: &marmot_app::AccountKeyPackageRecord) -> KeyPackageInfo {
@@ -7837,7 +9085,13 @@ fn push_network_relays(ui: &DarkMatterLinux, list: &[String]) {
 }
 
 /// Well-known public relays offered as one-click adds on the get-started screen.
-const SUGGESTED_RELAYS: &[&str] = &["wss://relay.primal.net", "wss://relay.ditto.pub"];
+/// DEV POLICY: whitenoise official relays only while in development — these are
+/// where the mobile apps publish, so dev peers are always mutually discoverable.
+/// Before release, broaden again (e.g. relay.primal.net, relay.ditto.pub).
+const SUGGESTED_RELAYS: &[&str] = &[
+    "wss://relay.eu.whitenoise.chat",
+    "wss://relay.us.whitenoise.chat",
+];
 
 /// Publish the suggested-relay chips = `SUGGESTED_RELAYS` minus whatever the user
 /// already has, so a suggestion vanishes once it's added.

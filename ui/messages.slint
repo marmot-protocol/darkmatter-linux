@@ -28,6 +28,7 @@ export component MessagesArea inherits Rectangle {
     callback show-history(string);
     callback retry(string);
     callback attachment-clicked(string);
+    callback album-cell-clicked(string);
     property <length> content-w: max(120px, root.available-w - 36px);
     // Subtle vertical lift — keeps the chat canvas from feeling flat.
     background: Theme.retro
@@ -159,6 +160,9 @@ export component MessagesArea inherits Rectangle {
                     att-has-image: msg.att-has-image;
                     att-loading: msg.att-loading;
                     att-failed: msg.att-failed;
+                    album: msg.album;
+                    album-w: msg.album-w;
+                    album-h: msg.album-h;
                     edited: msg.edited;
                     edit-count: msg.edit-count;
                     react(id, emoji) => { root.react(id, emoji); }
@@ -168,6 +172,7 @@ export component MessagesArea inherits Rectangle {
                     request-context-menu(id, text, author, can-edit, ax, ay) => { root.request-context-menu(id, text, author, can-edit, ax, ay); }
                     show-history(id) => { root.show-history(id); }
                     attachment-clicked(id) => { root.attachment-clicked(id); }
+                    album-cell-clicked(key) => { root.album-cell-clicked(key); }
                 }
 
                 if msg.outgoing : OutgoingRow {
@@ -202,9 +207,13 @@ export component MessagesArea inherits Rectangle {
                     att-has-image: msg.att-has-image;
                     att-loading: msg.att-loading;
                     att-failed: msg.att-failed;
+                    album: msg.album;
+                    album-w: msg.album-w;
+                    album-h: msg.album-h;
                     edited: msg.edited;
                     edit-count: msg.edit-count;
                     can-edit: msg.can-edit;
+                    album-cell-clicked(key) => { root.album-cell-clicked(key); }
                     react(id, emoji) => { root.react(id, emoji); }
                     unreact(id) => { root.unreact(id); }
                     request-picker(id, ax, ay) => { root.request-picker(id, ax, ay); }

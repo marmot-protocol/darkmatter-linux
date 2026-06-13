@@ -29,6 +29,10 @@ export component LineInput inherits Rectangle {
     callback nav(int);            // +1 / -1 to move the picker selection
     callback commit-mention();    // accept the highlighted candidate
     callback dismiss-mention();   // close the picker
+    // Fired on a paste shortcut (Ctrl/Cmd+V, Shift+Insert) *in addition to*
+    // the native text paste, which still runs. The owner can probe the
+    // system clipboard for non-text content (the composer sends images).
+    callback paste-image();
 
     // Move the caret to `pos` (byte offset) and refocus — used after Rust
     // splices a chosen mention into the text.
@@ -96,6 +100,14 @@ export component LineInput inherits Rectangle {
                 if (root.enter-submits && event.text == Key.Return && !event.modifiers.shift) {
                     root.submit();
                     return accept;
+                }
+                // Paste shortcut: notify the owner so it can probe for image
+                // content, but reject so the built-in text paste still runs
+                // (it is a no-op when the clipboard holds no text).
+                if (((event.text == "v" || event.text == "V") && (event.modifiers.control || event.modifiers.meta))
+                    || (event.text == Key.Insert && event.modifiers.shift)) {
+                    root.paste-image();
+                    return reject;
                 }
                 return reject;
             }

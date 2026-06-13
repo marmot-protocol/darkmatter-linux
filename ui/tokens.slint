@@ -209,6 +209,18 @@ export struct EmojiEntry {
     clip-y: int,
 }
 
+// One queued composer attachment (paperclip picker or clipboard paste).
+// Nothing uploads until the user presses Send — the chip row above the
+// input is the confirmation step. `thumb` is a small decoded preview for
+// images (`has-thumb` false → generic file chip).
+export struct StagedAttachment {
+    name: string,
+    size-label: string,
+    is-image: bool,
+    thumb: image,
+    has-thumb: bool,
+}
+
 // One inline cell inside a wrapped line of a chat-message body. Slint's
 // `Text` can't host inline images and `HorizontalLayout` doesn't wrap, so
 // Rust pre-tokenizes the message into text + emoji runs and pre-groups them
@@ -271,6 +283,22 @@ export global EmojiSheet {
     in property <int> tile;
 }
 
+// One image in a multi-image album (Telegram-style grid). Rust computes the
+// pixel rect (x/y/w/h) within the album box via an aspect-aware layout engine;
+// the bubble just absolute-positions a clipped image at that rect. `key` is the
+// per-image cache/slideshow handle (message-id for a lone image, `id#index`
+// inside an album) the tap routes through.
+export struct AlbumCell {
+    x: length,
+    y: length,
+    w: length,
+    h: length,
+    image: image,
+    has-image: bool,
+    loading: bool,
+    key: string,
+}
+
 export struct ChatMessage {
     text: string,
     // Pre-tokenized + pre-wrapped body, grouped into lines. Empty for
@@ -323,6 +351,12 @@ export struct ChatMessage {
     // Attachment (NIP-92 imeta payload, parsed in Rust). When `has-attachment`
     // is true the bubble renders a chip / image preview block above the body.
     has-attachment: bool,
+    // Album: 2+ images sent in one message, rendered as an aspect-aware grid
+    // instead of the single `att-*` tile. When `album` has entries the bubble
+    // renders the grid (sized `album-w` × `album-h`) and ignores `att-*`.
+    album: [AlbumCell],
+    album-w: length,
+    album-h: length,
     att-name: string,
     att-mime: string,
     att-size-label: string,

@@ -1,4 +1,4 @@
-import { Palette, Theme, MessageLine, EmojiSheet, Linkout } from "../tokens.slint";
+import { Palette, Theme, MessageLine, EmojiSheet, Linkout, AlbumCell } from "../tokens.slint";
 import { CheckMark } from "../icons/check-mark.slint";
 
 // One inline run inside a wrapped chat line. The Text element is always
@@ -118,6 +118,13 @@ export component MessageBubble inherits Rectangle {
     in property <bool> att-has-image: false;
     in property <bool> att-loading: false;
     in property <bool> att-failed: false;
+    // Album block — 2+ images sent together, rendered as an aspect-aware grid
+    // (rects precomputed in Rust). Tapping a cell fires album-cell-clicked(key)
+    // which opens the lightbox slideshow at that image.
+    in property <[AlbumCell]> album: [];
+    in property <length> album-w;
+    in property <length> album-h;
+    callback album-cell-clicked(string);
     // Edit state. When `edited` is true an "(edited)" affordance renders next
     // to the timestamp; tapping it asks the root to open the history modal.
     in property <bool> edited: false;
@@ -243,6 +250,43 @@ export component MessageBubble inherits Rectangle {
                         opacity: root.outgoing ? 0.65 : 0.9;
                         width: max(40px, root.text-budget - 18px);
                     }
+                }
+            }
+        }
+
+        // Album grid. Each cell's rect is precomputed in Rust; we absolute-
+        // position a clipped image (or a subtle placeholder until it decodes).
+        if root.album.length > 0 : Rectangle {
+            width: root.album-w;
+            height: root.album-h;
+            for cell[i] in root.album : Rectangle {
+                x: cell.x;
+                y: cell.y;
+                width: cell.w;
+                height: cell.h;
+                border-radius: (6px) * Theme.r-scale;
+                background: root.outgoing ? #00000022 : (Theme.light ? #E2E8F0 : #ffffff10);
+                clip: true;
+                border-width: Theme.retro ? Theme.border-w : 0px;
+                border-color: Palette.border-2;
+                if cell.has-image : Image {
+                    width: parent.width;
+                    height: parent.height;
+                    source: cell.image;
+                    image-fit: cover;
+                }
+                if !cell.has-image : Text {
+                    text: cell.loading ? "…" : "🖼";
+                    color: root.outgoing ? Palette.bubble-out-fg : Palette.text-mid;
+                    font-size: (22px) * Theme.fs-scale;
+                    font-family: Theme.font;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                    opacity: 0.7;
+                }
+                TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => { root.album-cell-clicked(cell.key); }
                 }
             }
         }

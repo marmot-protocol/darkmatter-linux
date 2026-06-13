@@ -22,6 +22,7 @@ export component OutgoingRow inherits VerticalLayout {
     in property <[Reaction]> reactions;
     in property <bool> first-in-group: true;
     in property <bool> last-in-group: true;
+    in property <bool> jumbo-emoji: false;
     in property <bool> pending: false;
     in property <bool> failed: false;
     in property <string> reply-to-id;
@@ -108,6 +109,7 @@ export component OutgoingRow inherits VerticalLayout {
                     available-w: max(80px, root.row-w - 28px - 10px - 10px);
                     first-in-group: root.first-in-group;
                     last-in-group: root.last-in-group;
+                    jumbo-emoji: root.jumbo-emoji;
                     pending: root.pending;
                     failed: root.failed;
                     reply-to-id: root.reply-to-id;

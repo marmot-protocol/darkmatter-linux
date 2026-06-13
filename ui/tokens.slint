@@ -373,6 +373,9 @@ export struct ChatMessage {
     edited: bool,
     edit-count: int,
     can-edit: bool,
+    // Emoji-only body (1–3 emoji, no attachment/album/reply): renders jumbo and
+    // bubble-less, Telegram-style, with the timestamp floating on hover.
+    jumbo-emoji: bool,
 }
 
 // One entry in a message's edit history (original + each subsequent edit),

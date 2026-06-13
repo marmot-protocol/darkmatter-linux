@@ -7192,9 +7192,17 @@ fn chat_message_from_with_reactions(
         ),
     };
 
+    // Jumbo only for a bare emoji body — a reply/attachment/album wants its
+    // normal bubble chrome around the block.
+    let jumbo_emoji = !has_attachment
+        && !is_album
+        && reply_id.is_empty()
+        && jumbo_emoji_count(display_text) > 0;
+
     ChatMessage {
         text: s(display_text),
         lines,
+        jumbo_emoji,
         stamp: s(&format_unix(record.recorded_at)),
         outgoing,
         edited,
@@ -7364,9 +7372,15 @@ fn pending_chat_message(
         ),
     };
 
+    let jumbo_emoji = !has_attachment
+        && !is_album
+        && reply_id.is_empty()
+        && jumbo_emoji_count(&pending.text) > 0;
+
     ChatMessage {
         text: s(&pending.text),
         lines,
+        jumbo_emoji,
         stamp: s(&stamp),
         outgoing: true,
         edited: false,
@@ -7553,6 +7567,10 @@ fn apply_edit_to_model_row(
         };
         row.text = s(new_text);
         row.lines = build_message_lines(new_text, row.bubble_max);
+        row.jumbo_emoji = !row.has_attachment
+            && row.album.row_count() == 0
+            && row.reply_to_id.is_empty()
+            && jumbo_emoji_count(new_text) > 0;
         row.edited = true;
         row.edit_count += 1;
         vm.set_row_data(pos, row);
@@ -8857,6 +8875,50 @@ fn build_message_lines(text: &str, bubble_max: f32) -> ModelRc<MessageLine> {
         cache.insert(key, model.clone());
         model
     })
+}
+
+/// Telegram-style jumbo-emoji test. If `text` is nothing but emoji (plus
+/// whitespace) and short enough — at most [`JUMBO_EMOJI_MAX`] glyphs — return
+/// the emoji count; otherwise 0. The probe mirrors the tokenizer's longest-
+/// match-against-the-sprite-table logic ([`md_push_text`]) so what we classify
+/// as jumbo is exactly what would render as sprite cells.
+const JUMBO_EMOJI_MAX: u32 = 3;
+fn jumbo_emoji_count(text: &str) -> u32 {
+    let positions = emoji_position_index();
+    let t = text.trim();
+    if t.is_empty() {
+        return 0;
+    }
+    let mut count = 0u32;
+    let mut i = 0usize;
+    while i < t.len() {
+        let c = t[i..].chars().next().unwrap();
+        if c.is_whitespace() {
+            i += c.len_utf8();
+            continue;
+        }
+        // Longest emoji match at `i` (ZWJ sequences run ~30+ bytes; 48 caps it).
+        let end_max = (i + 48).min(t.len());
+        let mut matched = None;
+        for end in (i + 1..=end_max).rev() {
+            if t.is_char_boundary(end) && positions.contains_key(&t[i..end]) {
+                matched = Some(end);
+                break;
+            }
+        }
+        match matched {
+            Some(end) => {
+                count += 1;
+                if count > JUMBO_EMOJI_MAX {
+                    return 0;
+                }
+                i = end;
+            }
+            // Any non-emoji glyph disqualifies the whole message.
+            None => return 0,
+        }
+    }
+    count
 }
 
 /// Filter the full emoji catalog by `query` (matches name + shortcodes,

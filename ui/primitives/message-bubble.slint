@@ -134,6 +134,10 @@ export component MessageBubble inherits Rectangle {
     // standalone bubble is the head, so it defaults true.
     in property <bool> first-in-group: true;
     in property <bool> last-in-group: true;
+    // Emoji-only message: drop the bubble chrome, render the glyphs large, and
+    // float the timestamp pill on hover (Telegram-style). The `lines` model is
+    // unchanged — only the per-emoji size and the surrounding chrome differ.
+    in property <bool> jumbo-emoji: false;
     // True while the pointer is anywhere over the bubble. Read by the row to
     // reveal the floating action toolbar. Sourced from a bottom-most sensor so
     // it never steals taps from the attachment / retry areas above it.
@@ -153,7 +157,7 @@ export component MessageBubble inherits Rectangle {
     // Body typography. Emoji glyphs are sized off `body-fs` so they ride
     // the text line cleanly.
     property <length> body-fs: (13px) * Theme.fs-scale;
-    property <length> emoji-px: root.body-fs * 1.2;
+    property <length> emoji-px: root.jumbo-emoji ? (66px) * Theme.fs-scale : root.body-fs * 1.2;
 
     property <float> enter: 0;
     init => { self.enter = 1; }
@@ -168,11 +172,13 @@ export component MessageBubble inherits Rectangle {
 
     // Outgoing bubbles get a vertical mint gradient for a bit of depth; retro
     // stays flat for the pixel aesthetic. Incoming stays on the flat surface.
-    background: root.outgoing
-        ? (Theme.retro
-            ? Palette.mint
-            : @linear-gradient(180deg, Palette.mint-hi 0%, Palette.mint 92%))
-        : Palette.bubble-in;
+    background: root.jumbo-emoji
+        ? transparent
+        : (root.outgoing
+            ? (Theme.retro
+                ? Palette.mint
+                : @linear-gradient(180deg, Palette.mint-hi 0%, Palette.mint 92%))
+            : Palette.bubble-in);
     // Chat-style asymmetric corners. The tail corner (bottom, avatar side)
     // stays tight; within a group the top corner on the avatar side also
     // tightens so consecutive bubbles read as one stacked column.
@@ -180,16 +186,18 @@ export component MessageBubble inherits Rectangle {
     border-top-right-radius: root.outgoing ? (root.first-in-group ? root.r-lg : root.r-sm) : root.r-lg;
     border-bottom-left-radius: root.outgoing ? root.r-lg : root.r-sm;
     border-bottom-right-radius: root.outgoing ? root.r-sm : root.r-lg;
-    border-width: root.failed ? 1.5px : (Theme.retro ? Theme.border-w : 1px);
+    border-width: root.jumbo-emoji ? 0px : (root.failed ? 1.5px : (Theme.retro ? Theme.border-w : 1px));
     border-color: root.failed ? Palette.danger-on-bubble : (root.outgoing ? transparent : Palette.border-2);
-    drop-shadow-color: Theme.retro
-        ? Palette.shadow
-        : (root.outgoing ? Palette.mint-glow : (Theme.light ? #00000018 : #00000050));
+    drop-shadow-color: root.jumbo-emoji
+        ? transparent
+        : (Theme.retro
+            ? Palette.shadow
+            : (root.outgoing ? Palette.mint-glow : (Theme.light ? #00000018 : #00000050)));
     drop-shadow-offset-x: Theme.retro ? 2px : 0px;
     drop-shadow-offset-y: Theme.retro ? 2px : (root.outgoing ? 3px : 2px);
-    drop-shadow-blur: Theme.retro ? 0px : (root.outgoing ? 14px : 8px);
+    drop-shadow-blur: root.jumbo-emoji ? 0px : (Theme.retro ? 0px : (root.outgoing ? 14px : 8px));
     y: root.pop-y;
-    width: max(root.min-w, layout.preferred-width) * root.pop-scale;
+    width: (root.jumbo-emoji ? layout.preferred-width : max(root.min-w, layout.preferred-width)) * root.pop-scale;
     height: layout.preferred-height * root.pop-scale;
     opacity: root.pending ? root.enter * 0.62 : root.enter;
     animate opacity { duration: 180ms; easing: ease-out; }
@@ -213,8 +221,10 @@ export component MessageBubble inherits Rectangle {
     }
 
     layout := VerticalLayout {
-        padding-left: root.pad-h; padding-right: root.pad-h;
-        padding-top: root.pad-v; padding-bottom: root.pad-v;
+        padding-left: root.jumbo-emoji ? 0px : root.pad-h;
+        padding-right: root.jumbo-emoji ? 0px : root.pad-h;
+        padding-top: root.jumbo-emoji ? 0px : root.pad-v;
+        padding-bottom: root.jumbo-emoji ? 0px : root.pad-v;
         spacing: 6px;
         alignment: stretch;
 
@@ -398,7 +408,7 @@ export component MessageBubble inherits Rectangle {
         }
 
         HorizontalLayout {
-        spacing: root.gap;
+        spacing: root.jumbo-emoji ? 0px : root.gap;
         alignment: stretch;
 
         // Runs renderer — one HorizontalLayout per line of pre-wrapped runs.
@@ -475,7 +485,9 @@ export component MessageBubble inherits Rectangle {
 
         meta := VerticalLayout {
             alignment: end;
-            HorizontalLayout {
+            // Hidden for jumbo emoji — the timestamp floats as a pill instead
+            // (see `stamp-pill` below), so it doesn't reserve inline width.
+            if !root.jumbo-emoji : HorizontalLayout {
                 spacing: 4px;
                 alignment: end;
                 // "(edited)" affordance — opens the history modal on tap. Sits
@@ -524,6 +536,40 @@ export component MessageBubble inherits Rectangle {
                 }
             }
         }
+        }
+    }
+
+    // Floating timestamp for jumbo-emoji messages. There's no bubble to host
+    // the inline meta, so the stamp (+ outgoing status tick) rides a translucent
+    // pill overlapping the bottom of the glyphs, revealed on hover — or kept up
+    // while a send is pending/failed so state is never hidden. Anchored inside
+    // the bubble bounds so it never overlaps the neighbouring row.
+    if root.jumbo-emoji : Rectangle {
+        x: parent.width - self.width;
+        y: parent.height - self.height;
+        height: pill-row.preferred-height;
+        width: pill-row.preferred-width;
+        background: #00000088;
+        border-radius: (10px) * Theme.r-scale;
+        opacity: (hover-sensor.has-hover || root.pending || root.failed) ? 1.0 : 0.0;
+        animate opacity { duration: 120ms; easing: ease-out; }
+        pill-row := HorizontalLayout {
+            padding-left: 7px; padding-right: 7px;
+            padding-top: 3px; padding-bottom: 3px;
+            spacing: 4px;
+            alignment: end;
+            Text {
+                text: root.failed ? @tr("failed · tap to retry") : root.stamp;
+                color: root.failed ? Palette.danger-on-bubble : #FFFFFF;
+                font-size: (10px) * Theme.fs-scale;
+                font-family: Theme.font;
+                vertical-alignment: center;
+            }
+            if root.outgoing && !root.failed : CheckMark {
+                stroke: #FFFFFF;
+                double: !root.pending;
+                opacity: root.pending ? 0.55 : 1.0;
+            }
         }
     }
 }

@@ -16,6 +16,7 @@ mod animal_avatar;
 mod backend;
 mod blossom;
 mod media_cache;
+mod mpv;
 mod observability;
 mod settings;
 mod vault;
@@ -71,6 +72,7 @@ struct PendingMedia {
     media_type: String,
     size_bytes: u64,
     is_image: bool,
+    is_video: bool,
     // Local pixels for instant image preview while the upload is in flight.
     // None for non-image attachments.
     local_preview: Option<PicturePixels>,
@@ -3536,6 +3538,7 @@ fn main() -> Result<(), slint::PlatformError> {
                     media_type: media_type_u.clone(),
                     size_bytes,
                     is_image,
+                    is_video: mime_is_video(&media_type_u),
                     local_preview: local_preview.clone(),
                 }],
             };
@@ -3740,6 +3743,7 @@ fn main() -> Result<(), slint::PlatformError> {
                     media_type: f.media_type.clone(),
                     size_bytes: f.bytes.len() as u64,
                     is_image: true,
+                    is_video: false,
                     local_preview: f.preview.clone(),
                 })
                 .collect();
@@ -4063,6 +4067,7 @@ fn main() -> Result<(), slint::PlatformError> {
                 return;
             };
             let is_image = mime_is_image(&reference.media_type);
+            let is_video = mime_is_video(&reference.media_type);
             let _ = slint::invoke_from_event_loop(move || {
             let Some(ui) = weak.upgrade() else { return };
             let chats_messages = ui.get_chats_messages();
@@ -4078,6 +4083,34 @@ fn main() -> Result<(), slint::PlatformError> {
                     &all,
                 );
             }
+
+            // Video → open the in-app libmpv viewer and start playback. The
+            // poster (first frame) + duration get cached during playback, so
+            // the dismiss handler can repaint the bubble tile afterwards.
+            if is_video {
+                attachment_in_flight().lock().ok().map(|mut s| s.remove(&mid));
+                stop_current_player();
+                *current_video_duration().lock().unwrap() = 0.0;
+                *current_video_target().lock().unwrap() =
+                    Some((group_hex.clone(), mid.clone()));
+                ui.set_video_viewer_has_frame(false);
+                ui.set_video_viewer_playing(false);
+                ui.set_video_viewer_progress(0.0);
+                ui.set_video_viewer_pos("0:00".into());
+                ui.set_video_viewer_dur("0:00".into());
+                ui.set_video_viewer_loading(true);
+                ui.set_video_viewer_open(true);
+                start_video_playback(
+                    weak.clone(),
+                    b.clone(),
+                    group_hex.clone(),
+                    mid.clone(),
+                    reference.clone(),
+                    vault.clone(),
+                );
+                return;
+            }
+
             let tokio_handle = b.tokio_handle();
 
             // After the (optional) save dialog resolves, kick off the actual
@@ -4393,6 +4426,62 @@ fn main() -> Result<(), slint::PlatformError> {
                 ui.set_image_viewer_loading(false);
             }
             VIEWER_SLIDESHOW.with(|s| *s.borrow_mut() = ViewerSlideshow::default());
+        }
+    });
+
+    // ─── In-app video viewer ───────────────────────────────────────────
+    // Dropping the player joins its render/event threads and frees the mpv
+    // handle (stopping audio). The first-frame poster + duration captured
+    // during playback are now cached, so repaint that bubble's tile.
+    ui.on_dismiss_video_viewer({
+        let weak = ui.as_weak();
+        let backend_cell = backend_cell.clone();
+        let pending_state = pending_state.clone();
+        let group_ids = group_ids.clone();
+        move || {
+            stop_current_player();
+            if let Some(ui) = weak.upgrade() {
+                ui.set_video_viewer_open(false);
+                ui.set_video_viewer_loading(false);
+                ui.set_video_viewer_has_frame(false);
+                ui.set_video_viewer_playing(false);
+                ui.set_video_viewer_frame(slint::Image::default());
+            }
+            let target = current_video_target().lock().ok().and_then(|t| t.clone());
+            if let Some((group_hex, mid)) = target {
+                if let Some(backend) = backend_cell.lock().unwrap().clone() {
+                    refresh_one_message_row_async(
+                        &backend,
+                        weak.clone(),
+                        pending_state.clone(),
+                        group_ids.clone(),
+                        group_hex,
+                        mid,
+                    );
+                }
+            }
+            *current_video_target().lock().unwrap() = None;
+        }
+    });
+
+    ui.on_video_viewer_toggle_play({
+        let weak = ui.as_weak();
+        move || {
+            if let Some(player) = current_player().lock().unwrap().as_ref() {
+                let now_playing = !player.toggle_pause();
+                if let Some(ui) = weak.upgrade() {
+                    ui.set_video_viewer_playing(now_playing);
+                }
+            }
+        }
+    });
+
+    ui.on_video_viewer_seek(move |fraction| {
+        let dur = *current_video_duration().lock().unwrap();
+        if dur > 0.0 {
+            if let Some(player) = current_player().lock().unwrap().as_ref() {
+                player.seek((fraction as f64).clamp(0.0, 1.0) * dur);
+            }
         }
     });
 
@@ -5681,6 +5770,200 @@ fn parse_one_imeta(tag: &[String], source_epoch: Option<u64>) -> Option<MediaAtt
 
 fn mime_is_image(mime: &str) -> bool {
     mime.starts_with("image/")
+}
+
+fn mime_is_video(mime: &str) -> bool {
+    mime.starts_with("video/")
+}
+
+/// Attachment-image-cache key for a video's poster frame. Distinct from the
+/// bare message id (which the image path uses) so a video never trips the
+/// image lightbox's "already decoded → open viewer" shortcut in
+/// `on_attachment_clicked`.
+fn vidposter_key(message_id: &str) -> String {
+    format!("vidposter:{message_id}")
+}
+
+/// Format a duration in seconds as "m:ss" (or "h:mm:ss").
+fn fmt_dur(secs: f64) -> String {
+    if !secs.is_finite() || secs < 0.0 {
+        return "0:00".to_string();
+    }
+    let total = secs.round() as u64;
+    let (h, m, s) = (total / 3600, (total % 3600) / 60, total % 60);
+    if h > 0 {
+        format!("{h}:{m:02}:{s:02}")
+    } else {
+        format!("{m}:{s:02}")
+    }
+}
+
+/// Cached duration label per video message id ("1:23"), captured the first
+/// time a clip is played (mpv reports `duration`). Renders on the poster tile.
+fn video_meta() -> &'static Mutex<HashMap<String, String>> {
+    use std::sync::OnceLock;
+    static M: OnceLock<Mutex<HashMap<String, String>>> = OnceLock::new();
+    M.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn video_duration_label(message_id: &str) -> String {
+    video_meta()
+        .lock()
+        .ok()
+        .and_then(|m| m.get(message_id).cloned())
+        .unwrap_or_default()
+}
+
+/// The single live [`mpv::MpvPlayer`] backing the video viewer. Only one video
+/// plays at a time; opening another or dismissing the viewer drops this (which
+/// joins the render/event threads and frees the mpv handle).
+fn current_player() -> &'static Mutex<Option<mpv::MpvPlayer>> {
+    use std::sync::OnceLock;
+    static P: OnceLock<Mutex<Option<mpv::MpvPlayer>>> = OnceLock::new();
+    P.get_or_init(|| Mutex::new(None))
+}
+
+/// Stop + drop the live player off the UI thread. `MpvPlayer::drop` joins its
+/// render/event threads and calls `mpv_terminate_destroy`, which can block
+/// briefly — never do that on the event loop (hard rule).
+fn stop_current_player() {
+    let taken = current_player().lock().ok().and_then(|mut p| p.take());
+    if let Some(player) = taken {
+        std::thread::spawn(move || drop(player));
+    }
+}
+
+/// Duration (seconds) of the currently-open video, for translating the seek
+/// bar's 0..1 fraction into an absolute position.
+fn current_video_duration() -> &'static Mutex<f64> {
+    use std::sync::OnceLock;
+    static D: OnceLock<Mutex<f64>> = OnceLock::new();
+    D.get_or_init(|| Mutex::new(0.0))
+}
+
+/// `(group_hex, message_id)` of the video currently open in the viewer, so the
+/// dismiss handler can repaint that bubble (poster + duration now cached).
+fn current_video_target() -> &'static Mutex<Option<(String, String)>> {
+    use std::sync::OnceLock;
+    static T: OnceLock<Mutex<Option<(String, String)>>> = OnceLock::new();
+    T.get_or_init(|| Mutex::new(None))
+}
+
+/// Fetch (cache read-through, else decrypt+download) a video attachment and
+/// hand the bytes to [`spawn_video_player`]. Runs entirely on the backend
+/// runtime; on failure it just clears the viewer's loading spinner.
+fn start_video_playback(
+    weak: Weak<DarkMatterLinux>,
+    backend: Arc<Backend>,
+    group_hex: String,
+    mid: String,
+    reference: MediaAttachmentReference,
+    vault: Option<Arc<Mutex<Vault>>>,
+) {
+    let hash = reference.ciphertext_sha256.clone();
+    let backend2 = backend.clone();
+    backend.tokio_handle().spawn(async move {
+        // Encrypted disk cache first (survives restart, no network).
+        if let Some(bytes) = vault.as_ref().and_then(|v| media_cache::get(v, &hash)) {
+            spawn_video_player(weak, mid, bytes);
+            return;
+        }
+        let weak_fail = weak.clone();
+        let mid_dl = mid.clone();
+        let vault2 = vault.clone();
+        backend2.download_media_async(&group_hex, reference, move |res| match res {
+            Ok(dl) => {
+                if let Some(v) = &vault2 {
+                    media_cache::put(v, &hash, &dl.plaintext);
+                }
+                spawn_video_player(weak, mid_dl, dl.plaintext);
+            }
+            Err(e) => {
+                eprintln!("[video] download {mid_dl}: {e:#}");
+                let _ = slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = weak_fail.upgrade() {
+                        ui.set_video_viewer_loading(false);
+                    }
+                });
+            }
+        });
+    });
+}
+
+/// Build the libmpv player for already-decrypted `bytes`, wiring its frame and
+/// state callbacks to the video viewer. Caches the first frame as the bubble
+/// poster and the clip duration. Stores the player in [`current_player`] so the
+/// viewer controls + dismiss can reach it. Safe to call off the UI thread.
+fn spawn_video_player(weak: Weak<DarkMatterLinux>, mid: String, bytes: Vec<u8>) {
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    let poster_saved = Arc::new(AtomicBool::new(false));
+    let dur_saved = Arc::new(AtomicBool::new(false));
+
+    let on_frame = {
+        let weak = weak.clone();
+        let mid = mid.clone();
+        move |px: PicturePixels| {
+            // First frame doubles as the bubble poster (cached once).
+            if !poster_saved.swap(true, Ordering::AcqRel) {
+                attachment_image_cache_put(vidposter_key(&mid), px.clone());
+            }
+            let weak = weak.clone();
+            let _ = slint::invoke_from_event_loop(move || {
+                if let Some(ui) = weak.upgrade() {
+                    ui.set_video_viewer_frame(image_from_pixels(&px));
+                    ui.set_video_viewer_has_frame(true);
+                    ui.set_video_viewer_loading(false);
+                }
+            });
+        }
+    };
+
+    let on_state = {
+        let weak = weak.clone();
+        let mid = mid.clone();
+        move |st: mpv::PlayerState| {
+            if st.duration > 0.0 {
+                *current_video_duration().lock().unwrap() = st.duration;
+                if !dur_saved.swap(true, Ordering::AcqRel) {
+                    if let Ok(mut m) = video_meta().lock() {
+                        m.insert(mid.clone(), fmt_dur(st.duration));
+                    }
+                }
+            }
+            let progress = if st.duration > 0.0 {
+                (st.time_pos / st.duration).clamp(0.0, 1.0) as f32
+            } else {
+                0.0
+            };
+            let pos_l = fmt_dur(st.time_pos);
+            let dur_l = fmt_dur(st.duration);
+            let playing = !st.paused;
+            let weak = weak.clone();
+            let _ = slint::invoke_from_event_loop(move || {
+                if let Some(ui) = weak.upgrade() {
+                    ui.set_video_viewer_progress(progress);
+                    ui.set_video_viewer_pos(pos_l.into());
+                    ui.set_video_viewer_dur(dur_l.into());
+                    ui.set_video_viewer_playing(playing);
+                }
+            });
+        }
+    };
+
+    match mpv::MpvPlayer::open(bytes, 1920, on_frame, on_state) {
+        Some(player) => {
+            *current_player().lock().unwrap() = Some(player);
+        }
+        None => {
+            eprintln!("[video] mpv player failed to start");
+            let _ = slint::invoke_from_event_loop(move || {
+                if let Some(ui) = weak.upgrade() {
+                    ui.set_video_viewer_loading(false);
+                }
+            });
+        }
+    }
 }
 
 // ─── Album (multi-image) layout + cells ────────────────────────────────────
@@ -7192,6 +7475,24 @@ fn chat_message_from_with_reactions(
         ),
     };
 
+    // Video attachment: not an image, so the tuple above left the poster empty.
+    // The poster (decoded first frame, captured on first play) lives under a
+    // distinct cache key; the duration label is captured alongside it.
+    let att_is_video = has_attachment && mime_is_video(&att_mime);
+    let (att_image, att_has_image) = if att_is_video {
+        match attachment_image_cache_get(&vidposter_key(&record.message_id_hex)) {
+            Some(px) => (image_from_pixels(&px), true),
+            None => (att_image, att_has_image),
+        }
+    } else {
+        (att_image, att_has_image)
+    };
+    let att_duration = if att_is_video {
+        video_duration_label(&record.message_id_hex)
+    } else {
+        String::new()
+    };
+
     // Jumbo only for a bare emoji body — a reply/attachment/album wants its
     // normal bubble chrome around the block.
     let jumbo_emoji = !has_attachment
@@ -7236,6 +7537,8 @@ fn chat_message_from_with_reactions(
         att_mime: s(&att_mime),
         att_size_label: s(&att_size_label),
         att_is_image,
+        att_is_video,
+        att_duration: s(&att_duration),
         att_image,
         att_has_image,
         att_loading,
@@ -7372,6 +7675,14 @@ fn pending_chat_message(
         ),
     };
 
+    // Optimistic video bubble: poster placeholder (▶ tile) until first play.
+    let att_is_video = has_attachment
+        && pending
+            .media
+            .first()
+            .map(|m| m.is_video)
+            .unwrap_or(false);
+
     let jumbo_emoji = !has_attachment
         && !is_album
         && reply_id.is_empty()
@@ -7419,6 +7730,8 @@ fn pending_chat_message(
         att_mime: s(&att_mime),
         att_size_label: s(&att_size_label),
         att_is_image,
+        att_is_video,
+        att_duration: s(""),
         att_image,
         att_has_image,
         att_loading,

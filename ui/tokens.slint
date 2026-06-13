@@ -361,6 +361,12 @@ export struct ChatMessage {
     att-mime: string,
     att-size-label: string,
     att-is-image: bool,
+    // Video attachment (mime `video/*`). Renders a poster tile (reusing
+    // `att-image`/`att-has-image` as the poster frame) with a ▶ overlay and,
+    // when known, an `att-duration` badge ("1:23"). Tapping opens the in-app
+    // libmpv viewer instead of the image lightbox.
+    att-is-video: bool,
+    att-duration: string,
     // Cached decoded preview pixels. Populated lazily on first tap; empty
     // (default) image otherwise.
     att-image: image,

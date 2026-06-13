@@ -114,6 +114,9 @@ export component MessageBubble inherits Rectangle {
     in property <string> att-mime;
     in property <string> att-size-label;
     in property <bool> att-is-image: false;
+    // Video attachment: poster tile + ▶ overlay, opens the in-app libmpv viewer.
+    in property <bool> att-is-video: false;
+    in property <string> att-duration;
     in property <image> att-image;
     in property <bool> att-has-image: false;
     in property <bool> att-loading: false;
@@ -309,6 +312,67 @@ export component MessageBubble inherits Rectangle {
         // Attachment block. Image attachments render as a tappable preview
         // tile (placeholder until decoded); other files render as a chip with
         // filename + size. Both fire `attachment-clicked` on tap.
+        // Video attachment — poster frame (decoded first frame or imeta thumb)
+        // with a ▶ play badge + optional duration. Tap opens the in-app viewer.
+        if root.has-attachment && root.att-is-video : vid-tile := Rectangle {
+            property <length> vid-w: min(280px, max(120px, root.text-budget));
+            width: self.vid-w;
+            height: 180px;
+            border-radius: (8px) * Theme.r-scale;
+            background: root.outgoing ? #00000033 : (Theme.light ? #1E293B : #00000044);
+            clip: true;
+            border-width: Theme.retro ? Theme.border-w : 0px;
+            border-color: Palette.border-2;
+            if root.att-has-image : Image {
+                width: parent.width;
+                height: parent.height;
+                source: root.att-image;
+                image-fit: cover;
+            }
+            // Play badge (always shown over the poster / placeholder).
+            Rectangle {
+                width: 56px;
+                height: 56px;
+                border-radius: (28px) * Theme.r-scale;
+                background: #00000099;
+                border-width: Theme.retro ? Theme.border-w : 1px;
+                border-color: #FFFFFFCC;
+                Text {
+                    // Nudge the glyph optically-center inside the circle.
+                    x: parent.width / 2 - self.width / 2 + 3px;
+                    text: root.att-loading ? "…" : (root.att-failed ? "!" : "▶");
+                    color: #FFFFFF;
+                    font-size: (24px) * Theme.fs-scale;
+                    font-family: Theme.font;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+            // Duration badge, bottom-right.
+            if root.att-duration != "" : Rectangle {
+                x: parent.width - self.width - 6px;
+                y: parent.height - self.height - 6px;
+                width: dur-text.preferred-width + 12px;
+                height: 18px;
+                border-radius: (4px) * Theme.r-scale;
+                background: #000000AA;
+                dur-text := Text {
+                    text: root.att-duration;
+                    color: #FFFFFF;
+                    font-size: (10px) * Theme.fs-scale;
+                    font-family: Theme.font;
+                    font-weight: 600;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+            TouchArea {
+                enabled: !root.att-loading;
+                mouse-cursor: pointer;
+                clicked => { root.attachment-clicked(); }
+            }
+        }
+
         if root.has-attachment && root.att-is-image : img-tile := Rectangle {
             property <length> img-w: min(280px, max(120px, root.text-budget));
             property <length> img-h: 180px;
@@ -354,7 +418,7 @@ export component MessageBubble inherits Rectangle {
             }
         }
 
-        if root.has-attachment && !root.att-is-image : Rectangle {
+        if root.has-attachment && !root.att-is-image && !root.att-is-video : Rectangle {
             background: root.outgoing ? #00000022 : (Theme.light ? #F1F5F9 : #ffffff0e);
             border-radius: (6px) * Theme.r-scale;
             border-width: Theme.retro ? Theme.border-w : 0px;

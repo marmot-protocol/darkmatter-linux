@@ -33,6 +33,8 @@ export component OutgoingRow inherits VerticalLayout {
     in property <string> att-mime;
     in property <string> att-size-label;
     in property <bool> att-is-image: false;
+    in property <bool> att-is-video: false;
+    in property <string> att-duration;
     in property <image> att-image;
     in property <bool> att-has-image: false;
     in property <bool> att-loading: false;
@@ -120,6 +122,8 @@ export component OutgoingRow inherits VerticalLayout {
                     att-mime: root.att-mime;
                     att-size-label: root.att-size-label;
                     att-is-image: root.att-is-image;
+                    att-is-video: root.att-is-video;
+                    att-duration: root.att-duration;
                     att-image: root.att-image;
                     att-has-image: root.att-has-image;
                     att-loading: root.att-loading;

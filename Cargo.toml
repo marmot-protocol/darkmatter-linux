@@ -68,6 +68,10 @@ marmot-app = { git = "ssh://git@github.com/marmot-protocol/darkmatter.git", bran
 marmot-account = { git = "ssh://git@github.com/marmot-protocol/darkmatter.git", branch = "master" }
 cgka-traits = { git = "ssh://git@github.com/marmot-protocol/darkmatter.git", branch = "master" }
 
+[build-dependencies]
+# Resolves libmpv's link flags for build.rs (see src/mpv.rs FFI core).
+pkg-config = "0.3"
+
 # Dev builds keep our own crate at opt-level 0 (fast incremental compiles) but
 # optimize every dependency. All the heavy lifting — SQLCipher page decryption,
 # MLS/AEAD crypto, Argon2id key derivation, image decoding, markdown parsing —

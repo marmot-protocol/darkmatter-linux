@@ -1,0 +1,170 @@
+import { Modal } from "modal.slint";
+import { Palette, Theme } from "../tokens.slint";
+
+// Full-window in-app video player, built on Modal's bare mode. `frame` is the
+// latest decoded RGBA frame pushed from Rust (libmpv software render); it's
+// letterboxed (`image-fit: contain`) into ~88% of the window. A bottom control
+// bar carries play/pause, a clickable progress bar, and a time readout. Rust
+// owns the libmpv instance and the playback state; this is a pure view.
+//
+// Backdrop click / floating ✕ / Esc dismiss (Modal). Spacebar toggles play.
+export component VideoViewerModal inherits Modal {
+    in property <image> frame;
+    in property <bool> has-frame: false;
+    in property <bool> playing: false;
+    in property <bool> loading: false;
+    // Playback position as a 0..1 fraction (drives the bar) plus preformatted
+    // "m:ss" labels (Rust formats them so we don't duplicate the logic here).
+    in property <float> progress: 0.0;
+    in property <string> pos-label: "0:00";
+    in property <string> dur-label: "0:00";
+    callback toggle-play();
+    // Seek to a 0..1 fraction of the duration (progress-bar click/drag).
+    callback seek(float);
+
+    bare: true;
+    background: #000000F2;
+    grab-focus: false;
+
+    Rectangle {
+        key-scope := FocusScope {
+            width: 100%;
+            height: 100%;
+            init => { self.focus(); }
+            key-pressed(event) => {
+                if (event.text == " ") {
+                    root.toggle-play();
+                    return accept;
+                }
+                return reject;
+            }
+
+            // The video frame.
+            if root.has-frame : Image {
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2 - 24px;
+                width: parent.width * 0.88;
+                height: parent.height * 0.88;
+                source: root.frame;
+                image-fit: contain;
+                // Tap the video to toggle play; swallow so it doesn't dismiss.
+                TouchArea { clicked => { root.toggle-play(); } }
+            }
+        }
+
+        // "Loading…" pill while the first frame decodes.
+        if root.loading && !root.has-frame : Rectangle {
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            width: load-text.preferred-width + 32px;
+            height: 40px;
+            border-radius: (10px) * Theme.r-scale;
+            background: #000000AA;
+            load-text := Text {
+                text: @tr("Loading…");
+                color: #FFFFFF;
+                font-size: (13px) * Theme.fs-scale;
+                font-family: Theme.font;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+
+        // Bottom control bar.
+        Rectangle {
+            x: (parent.width - self.width) / 2;
+            y: parent.height - self.height - 28px;
+            width: min(720px, parent.width - 96px);
+            height: 56px;
+            border-radius: (14px) * Theme.r-scale;
+            background: #000000C0;
+            border-width: Theme.retro ? Theme.border-w : 0px;
+            border-color: Palette.border-2;
+
+            HorizontalLayout {
+                padding-left: 16px;
+                padding-right: 18px;
+                spacing: 14px;
+                alignment: stretch;
+
+                // Play / pause toggle.
+                play-btn := Rectangle {
+                    width: 36px;
+                    height: 36px;
+                    y: (parent.height - self.height) / 2;
+                    border-radius: (18px) * Theme.r-scale;
+                    background: play-touch.has-hover ? Palette.mint : #FFFFFF22;
+                    animate background { duration: 100ms; }
+                    Text {
+                        x: parent.width / 2 - self.width / 2 + (root.playing ? 0px : 2px);
+                        text: root.playing ? "⏸" : "▶";
+                        color: #FFFFFF;
+                        font-size: (16px) * Theme.fs-scale;
+                        font-family: Theme.font;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                    play-touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { root.toggle-play(); }
+                    }
+                }
+
+                Text {
+                    text: root.pos-label;
+                    color: #FFFFFFCC;
+                    font-size: (12px) * Theme.fs-scale;
+                    font-family: Theme.font;
+                    vertical-alignment: center;
+                    horizontal-alignment: right;
+                    width: 42px;
+                }
+
+                // Progress bar — click anywhere to seek to that fraction.
+                Rectangle {
+                    horizontal-stretch: 1;
+                    height: 100%;
+                    bar := Rectangle {
+                        width: 100%;
+                        height: 5px;
+                        y: (parent.height - self.height) / 2;
+                        border-radius: 2.5px * Theme.r-scale;
+                        background: #FFFFFF33;
+                        Rectangle {
+                            x: 0;
+                            width: parent.width * clamp(root.progress, 0.0, 1.0);
+                            height: 100%;
+                            border-radius: 2.5px * Theme.r-scale;
+                            background: Palette.mint;
+                        }
+                        // Playhead knob.
+                        Rectangle {
+                            x: parent.width * clamp(root.progress, 0.0, 1.0) - self.width / 2;
+                            y: (parent.height - self.height) / 2;
+                            width: seek-touch.has-hover ? 14px : 11px;
+                            height: self.width;
+                            animate width { duration: 80ms; }
+                            border-radius: self.width / 2;
+                            background: #FFFFFF;
+                        }
+                    }
+                    seek-touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            root.seek(self.mouse-x / self.width);
+                        }
+                    }
+                }
+
+                Text {
+                    text: root.dur-label;
+                    color: #FFFFFFCC;
+                    font-size: (12px) * Theme.fs-scale;
+                    font-family: Theme.font;
+                    vertical-alignment: center;
+                    width: 42px;
+                }
+            }
+        }
+    }
+}

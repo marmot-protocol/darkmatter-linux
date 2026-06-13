@@ -24,6 +24,7 @@ import { CommandPalette, PaletteAction } from "modals/command-palette.slint";
 import { LanguagePickerModal } from "modals/language-picker-modal.slint";
 import { EditHistoryModal } from "modals/edit-history-modal.slint";
 import { ImageViewerModal } from "modals/image-viewer-modal.slint";
+import { VideoViewerModal } from "modals/video-viewer-modal.slint";
 import { ProfileModal } from "modals/profile-modal.slint";
 import { LoginScreen } from "login/login-screen.slint";
 import { SplashScreen } from "splash.slint";
@@ -134,6 +135,21 @@ export component DarkMatterLinux inherits Window {
     callback dismiss-image-viewer();
     callback image-viewer-prev();
     callback image-viewer-next();
+
+    // In-app video player — opened by Rust when a `video/*` attachment is
+    // tapped. Rust owns the libmpv instance, pushes decoded frames into
+    // `video-viewer-frame` and playback state into the progress/label props.
+    in-out property <bool> video-viewer-open: false;
+    in property <image> video-viewer-frame;
+    in property <bool> video-viewer-has-frame: false;
+    in property <bool> video-viewer-playing: false;
+    in property <bool> video-viewer-loading: false;
+    in property <float> video-viewer-progress: 0.0;
+    in property <string> video-viewer-pos: "0:00";
+    in property <string> video-viewer-dur: "0:00";
+    callback dismiss-video-viewer();
+    callback video-viewer-toggle-play();
+    callback video-viewer-seek(float);
 
     // Peer-profile modal — opened by tapping an @mention or any avatar (Rust
     // binds ProfileSink.open and the nostr: link interception). The `peer-`
@@ -928,6 +944,22 @@ export component DarkMatterLinux inherits Window {
         dismissed => { root.dismiss-image-viewer(); }
         prev => { root.image-viewer-prev(); }
         next => { root.image-viewer-next(); }
+    }
+
+    if root.video-viewer-open : VideoViewerModal {
+        x: 0; y: 0;
+        width: root.width;
+        height: root.height;
+        frame: root.video-viewer-frame;
+        has-frame: root.video-viewer-has-frame;
+        playing: root.video-viewer-playing;
+        loading: root.video-viewer-loading;
+        progress: root.video-viewer-progress;
+        pos-label: root.video-viewer-pos;
+        dur-label: root.video-viewer-dur;
+        dismissed => { root.dismiss-video-viewer(); }
+        toggle-play => { root.video-viewer-toggle-play(); }
+        seek(f) => { root.video-viewer-seek(f); }
     }
 
     if root.peer-profile-open : ProfileModal {

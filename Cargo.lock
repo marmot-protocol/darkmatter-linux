@@ -1593,6 +1593,7 @@ dependencies = [
  "marmot-app",
  "mime_guess",
  "nostr",
+ "pkg-config",
  "qrcode",
  "reqwest",
  "resvg 0.45.1",

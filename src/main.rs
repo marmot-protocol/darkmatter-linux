@@ -436,6 +436,12 @@ fn main() -> Result<(), slint::PlatformError> {
     // the relays-added first-run reboot (publishing fails while no relays are
     // configured) and is cleared only once the kind-0 actually lands.
     let pending_profile_seed: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
+    // Display name picked at key-generation time — reused when seeding the
+    // kind-0 so the login preview matches the published profile.
+    let pending_profile_name: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
+    // Chats whose encryption banner entrance has already played.
+    let encryption_banner_seen: Arc<Mutex<std::collections::HashSet<String>>> =
+        Arc::new(Mutex::new(std::collections::HashSet::new()));
 
     // Boot the backend from an nsec and populate the chat models. Errors are
     // surfaced on the UI's backend-error property; the UI stays logged-in
@@ -452,6 +458,8 @@ fn main() -> Result<(), slint::PlatformError> {
         let vault_cell = vault_cell.clone();
         let chats_watcher = chats_watcher.clone();
         let pending_profile_seed = pending_profile_seed.clone();
+        let pending_profile_name = pending_profile_name.clone();
+        let encryption_banner_seen = encryption_banner_seen.clone();
         // `active_hint` names the account (id hex) to display first — the
         // vault-recorded last-active account on unlock, `None` on first run.
         move |nsec: String, vault: Arc<Mutex<Vault>>, active_hint: Option<String>| {
@@ -461,7 +469,8 @@ fn main() -> Result<(), slint::PlatformError> {
             ui.set_backend_ready(false);
             ui.set_backend_error(s(""));
             ui.set_booting(true);
-            ui.set_booting_status(s("Opening account home…"));
+            ui.set_booting_phase(0);
+            ui.set_booting_status(s("Opening vault…"));
 
             // Hand the boot off to a worker thread so the Slint event loop
             // keeps rendering the splash screen. Send the result back via
@@ -474,6 +483,8 @@ fn main() -> Result<(), slint::PlatformError> {
             let archived_group_ids = archived_group_ids.clone();
             let chats_watcher = chats_watcher.clone();
             let pending_profile_seed = pending_profile_seed.clone();
+            let pending_profile_name = pending_profile_name.clone();
+            let encryption_banner_seen = encryption_banner_seen.clone();
             std::thread::spawn(move || {
                 let relays = backend::load_relays();
                 // Kept aside for the per-account nsec migration write below —
@@ -495,6 +506,17 @@ fn main() -> Result<(), slint::PlatformError> {
                 let group_ids_for_sync = group_ids.clone();
                 let archived_for_sync = archived_group_ids.clone();
                 let sync_done_for_sync = sync_done.clone();
+                let weak_for_status = weak_for_worker.clone();
+                let on_status: Arc<dyn Fn(&str) + Send + Sync> = Arc::new(move |msg: &str| {
+                    let weak = weak_for_status.clone();
+                    let msg = msg.to_string();
+                    let phase = boot_phase_for_status(&msg);
+                    let _ = slint::invoke_from_event_loop(move || {
+                        let Some(ui) = weak.upgrade() else { return };
+                        ui.set_booting_status(msg.into());
+                        ui.set_booting_phase(phase);
+                    });
+                });
                 let on_synced = move |sync_result: anyhow::Result<()>| {
                     let _ = slint::invoke_from_event_loop(move || {
                         sync_done_for_sync.store(true, std::sync::atomic::Ordering::Relaxed);
@@ -539,7 +561,14 @@ fn main() -> Result<(), slint::PlatformError> {
                         );
                     });
                 };
-                let result = Backend::boot(&nsec, relays, secret_store, active_hint, on_synced);
+                let result = Backend::boot(
+                    &nsec,
+                    relays,
+                    secret_store,
+                    active_hint,
+                    on_synced,
+                    Some(on_status),
+                );
                 let _ = slint::invoke_from_event_loop(move || {
                     let Some(ui) = weak_for_worker.upgrade() else { return };
                     match result {
@@ -549,6 +578,21 @@ fn main() -> Result<(), slint::PlatformError> {
                             // applied back on the UI thread — the boot closure
                             // itself does zero sqlite/disk reads.
                             populate_models_for_active(&ui, &b, &group_ids, &archived_group_ids);
+                            // First chat may already be visible — play the
+                            // encryption-banner entrance once its key is known.
+                            let weak_banner = ui.as_weak();
+                            let group_ids_banner = group_ids.clone();
+                            let banner_seen_boot = encryption_banner_seen.clone();
+                            slint::Timer::single_shot(std::time::Duration::from_millis(350), move || {
+                                let Some(ui) = weak_banner.upgrade() else { return };
+                                let idx = ui.get_active_chat() as usize;
+                                let key = group_ids_banner.lock().unwrap().get(idx).cloned();
+                                trigger_encryption_banner_entrance(
+                                    &ui,
+                                    key.as_deref(),
+                                    &banner_seen_boot,
+                                );
+                            });
                             // The displayed account may be the vault's
                             // last-active hint rather than the nsec we booted
                             // with — derive the identity-bound chrome from the
@@ -586,10 +630,12 @@ fn main() -> Result<(), slint::PlatformError> {
                             let seeding = pending_profile_seed.lock().unwrap().clone();
                             if seeding.as_deref() == Some(active.account_id_hex.as_str()) {
                                 let cell = pending_profile_seed.clone();
+                                let preset_name = pending_profile_name.lock().unwrap().take();
                                 publish_random_profile_async(
                                     &b,
                                     active.label.clone(),
                                     active.account_id_hex.clone(),
+                                    preset_name,
                                     ui.as_weak(),
                                     move || *cell.lock().unwrap() = None,
                                 );
@@ -877,6 +923,7 @@ fn main() -> Result<(), slint::PlatformError> {
                                     &backend_for_seed,
                                     summary.label.clone(),
                                     summary.account_id_hex.clone(),
+                                    None,
                                     ui.as_weak(),
                                     || {},
                                 );
@@ -1026,6 +1073,7 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.on_generate_key_requested({
         let weak = ui.as_weak();
         let pending = pending_generated.clone();
+        let pending_name = pending_profile_name.clone();
         move || {
             eprintln!("[login] generate_key_requested fired");
             let Some(ui) = weak.upgrade() else { return };
@@ -1045,6 +1093,15 @@ fn main() -> Result<(), slint::PlatformError> {
                 }
             };
             *pending.lock().unwrap() = Some(nsec.clone());
+            let name = random_profile_name();
+            *pending_name.lock().unwrap() = Some(name.clone());
+            ui.set_generated_display_name(name.clone().into());
+            if let Some(img) = local_animal_avatar_image(&npub, &name) {
+                ui.set_generated_avatar(img);
+                ui.set_generated_has_avatar(true);
+            } else {
+                ui.set_generated_has_avatar(false);
+            }
             ui.set_generated_nsec(nsec.into());
             ui.set_generated_npub(npub.into());
             ui.set_login_error(s(""));
@@ -1102,6 +1159,8 @@ fn main() -> Result<(), slint::PlatformError> {
                             ui.set_my_npub(npub.into());
                             ui.set_generated_nsec(s(""));
                             ui.set_generated_npub(s(""));
+                            ui.set_generated_display_name(s(""));
+                            ui.set_generated_has_avatar(false);
                             ui.set_password_input(s(""));
                             ui.set_password_confirm(s(""));
                             ui.set_logged_in(true);
@@ -2375,6 +2434,7 @@ fn main() -> Result<(), slint::PlatformError> {
         let group_ids = group_ids.clone();
         let active_watcher = active_message_watcher.clone();
         let pending_state = pending_state.clone();
+        let banner_seen = encryption_banner_seen.clone();
         move |idx| {
             if let Some(ui) = weak.upgrade() {
                 ui.set_active_chat(idx);
@@ -2388,6 +2448,11 @@ fn main() -> Result<(), slint::PlatformError> {
                     return;
                 };
                 let group_hex = group_ids.lock().unwrap().get(idx as usize).cloned();
+                trigger_encryption_banner_entrance(
+                    &ui,
+                    group_hex.as_deref(),
+                    &banner_seen,
+                );
                 if let Some(group_hex) = group_hex {
                     let t_switch = std::time::Instant::now();
                     // Re-entering a chat always starts from the default
@@ -6176,6 +6241,67 @@ fn my_avatar_label(backend: &Backend, my_id: &str) -> String {
     }
 }
 
+/// One-time encryption-banner entrance when a chat is opened for the first time.
+fn trigger_encryption_banner_entrance(
+    ui: &DarkMatterLinux,
+    chat_key: Option<&str>,
+    banner_seen: &Arc<Mutex<std::collections::HashSet<String>>>,
+) {
+    let Some(chat_key) = chat_key else {
+        ui.set_encryption_banner_first_show(false);
+        return;
+    };
+    let first_show = {
+        let mut seen = banner_seen.lock().unwrap();
+        if seen.contains(chat_key) {
+            false
+        } else {
+            seen.insert(chat_key.to_string());
+            true
+        }
+    };
+    ui.set_encryption_banner_first_show(first_show);
+    if first_show {
+        let weak = ui.as_weak();
+        slint::Timer::single_shot(std::time::Duration::from_millis(520), move || {
+            if let Some(ui) = weak.upgrade() {
+                ui.set_encryption_banner_first_show(false);
+            }
+        });
+    }
+}
+
+/// Splash step index for a boot status line.
+fn boot_phase_for_status(status: &str) -> i32 {
+    if status.contains("Opening") {
+        0
+    } else if status.contains("Deriving") {
+        1
+    } else if status.contains("Publishing") {
+        2
+    } else {
+        3
+    }
+}
+
+/// Rasterize the named animal over an npub-derived gradient for immediate UI
+/// preview (login mode 2). Must run on the UI thread — `slint::Image` is `!Send`.
+fn local_animal_avatar_image(npub: &str, name: &str) -> Option<slint::Image> {
+    let animal = name.rsplit(' ').next()?;
+    let svg = animal_avatar::svg_for(animal)?;
+    let (a, b, _) = avatar_for(npub);
+    let png = animal_avatar::render_png(
+        svg,
+        (a.red(), a.green(), a.blue()),
+        (b.red(), b.green(), b.blue()),
+    )
+    .ok()?;
+    let img = image::load_from_memory(&png).ok()?.into_rgba8();
+    let (w, h) = img.dimensions();
+    let buffer = slint::SharedPixelBuffer::<slint::Rgba8Pixel>::clone_from_slice(img.as_raw(), w, h);
+    Some(slint::Image::from_rgba8(buffer))
+}
+
 /// A random "[Adjective] [Animal]" display name for freshly generated
 /// accounts, e.g. "Spooky Bear".
 fn random_profile_name() -> String {
@@ -6208,6 +6334,7 @@ fn publish_random_profile_async(
     backend: &Arc<Backend>,
     label: String,
     account_id_hex: String,
+    preset_name: Option<String>,
     weak: slint::Weak<DarkMatterLinux>,
     on_published: impl FnOnce() + Send + 'static,
 ) {
@@ -6219,7 +6346,7 @@ fn publish_random_profile_async(
             on_published();
             return;
         }
-        let name = random_profile_name();
+        let name = preset_name.unwrap_or_else(random_profile_name);
         // Companion art is best-effort: a render/upload miss just means a
         // name-only profile.
         let picture = seed_profile_picture(&backend, &label, &account_id_hex, &name);

@@ -5,6 +5,7 @@ members = ["dm-ui"]
 name = "darkmatter-linux"
 version = "0.1.0"
 edition = "2024"
+default-run = "darkmatter-linux"
 
 [dependencies]
 slint = "1.8"

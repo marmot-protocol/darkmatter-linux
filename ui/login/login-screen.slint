@@ -16,6 +16,7 @@ import { LockIcon } from "../icons/lock-icon.slint";
 import { CopyIcon } from "../icons/copy-icon.slint";
 import { PlusIcon } from "../icons/plus-icon.slint";
 import { RefreshIcon } from "../icons/refresh-icon.slint";
+import { Avatar } from "../primitives/avatar.slint";
 
 // A labeled field box matching the login card style. Used for the nsec input
 // and the password / confirm-password fields.
@@ -73,11 +74,31 @@ export component LoginScreen inherits Rectangle {
     // shown in mode 2 after Rust fills it from Keys::generate().
     in property <string> generated-nsec;
     in property <string> generated-npub;
+    // Random "[Adjective] [Animal]" name + locally rendered starter avatar.
+    in property <string> generated-display-name;
+    in property <image> generated-avatar;
+    in property <bool> generated-has-avatar: false;
     // error from last attempt (empty = no error). in-out so the component can also
     // clear it locally when the user navigates between modes.
     in-out property <string> error: "";
     // disable actions while Rust is working (deriving the key, booting).
     in property <bool> busy: false;
+    // Mode-2 name/avatar reveal progress (0 → 1).
+    property <float> name-reveal: 0;
+    property <float> avatar-reveal: 0;
+    changed generated-display-name => {
+        if (root.generated-display-name != "") {
+            self.name-reveal = 0;
+            self.name-reveal = 1;
+        }
+    }
+    changed generated-has-avatar => {
+        if (root.generated-has-avatar) {
+            self.avatar-reveal = 0;
+            self.avatar-reveal = 1;
+        }
+    }
+    animate name-reveal, avatar-reveal { duration: 300ms; easing: ease-out; }
 
     callback login-with-nsec(string, string, string); // nsec, password, confirm
     callback generate-requested();
@@ -114,7 +135,7 @@ export component LoginScreen inherits Rectangle {
         width: 480px;
         // Per-mode baseline, but never clip the content: translated strings
         // (de/ja) can run taller than the English layout was tuned for.
-        height: max(root.mode == 2 ? 660px : root.mode == 1 ? 520px : 420px,
+        height: max(root.mode == 2 ? 740px : root.mode == 1 ? 520px : 420px,
                     card-content.preferred-height);
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
@@ -286,6 +307,51 @@ export component LoginScreen inherits Rectangle {
             // === MODE 2: show generated key + set vault password ===
             if root.mode == 2 : VerticalLayout {
                 spacing: 14px;
+
+                if root.generated-display-name != "" : Rectangle {
+                    height: 72px;
+                    border-radius: (8px) * Theme.r-scale;
+                    background: Palette.field;
+                    border-width: 1px;
+                    border-color: Palette.field-border;
+                    HorizontalLayout {
+                        padding-left: 14px; padding-right: 14px;
+                        spacing: 14px;
+                        alignment: center;
+                        if root.generated-has-avatar : Rectangle {
+                            width: 48px; height: 48px;
+                            opacity: root.avatar-reveal;
+                            Avatar {
+                                size: 48px;
+                                picture: root.generated-avatar;
+                                has-picture: true;
+                                initials: "";
+                                color-a: Palette.mint;
+                                color-b: Palette.mint-dim;
+                                font-size: 16px;
+                            }
+                        }
+                        VerticalLayout {
+                            spacing: 4px;
+                            alignment: center;
+                            horizontal-stretch: 1;
+                            Text {
+                                text: @tr("YOUR DISPLAY NAME");
+                                color: Palette.text-mid;
+                                font-size: (9px) * Theme.fs-scale;
+                                font-weight: 700;
+                                letter-spacing: 1.6px;
+                            }
+                            Text {
+                                text: root.generated-display-name;
+                                color: Palette.text-hi;
+                                font-size: (Theme.retro ? 18px : 16px) * Theme.fs-scale;
+                                font-weight: 700;
+                                opacity: root.name-reveal;
+                            }
+                        }
+                    }
+                }
 
                 // Warning banner.
                 Rectangle {

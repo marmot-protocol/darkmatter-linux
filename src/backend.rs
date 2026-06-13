@@ -165,8 +165,15 @@ impl Backend {
         secret_store: Arc<dyn AccountSecretStore>,
         active_account: Option<String>,
         on_synced: impl FnOnce(Result<()>) + Send + 'static,
+        on_status: Option<Arc<dyn Fn(&str) + Send + Sync>>,
     ) -> Result<Self> {
+        let status = |msg: &str| {
+            if let Some(ref cb) = on_status {
+                cb(msg);
+            }
+        };
         let t_boot = std::time::Instant::now();
+        status("Opening vault…");
         let home = default_home();
         std::fs::create_dir_all(&home).context("create dm home")?;
 
@@ -198,6 +205,7 @@ impl Backend {
             .context("list accounts")?
             .into_iter()
             .any(|a| a.account_id_hex == target_id);
+        status("Deriving keys…");
         eprintln!(
             "[boot-timing] local setup done at {:?} (already_present={already_present})",
             t_boot.elapsed()
@@ -271,6 +279,8 @@ impl Backend {
         backend.warm_members_cache();
         backend.warm_profile_cache();
 
+        status("Publishing key package…");
+
         // Point marmot's telemetry exporter + audit-log tracker at the IPF
         // services. The library auto-exports metrics (~60s) and auto-uploads
         // audit logs after sends/syncs — we only supply endpoints, tokens, and
@@ -288,6 +298,7 @@ impl Backend {
             on_synced,
         );
 
+        status("Connecting to relays…");
         eprintln!("[boot-timing] boot returning at {:?}", t_boot.elapsed());
         Ok(backend)
     }

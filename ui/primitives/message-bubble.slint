@@ -158,6 +158,10 @@ export component MessageBubble inherits Rectangle {
     property <float> enter: 0;
     init => { self.enter = 1; }
     animate enter { duration: Theme.retro ? 120ms : 220ms; easing: ease-out; }
+    // Retro send pop: bubble starts slightly smaller/higher, snaps to full size.
+    property <float> pop-scale: Theme.retro ? (0.90 + root.enter * 0.10) : 1.0;
+    property <length> pop-y: Theme.retro ? (1.0 - root.enter) * -6px : 0px;
+    animate pop-scale, pop-y { duration: Theme.retro ? 120ms : 0ms; easing: ease-out; }
 
     property <length> r-lg: (16px) * Theme.r-scale;
     property <length> r-sm: (5px) * Theme.r-scale;
@@ -184,8 +188,9 @@ export component MessageBubble inherits Rectangle {
     drop-shadow-offset-x: Theme.retro ? 2px : 0px;
     drop-shadow-offset-y: Theme.retro ? 2px : (root.outgoing ? 3px : 2px);
     drop-shadow-blur: Theme.retro ? 0px : (root.outgoing ? 14px : 8px);
-    width: max(root.min-w, layout.preferred-width);
-    height: layout.preferred-height;
+    y: root.pop-y;
+    width: max(root.min-w, layout.preferred-width) * root.pop-scale;
+    height: layout.preferred-height * root.pop-scale;
     opacity: root.pending ? root.enter * 0.62 : root.enter;
     animate opacity { duration: 180ms; easing: ease-out; }
 

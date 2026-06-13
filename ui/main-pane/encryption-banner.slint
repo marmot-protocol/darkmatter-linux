@@ -3,18 +3,35 @@ import { LockIcon } from "../icons/lock-icon.slint";
 
 export component EncryptionBanner inherits Rectangle {
     in property <string> npub;
+    // True the first time this chat's banner is shown — drives a one-time
+    // stripe draw-in + lock reveal. Rust clears after the entrance completes.
+    in property <bool> first-show: false;
 
     height: 56px;
     background: Theme.retro
         ? Palette.banner
         : @linear-gradient(90deg, Palette.banner-edge 0%, Palette.banner 40%, Palette.banner-edge 100%);
 
-    // Left accent stripe — encryption at a glance.
+    property <float> reveal: 1;
+    property <float> shimmer: 1.0;
+    changed first-show => {
+        if (root.first-show) {
+            self.reveal = 0;
+            self.reveal = 1;
+            self.shimmer = 0.65;
+            self.shimmer = 1.0;
+        }
+    }
+    animate reveal { duration: Theme.retro ? 200ms : 420ms; easing: ease-out; }
+    animate shimmer { duration: 480ms; easing: ease-in-out; }
+
+    // Left accent stripe — draws in on first show; shimmer via opacity pulse.
     Rectangle {
         x: 0; y: 0;
-        width: 3px; height: parent.height;
+        width: 3px * root.reveal;
+        height: parent.height;
         background: Palette.mint;
-        opacity: Theme.retro ? 1.0 : 0.85;
+        opacity: Theme.retro ? 1.0 : root.shimmer;
     }
 
     Rectangle {
@@ -29,19 +46,52 @@ export component EncryptionBanner inherits Rectangle {
         spacing: 12px;
         alignment: start;
 
-        LockIcon {
-            stroke: Palette.mint;
-            y: (parent.height - self.height) / 2;
+        Rectangle {
+            width: 16px;
+            height: 16px;
+            opacity: root.reveal;
+            y: (parent.height - self.height) / 2 + (1.0 - root.reveal) * -4px;
+            LockIcon {
+                stroke: Palette.mint;
+            }
         }
 
         VerticalLayout {
             spacing: 4px;
             alignment: center;
-            Text {
-                text: @tr("End-to-end encrypted with") + " MLS";
-                color: Palette.text-hi;
-                font-size: (13px) * Theme.fs-scale;
-                font-weight: 600;
+            HorizontalLayout {
+                spacing: 6px;
+                alignment: start;
+                Text {
+                    text: @tr("End-to-end encrypted with");
+                    color: Palette.text-hi;
+                    font-size: (13px) * Theme.fs-scale;
+                    font-weight: 600;
+                    vertical-alignment: center;
+                }
+                if Theme.retro : Rectangle {
+                    height: 18px;
+                    border-width: Theme.border-w;
+                    border-color: Palette.bevel-hi;
+                    background: Palette.mint;
+                    HorizontalLayout {
+                        padding-left: 5px; padding-right: 5px;
+                        Text {
+                            text: "MLS";
+                            color: Palette.bubble-out-fg;
+                            font-size: (10px) * Theme.fs-scale;
+                            font-weight: 700;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+                if !Theme.retro : Text {
+                    text: "MLS";
+                    color: Palette.mint;
+                    font-size: (13px) * Theme.fs-scale;
+                    font-weight: 700;
+                    vertical-alignment: center;
+                }
             }
             HorizontalLayout {
                 spacing: 8px;

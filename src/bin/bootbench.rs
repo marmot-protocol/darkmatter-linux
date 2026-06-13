@@ -72,7 +72,7 @@ fn main() {
     let t_boot = Instant::now();
     let b = backend::Backend::boot(&nsec, relays, secret_store, None, move |r| {
         let _ = tx.send(r);
-    })
+    }, None)
     .expect("boot");
     eprintln!("[bench] ── boot returned in {:?} ──", t_boot.elapsed());
 

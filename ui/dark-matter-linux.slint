@@ -74,6 +74,9 @@ export component DarkMatterLinux inherits Window {
     in-out property <string> password-confirm;
     in property <string> generated-nsec;
     in property <string> generated-npub;
+    in property <string> generated-display-name;
+    in property <image> generated-avatar;
+    in property <bool> generated-has-avatar: false;
     in property <string> login-error;
     in property <bool> login-busy;
     callback login-with-nsec(string, string, string); // nsec, password, confirm
@@ -285,6 +288,10 @@ export component DarkMatterLinux inherits Window {
     // the splash overlay instead of the (empty, useless) main shell.
     in property <bool> booting;
     in property <string> booting-status: @tr("Connecting to relays…");
+    in property <int> booting-phase: 0;
+    in property <int> booting-phase-count: 4;
+    // One-time encryption-banner entrance per chat (Rust clears after first show).
+    in property <bool> encryption-banner-first-show: false;
 
     // Profile editor state (kind-0 metadata via marmot-app).
     // Derived in Rust from the profile (display name → initials + palette).
@@ -590,6 +597,7 @@ export component DarkMatterLinux inherits Window {
                             album-cell-clicked(key) => { root.album-cell-clicked(key); }
                             is-group: root.chat-is-group;
                             can-show-members: root.chat-can-show-members;
+                            encryption-banner-first-show: root.encryption-banner-first-show;
                             member-count: root.chat-member-count;
                             members: root.chat-members;
                             show-members <=> root.show-chat-members;
@@ -952,6 +960,8 @@ export component DarkMatterLinux inherits Window {
         width: root.width;
         height: root.height;
         status: root.booting-status;
+        phase: root.booting-phase;
+        phase-count: root.booting-phase-count;
     }
 
     // Drives the chat-list "SYNCED Ns AGO" footer and keeps relay health live.
@@ -983,6 +993,9 @@ export component DarkMatterLinux inherits Window {
         password-confirm <=> root.password-confirm;
         generated-nsec: root.generated-nsec;
         generated-npub: root.generated-npub;
+        generated-display-name: root.generated-display-name;
+        generated-avatar: root.generated-avatar;
+        generated-has-avatar: root.generated-has-avatar;
         error: root.login-error;
         busy: root.login-busy;
         login-with-nsec(n, p, c) => { root.login-with-nsec(n, p, c); }

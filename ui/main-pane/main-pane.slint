@@ -13,6 +13,7 @@ export component MainPane inherits Rectangle {
     in property <int> active-chat;
     in property <bool> is-group: false;
     in property <bool> can-show-members: false;
+    in property <bool> encryption-banner-first-show: false;
     in property <int> member-count: 0;
     in property <[GroupMember]> members;
     in property <bool> can-add-members: false;
@@ -111,7 +112,10 @@ export component MainPane inherits Rectangle {
             }
 
             if root.chat.is-chat-request : ChatRequestBanner { }
-            if !root.chat.is-chat-request : EncryptionBanner { npub: root.chat.npub; }
+            if !root.chat.is-chat-request : EncryptionBanner {
+                npub: root.chat.npub;
+                first-show: root.encryption-banner-first-show;
+            }
 
             SessionDivider {
                 label: root.chat.is-chat-request

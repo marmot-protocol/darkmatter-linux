@@ -1,11 +1,11 @@
 import { Palette, Theme } from "tokens.slint";
 
-// Splash screen shown while the marmot runtime is booting. The boot path can
-// take many seconds (open SQLcipher DBs, derive keys, publish key package,
-// connect to relays), so this needs to be obviously alive — hence the
-// breathing dot animation.
+// Splash screen shown while the marmot runtime is booting. Rust drives phased
+// status text + a step rail so the multi-second boot path feels alive.
 export component SplashScreen inherits Rectangle {
     in property <string> status: @tr("Connecting to relays…");
+    in property <int> phase: 0;
+    in property <int> phase-count: 4;
 
     background: Palette.bg;
 
@@ -16,27 +16,16 @@ export component SplashScreen inherits Rectangle {
         alignment: center;
         spacing: 28px;
 
-        // Brand mark — three pulsing dots in the mint accent.
+        // Step rail — thin progress across boot phases.
         HorizontalLayout {
             alignment: center;
-            spacing: 10px;
-
-            for i in [0, 1, 2] : Rectangle {
-                width: 12px;
-                height: 12px;
-                border-radius: (6px) * Theme.r-scale;
-                background: Palette.mint;
-
-                property <float> pulse: 0.35;
-                init => { self.pulse = 1.0; }
-                opacity: self.pulse;
-                animate pulse {
-                    duration: 900ms;
-                    delay: i * 180ms;
-                    iteration-count: -1;
-                    direction: alternate;
-                    easing: ease-in-out;
-                }
+            spacing: 8px;
+            for i in 4 : Rectangle {
+                width: i <= root.phase ? 28px : 10px;
+                height: 4px;
+                border-radius: (2px) * Theme.r-scale;
+                background: i <= root.phase ? Palette.mint : Palette.field-border;
+                animate width, background { duration: 220ms; easing: ease-out; }
             }
         }
 
@@ -51,12 +40,33 @@ export component SplashScreen inherits Rectangle {
                 font-weight: 700;
                 font-family: Theme.font;
             }
-            Text {
-                text: root.status;
-                horizontal-alignment: center;
-                color: Palette.text-mid;
-                font-size: (12px) * Theme.fs-scale;
-                font-family: Theme.font;
+            Rectangle {
+                height: 18px;
+                status-text := Text {
+                    text: root.status;
+                    horizontal-alignment: center;
+                    color: Palette.text-mid;
+                    font-size: (12px) * Theme.fs-scale;
+                    font-family: Theme.font;
+                    x: (parent.width - self.width) / 2;
+                    y: 0;
+                }
+                if Theme.retro : Rectangle {
+                    width: 8px;
+                    height: (12px) * Theme.fs-scale;
+                    x: status-text.x + status-text.width + 2px;
+                    y: 2px;
+                    background: Palette.mint;
+                    property <float> blink: 1.0;
+                    init => { self.blink = 0.0; }
+                    opacity: self.blink;
+                    animate blink {
+                        duration: 600ms;
+                        iteration-count: -1;
+                        direction: alternate;
+                        easing: ease-in-out;
+                    }
+                }
             }
         }
     }

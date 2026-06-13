@@ -4439,8 +4439,13 @@ fn main() -> Result<(), slint::PlatformError> {
         let pending_state = pending_state.clone();
         let group_ids = group_ids.clone();
         move || {
+            use std::sync::atomic::Ordering;
             stop_current_player();
             if let Some(ui) = weak.upgrade() {
+                // Never leave the whole app stuck fullscreen after closing.
+                if video_fullscreen().swap(false, Ordering::AcqRel) {
+                    ui.window().set_fullscreen(false);
+                }
                 ui.set_video_viewer_open(false);
                 ui.set_video_viewer_loading(false);
                 ui.set_video_viewer_has_frame(false);
@@ -4481,6 +4486,24 @@ fn main() -> Result<(), slint::PlatformError> {
         if dur > 0.0 {
             if let Some(player) = current_player().lock().unwrap().as_ref() {
                 player.seek((fraction as f64).clamp(0.0, 1.0) * dur);
+            }
+        }
+    });
+
+    ui.on_video_viewer_seek_relative(move |secs| {
+        if let Some(player) = current_player().lock().unwrap().as_ref() {
+            player.seek_relative(secs as f64);
+        }
+    });
+
+    ui.on_video_viewer_fullscreen({
+        let weak = ui.as_weak();
+        move || {
+            use std::sync::atomic::Ordering;
+            let want = !video_fullscreen().load(Ordering::Acquire);
+            video_fullscreen().store(want, Ordering::Release);
+            if let Some(ui) = weak.upgrade() {
+                ui.window().set_fullscreen(want);
             }
         }
     });
@@ -5847,6 +5870,15 @@ fn current_video_target() -> &'static Mutex<Option<(String, String)>> {
     use std::sync::OnceLock;
     static T: OnceLock<Mutex<Option<(String, String)>>> = OnceLock::new();
     T.get_or_init(|| Mutex::new(None))
+}
+
+/// Whether the video viewer put the app window into fullscreen. Tracked so the
+/// `f`-key / button toggle can flip it and the dismiss handler can revert it
+/// (so closing the viewer never leaves the whole app stuck fullscreen).
+fn video_fullscreen() -> &'static std::sync::atomic::AtomicBool {
+    use std::sync::OnceLock;
+    static F: OnceLock<std::sync::atomic::AtomicBool> = OnceLock::new();
+    F.get_or_init(|| std::sync::atomic::AtomicBool::new(false))
 }
 
 /// Fetch (cache read-through, else decrypt+download) a video attachment and

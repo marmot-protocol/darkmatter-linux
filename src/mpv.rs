@@ -650,9 +650,19 @@ impl MpvPlayer {
 
     /// Seek to an absolute position in seconds.
     pub fn seek(&self, secs: f64) {
+        self.seek_cmd(secs, "absolute");
+    }
+
+    /// Seek relative to the current position (negative rewinds). mpv clamps to
+    /// the clip bounds, so out-of-range steps are harmless.
+    pub fn seek_relative(&self, secs: f64) {
+        self.seek_cmd(secs, "relative");
+    }
+
+    fn seek_cmd(&self, secs: f64, mode: &str) {
         let s = cstr("seek");
         let pos = cstr(&format!("{secs:.3}"));
-        let mode = cstr("absolute");
+        let mode = cstr(mode);
         let mut args: [*const c_char; 4] =
             [s.as_ptr(), pos.as_ptr(), mode.as_ptr(), std::ptr::null()];
         unsafe {

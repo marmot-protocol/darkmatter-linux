@@ -21,6 +21,10 @@ export component VideoViewerModal inherits Modal {
     callback toggle-play();
     // Seek to a 0..1 fraction of the duration (progress-bar click/drag).
     callback seek(float);
+    // Seek by a relative number of seconds (←/→ keys: ∓5s).
+    callback seek-relative(float);
+    // Toggle the app window between fullscreen and windowed.
+    callback fullscreen();
 
     bare: true;
     background: #000000F2;
@@ -34,6 +38,18 @@ export component VideoViewerModal inherits Modal {
             key-pressed(event) => {
                 if (event.text == " ") {
                     root.toggle-play();
+                    return accept;
+                }
+                if (event.text == Key.LeftArrow) {
+                    root.seek-relative(-5);
+                    return accept;
+                }
+                if (event.text == Key.RightArrow) {
+                    root.seek-relative(5);
+                    return accept;
+                }
+                if (event.text == "f" || event.text == "F") {
+                    root.fullscreen();
                     return accept;
                 }
                 return reject;
@@ -163,6 +179,28 @@ export component VideoViewerModal inherits Modal {
                     font-family: Theme.font;
                     vertical-alignment: center;
                     width: 42px;
+                }
+
+                // Fullscreen toggle (also bound to the `f` key).
+                fs-btn := Rectangle {
+                    width: 36px;
+                    height: 36px;
+                    y: (parent.height - self.height) / 2;
+                    border-radius: (18px) * Theme.r-scale;
+                    background: fs-touch.has-hover ? Palette.mint : #FFFFFF22;
+                    animate background { duration: 100ms; }
+                    Text {
+                        text: "⛶";
+                        color: #FFFFFF;
+                        font-size: (17px) * Theme.fs-scale;
+                        font-family: Theme.font;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                    fs-touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { root.fullscreen(); }
+                    }
                 }
             }
         }

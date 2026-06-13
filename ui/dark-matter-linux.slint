@@ -150,6 +150,8 @@ export component DarkMatterLinux inherits Window {
     callback dismiss-video-viewer();
     callback video-viewer-toggle-play();
     callback video-viewer-seek(float);
+    callback video-viewer-seek-relative(float);
+    callback video-viewer-fullscreen();
 
     // Peer-profile modal — opened by tapping an @mention or any avatar (Rust
     // binds ProfileSink.open and the nostr: link interception). The `peer-`
@@ -960,6 +962,8 @@ export component DarkMatterLinux inherits Window {
         dismissed => { root.dismiss-video-viewer(); }
         toggle-play => { root.video-viewer-toggle-play(); }
         seek(f) => { root.video-viewer-seek(f); }
+        seek-relative(s) => { root.video-viewer-seek-relative(s); }
+        fullscreen => { root.video-viewer-fullscreen(); }
     }
 
     if root.peer-profile-open : ProfileModal {

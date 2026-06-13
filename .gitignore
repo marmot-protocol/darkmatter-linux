@@ -1,2 +1,4 @@
 /target
 .stignore
+.syncthing.*
+*.sync-conflict*

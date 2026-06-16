@@ -291,6 +291,15 @@ fn friendly_error(op: &str, e: &anyhow::Error) -> String {
         "kp_refresh" => {
             "Couldn't refresh your key packages. Check your relay settings and try again."
         }
+        "republish" => "Couldn't republish to your relays. Check your relay settings and try again.",
+        "add account" => "Couldn't add that account. Please check the key and try again.",
+        "create chat" => "Couldn't create the chat. Please try again.",
+        "add contact" => "Couldn't add that contact. Please try again.",
+        "add member" => "Couldn't add that member. Please try again.",
+        "group settings" => "Couldn't update the group settings. Please try again.",
+        "group image" => "Couldn't update the group image. Please try again.",
+        "save profile" => "Couldn't save your profile. Check your connection and try again.",
+        "upload picture" => "Couldn't upload your picture. Please try again.",
         _ => "Something went wrong. Please try again.",
     }
     .to_string()
@@ -1074,7 +1083,8 @@ fn main() -> Result<(), slint::PlatformError> {
                             do_switch(summary.account_id_hex);
                         }
                         Err(e) => {
-                            ui.set_add_account_status(format!("{e:#}").into());
+                            eprintln!("[add-account] {e:#}");
+                            ui.set_add_account_status(friendly_error("add account", &e).into());
                         }
                     }
                 });
@@ -2160,7 +2170,7 @@ fn main() -> Result<(), slint::PlatformError> {
                         }
                         Err(e) => {
                             eprintln!("[create-group] {e:#}");
-                            ui.set_new_chat_status(format!("Failed: {e:#}").into());
+                            ui.set_new_chat_status(friendly_error("create chat", &e).into());
                         }
                     }
                 });
@@ -2231,7 +2241,7 @@ fn main() -> Result<(), slint::PlatformError> {
                         }
                         Err(e) => {
                             eprintln!("[add-contact] {e:#}");
-                            ui.set_add_contact_status(format!("Failed: {e:#}").into());
+                            ui.set_add_contact_status(friendly_error("add contact", &e).into());
                         }
                     }
                 });
@@ -2266,7 +2276,7 @@ fn main() -> Result<(), slint::PlatformError> {
                         }
                         Err(e) => {
                             eprintln!("[profile-add-contact] {e:#}");
-                            ui.set_peer_profile_status(format!("Failed: {e:#}").into());
+                            ui.set_peer_profile_status(friendly_error("add contact", &e).into());
                         }
                     }
                 });
@@ -2356,7 +2366,7 @@ fn main() -> Result<(), slint::PlatformError> {
                         }
                         Err(e) => {
                             eprintln!("[invite] {e:#}");
-                            ui.set_add_member_status(format!("Failed: {e:#}").into());
+                            ui.set_add_member_status(friendly_error("add member", &e).into());
                         }
                     }
                 });
@@ -2395,7 +2405,7 @@ fn main() -> Result<(), slint::PlatformError> {
                         }
                         Err(e) => {
                             eprintln!("[promote] {e:#}");
-                            ui.set_group_settings_status(format!("Failed: {e:#}").into());
+                            ui.set_group_settings_status(friendly_error("group settings", &e).into());
                         }
                     }
                 });
@@ -2433,7 +2443,7 @@ fn main() -> Result<(), slint::PlatformError> {
                         }
                         Err(e) => {
                             eprintln!("[demote] {e:#}");
-                            ui.set_group_settings_status(format!("Failed: {e:#}").into());
+                            ui.set_group_settings_status(friendly_error("group settings", &e).into());
                         }
                     }
                 });
@@ -2467,7 +2477,7 @@ fn main() -> Result<(), slint::PlatformError> {
                         }
                         Err(e) => {
                             eprintln!("[self-demote] {e:#}");
-                            ui.set_group_settings_status(format!("Failed: {e:#}").into());
+                            ui.set_group_settings_status(friendly_error("group settings", &e).into());
                         }
                     }
                 });
@@ -2511,7 +2521,7 @@ fn main() -> Result<(), slint::PlatformError> {
                         }
                         Err(e) => {
                             eprintln!("[rename] {e:#}");
-                            ui.set_group_settings_status(format!("Failed: {e:#}").into());
+                            ui.set_group_settings_status(friendly_error("group settings", &e).into());
                         }
                     }
                 });
@@ -2557,7 +2567,7 @@ fn main() -> Result<(), slint::PlatformError> {
                         }
                         Err(e) => {
                             eprintln!("[group-image] clear failed: {e:#}");
-                            ui.set_group_settings_status(format!("Failed: {e:#}").into());
+                            ui.set_group_settings_status(friendly_error("group image", &e).into());
                         }
                     }
                 });
@@ -2669,7 +2679,7 @@ fn main() -> Result<(), slint::PlatformError> {
                             }
                             Err(e) => {
                                 eprintln!("[group-image] upload failed: {e:#}");
-                                ui.set_group_settings_status(format!("upload failed: {e:#}").into());
+                                ui.set_group_settings_status(friendly_error("group image", &e).into());
                             }
                         }
                     });
@@ -5417,7 +5427,7 @@ fn main() -> Result<(), slint::PlatformError> {
                         }
                         Err(e) => {
                             eprintln!("[profile] save failed: {e:#}");
-                            ui.set_profile_status(format!("error: {e:#}").into());
+                            ui.set_profile_status(friendly_error("save profile", &e).into());
                         }
                     }
                 });
@@ -5535,7 +5545,7 @@ fn main() -> Result<(), slint::PlatformError> {
                             }
                             Err(e) => {
                                 eprintln!("[profile] picture upload failed: {e:#}");
-                                ui.set_profile_status(format!("upload failed: {e:#}").into());
+                                ui.set_profile_status(friendly_error("upload picture", &e).into());
                             }
                         }
                     });

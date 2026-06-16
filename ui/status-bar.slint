@@ -62,7 +62,10 @@ export component StatusBar inherits Rectangle {
         }
 
         Text {
-            text: "Ctrl+K";
+            // macOS uses ⌘; everything else Ctrl. Mirrors the command-palette
+            // modal so both surfaces show the same shortcut. Modifier glyphs are
+            // key labels, not prose, so they stay out of @tr().
+            text: Theme.is-mac ? "⌘ K" : "Ctrl K";
             color: Palette.text-mid;
             font-size: Theme.fs(10px, 14px);
             font-weight: 700;

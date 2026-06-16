@@ -57,6 +57,9 @@ rfd = { version = "0.15", default-features = false, features = [
   "async-std",
 ] }
 mime_guess = "2"
+# Cross-platform desktop notifications (freedesktop/dbus on Linux & *BSD,
+# NSUserNotification on macOS). Used for incoming-message alerts.
+notify-rust = "4"
 # Rasterizes the assets/animals/*.svg starter avatars over an npub-derived
 # gradient (animal_avatar.rs). Shape rendering only — no text/font features.
 resvg = { version = "0.45", default-features = false }

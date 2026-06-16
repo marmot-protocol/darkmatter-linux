@@ -3,6 +3,8 @@ import { SettingsSidebar } from "settings-sidebar.slint";
 import { GeneralPane } from "general-pane.slint";
 import { AppearancePane } from "appearance-pane.slint";
 import { PlaceholderPane } from "placeholder-pane.slint";
+import { StoragePane } from "storage-pane.slint";
+import { NotificationsPane } from "notifications-pane.slint";
 import { NetworkPane } from "network-pane.slint";
 import { AdvancedPane } from "advanced-pane.slint";
 import { DebugPane } from "debug-pane.slint";
@@ -38,6 +40,19 @@ export component SettingsPage inherits Rectangle {
     callback theme-mode-selected(string);
     callback accent-selected(int);
     callback outgoing-on-right-toggled(bool);
+
+    // Storage pane — encrypted media-cache size + clear. Forwarded to StoragePane.
+    in property <string> storage-cache-size;
+    in property <bool> storage-clearing: false;
+    callback storage-clear-cache();
+
+    // Notifications pane — desktop-alert toggles. Forwarded to NotificationsPane.
+    in-out property <bool> notifications-enabled: true;
+    in-out property <bool> notification-sound: true;
+    in-out property <bool> notification-preview: true;
+    callback notifications-toggled(bool);
+    callback notification-sound-toggled(bool);
+    callback notification-preview-toggled(bool);
 
     // Network & relays — forwarded straight to NetworkPane.
     in property <[string]> network-relays;
@@ -101,15 +116,20 @@ export component SettingsPage inherits Rectangle {
                 accent-selected(idx) => { root.accent-selected(idx); }
                 outgoing-on-right-toggled(v) => { root.outgoing-on-right-toggled(v); }
             }
-            if root.active-tab == 3 : PlaceholderPane {
+            if root.active-tab == 3 : NotificationsPane {
                 width: parent.width; height: parent.height;
-                title: @tr("Notifications");
-                body: @tr("Per-chat notification rules, sounds, focus mode.");
+                enabled <=> root.notifications-enabled;
+                sound <=> root.notification-sound;
+                preview <=> root.notification-preview;
+                enabled-toggled(v) => { root.notifications-toggled(v); }
+                sound-toggled(v) => { root.notification-sound-toggled(v); }
+                preview-toggled(v) => { root.notification-preview-toggled(v); }
             }
-            if root.active-tab == 4 : PlaceholderPane {
+            if root.active-tab == 4 : StoragePane {
                 width: parent.width; height: parent.height;
-                title: @tr("Storage");
-                body: @tr("Local cache, message retention, attachments.");
+                cache-size: root.storage-cache-size;
+                clearing: root.storage-clearing;
+                clear-cache => { root.storage-clear-cache(); }
             }
             if root.active-tab == 5 : AdvancedPane {
                 width: parent.width; height: parent.height;

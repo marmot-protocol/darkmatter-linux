@@ -2,7 +2,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-06-16 06:19+0000\n"
+"POT-Creation-Date: 2026-06-16 08:04+0000\n"
 "PO-Revision-Date: 2026-05-27 13:20+0000\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -255,25 +255,25 @@ msgctxt "ContactsSidebar"
 msgid "Search contacts…"
 msgstr "Kontakte durchsuchen…"
 
-#: ui/dark-matter-linux.slint:322
+#: ui/dark-matter-linux.slint:335
 msgctxt "DarkMatterLinux"
 msgid "Connecting to relays…"
 msgstr "Verbinde mit Relays…"
 
-#: ui/dark-matter-linux.slint:888
+#: ui/dark-matter-linux.slint:916
 #, fuzzy
 msgctxt "DarkMatterLinux"
 msgid "Block this chat request?"
 msgstr "Chat-Anfrage"
 
-#: ui/dark-matter-linux.slint:889
+#: ui/dark-matter-linux.slint:917
 msgctxt "DarkMatterLinux"
 msgid ""
 "This declines the invite from {}. It can't be restored unless they invite "
 "you again."
 msgstr ""
 
-#: ui/dark-matter-linux.slint:890
+#: ui/dark-matter-linux.slint:918
 #, fuzzy
 msgctxt "DarkMatterLinux"
 msgid "Block"
@@ -739,24 +739,24 @@ msgctxt "AddMemberCard"
 msgid "Invite"
 msgstr ""
 
-#: ui/main-pane/chat-header.slint:87
+#: ui/main-pane/chat-header.slint:91
 msgctxt "ChatHeader"
 msgid "1 member"
 msgid_plural "{n} members"
 msgstr[0] "1 Mitglied"
 msgstr[1] "{n} Mitglieder"
 
-#: ui/main-pane/chat-header.slint:117
+#: ui/main-pane/chat-header.slint:147
 msgctxt "ChatHeader"
 msgid "Block"
 msgstr "Blockieren"
 
-#: ui/main-pane/chat-header.slint:124
+#: ui/main-pane/chat-header.slint:154
 msgctxt "ChatHeader"
 msgid "Archive"
 msgstr "Archivieren"
 
-#: ui/main-pane/chat-header.slint:131
+#: ui/main-pane/chat-header.slint:161
 msgctxt "ChatHeader"
 msgid "Accept"
 msgstr "Annehmen"
@@ -915,12 +915,12 @@ msgctxt "GroupSettingsCard"
 msgid "Save name"
 msgstr "Speichern"
 
-#: ui/main-pane/main-pane.slint:130
+#: ui/main-pane/main-pane.slint:134
 msgctxt "MainPane"
 msgid "CHAT REQUEST"
 msgstr "CHAT-ANFRAGE"
 
-#: ui/main-pane/main-pane.slint:131
+#: ui/main-pane/main-pane.slint:135
 msgctxt "MainPane"
 msgid "SESSION ESTABLISHED"
 msgstr "SITZUNG HERGESTELLT"
@@ -1867,25 +1867,47 @@ msgid ""
 "find you."
 msgstr ""
 
-#: ui/settings/settings-page.slint:106
-msgctxt "SettingsPage"
+#: ui/settings/notifications-pane.slint:22
+#, fuzzy
+msgctxt "NotificationsPane"
 msgid "Notifications"
 msgstr "Benachrichtigungen"
 
-#: ui/settings/settings-page.slint:107
-msgctxt "SettingsPage"
-msgid "Per-chat notification rules, sounds, focus mode."
-msgstr "Benachrichtigungsregeln pro Chat, Töne, Fokusmodus."
+#: ui/settings/notifications-pane.slint:23
+msgctxt "NotificationsPane"
+msgid "DESKTOP ALERTS"
+msgstr ""
 
-#: ui/settings/settings-page.slint:111
-msgctxt "SettingsPage"
-msgid "Storage"
-msgstr "Speicher"
+#: ui/settings/notifications-pane.slint:28
+msgctxt "NotificationsPane"
+msgid "INCOMING MESSAGES"
+msgstr ""
 
-#: ui/settings/settings-page.slint:112
-msgctxt "SettingsPage"
-msgid "Local cache, message retention, attachments."
-msgstr "Lokaler Cache, Nachrichtenaufbewahrung, Anhänge."
+#: ui/settings/notifications-pane.slint:31
+#, fuzzy
+msgctxt "NotificationsPane"
+msgid "Desktop notifications"
+msgstr "Benachrichtigungen"
+
+#: ui/settings/notifications-pane.slint:32
+msgctxt "NotificationsPane"
+msgid "Alert me about messages in chats I'm not viewing."
+msgstr ""
+
+#: ui/settings/notifications-pane.slint:39
+msgctxt "NotificationsPane"
+msgid "Play a sound"
+msgstr ""
+
+#: ui/settings/notifications-pane.slint:47
+msgctxt "NotificationsPane"
+msgid "Show message preview"
+msgstr ""
+
+#: ui/settings/notifications-pane.slint:48
+msgctxt "NotificationsPane"
+msgid "Off shows only \"New message\" without the text."
+msgstr ""
 
 #: ui/settings/settings-sidebar.slint:33
 msgctxt "SettingsSidebar"
@@ -1932,6 +1954,43 @@ msgctxt "SettingsSidebar"
 msgid "Debug"
 msgstr "Debug"
 
+#: ui/settings/storage-pane.slint:22
+#, fuzzy
+msgctxt "StoragePane"
+msgid "Storage"
+msgstr "Speicher"
+
+#: ui/settings/storage-pane.slint:23
+msgctxt "StoragePane"
+msgid "ON THIS DEVICE"
+msgstr ""
+
+#: ui/settings/storage-pane.slint:28
+msgctxt "StoragePane"
+msgid "MEDIA CACHE"
+msgstr ""
+
+#: ui/settings/storage-pane.slint:31
+msgctxt "StoragePane"
+msgid "Cached attachments"
+msgstr ""
+
+#: ui/settings/storage-pane.slint:32
+msgctxt "StoragePane"
+msgid "Decrypted images and files, sealed with your vault key."
+msgstr ""
+
+#: ui/settings/storage-pane.slint:36
+#, fuzzy
+msgctxt "StoragePane"
+msgid "Clearing…"
+msgstr "Speichere…"
+
+#: ui/settings/storage-pane.slint:36
+msgctxt "StoragePane"
+msgid "Clear cache"
+msgstr ""
+
 #: ui/shells/side-panel.slint:14
 msgctxt "SidePanel"
 msgid "Search…"
@@ -1972,6 +2031,15 @@ msgstr "RELAYS"
 msgctxt "StatusBar"
 msgid "COMMAND"
 msgstr "BEFEHL"
+
+#, fuzzy
+#~ msgctxt "SettingsPage"
+#~ msgid "Coming soon — per-chat notification rules, sounds, and focus mode."
+#~ msgstr "Benachrichtigungsregeln pro Chat, Töne, Fokusmodus."
+
+#~ msgctxt "SettingsPage"
+#~ msgid "Local cache, message retention, attachments."
+#~ msgstr "Lokaler Cache, Nachrichtenaufbewahrung, Anhänge."
 
 #~ msgctxt "Composer"
 #~ msgid "Send a message  ·  encrypted with"

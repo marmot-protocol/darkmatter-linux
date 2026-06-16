@@ -13,6 +13,8 @@ export component MainPane inherits Rectangle {
     in property <int> active-chat;
     in property <bool> is-group: false;
     in property <bool> can-show-members: false;
+    in property <bool> chat-muted: false;
+    callback mute-toggle-clicked();
     in property <bool> encryption-banner-first-show: false;
     in property <int> member-count: 0;
     in property <[GroupMember]> members;
@@ -113,10 +115,12 @@ export component MainPane inherits Rectangle {
                 can-show-members: root.can-show-members;
                 member-count: root.member-count;
                 members-open: root.show-members;
+                muted: root.chat-muted;
                 accept-clicked => { root.accept-clicked(); }
                 block-clicked => { root.block-clicked(); }
                 archive-clicked => { root.archive-clicked(); }
                 members-toggle-clicked => { root.members-toggle-clicked(); }
+                mute-toggle-clicked => { root.mute-toggle-clicked(); }
             }
 
             if root.chat.is-chat-request : ChatRequestBanner { }

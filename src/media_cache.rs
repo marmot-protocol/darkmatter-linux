@@ -97,6 +97,21 @@ pub fn clear() {
     let _ = std::fs::remove_dir_all(cache_dir());
 }
 
+/// Total size on disk of the sealed cache entries, in bytes. Walks the cache
+/// dir (flat — no subdirs) and sums file lengths. Best-effort: an unreadable
+/// dir or entry just contributes nothing. Does IO, so call it off the UI thread.
+pub fn size_bytes() -> u64 {
+    let Ok(entries) = std::fs::read_dir(cache_dir()) else {
+        return 0;
+    };
+    entries
+        .flatten()
+        .filter_map(|e| e.metadata().ok())
+        .filter(|m| m.is_file())
+        .map(|m| m.len())
+        .sum()
+}
+
 #[cfg(unix)]
 fn set_owner_only(path: &Path) {
     use std::os::unix::fs::PermissionsExt;

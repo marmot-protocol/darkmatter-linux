@@ -1,0 +1,43 @@
+import { Palette, Theme } from "../tokens.slint";
+import { ArchiveIcon } from "../icons/archive-icon.slint";
+import { DetailPage } from "../shells/detail-page.slint";
+import { PageHeader } from "../shells/page-header.slint";
+import { Section } from "../shells/section.slint";
+import { GroupCard } from "../shells/group-card.slint";
+import { PrefRow } from "pref-row.slint";
+import { MicroButton } from "../primitives/button.slint";
+
+// Storage settings. The only on-disk store the user can act on today is the
+// encrypted media cache (decrypted attachment bytes, sealed with the vault key).
+// Size + a clear action are real and backed by `media_cache` in Rust — no
+// placeholder controls.
+export component StoragePane inherits DetailPage {
+    // Preformatted human size ("12.4 MB"); Rust owns the formatting.
+    in property <string> cache-size;
+    // True while a clear is in flight — disables the button to avoid double-fire.
+    in property <bool> clearing: false;
+    callback clear-cache();
+
+    PageHeader {
+        title: @tr("Storage");
+        caption: @tr("ON THIS DEVICE");
+        ArchiveIcon { stroke: Palette.mint; }
+    }
+
+    Section {
+        label: @tr("MEDIA CACHE");
+        GroupCard {
+            PrefRow {
+                label: @tr("Cached attachments");
+                sublabel: @tr("Decrypted images and files, sealed with your vault key.");
+                value: root.cache-size;
+                show-divider: false;
+                MicroButton {
+                    label: root.clearing ? @tr("Clearing…") : @tr("Clear cache");
+                    enabled: !root.clearing;
+                    clicked => { root.clear-cache(); }
+                }
+            }
+        }
+    }
+}

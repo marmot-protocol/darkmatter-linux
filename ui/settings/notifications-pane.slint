@@ -1,0 +1,58 @@
+import { Palette, Theme } from "../tokens.slint";
+import { BellIcon } from "../icons/bell-icon.slint";
+import { DetailPage } from "../shells/detail-page.slint";
+import { PageHeader } from "../shells/page-header.slint";
+import { Section } from "../shells/section.slint";
+import { GroupCard } from "../shells/group-card.slint";
+import { PrefRow } from "pref-row.slint";
+import { Toggle } from "toggle.slint";
+
+// Desktop-notification preferences. The master toggle gates the two detail
+// toggles (they dim + stop responding when notifications are off), mirroring
+// how the rest of the app treats dependent settings.
+export component NotificationsPane inherits DetailPage {
+    in-out property <bool> enabled: true;
+    in-out property <bool> sound: true;
+    in-out property <bool> preview: true;
+    callback enabled-toggled(bool);
+    callback sound-toggled(bool);
+    callback preview-toggled(bool);
+
+    PageHeader {
+        title: @tr("Notifications");
+        caption: @tr("DESKTOP ALERTS");
+        BellIcon { stroke: Palette.mint; }
+    }
+
+    Section {
+        label: @tr("INCOMING MESSAGES");
+        GroupCard {
+            PrefRow {
+                label: @tr("Desktop notifications");
+                sublabel: @tr("Alert me about messages in chats I'm not viewing.");
+                Toggle {
+                    on <=> root.enabled;
+                    toggled => { root.enabled-toggled(self.on); }
+                }
+            }
+            PrefRow {
+                label: @tr("Play a sound");
+                Toggle {
+                    on <=> root.sound;
+                    enabled: root.enabled;
+                    toggled => { root.sound-toggled(self.on); }
+                }
+            }
+            PrefRow {
+                label: @tr("Show message preview");
+                sublabel: @tr("Off shows only \"New message\" without the text.");
+                show-divider: false;
+                Toggle {
+                    on <=> root.preview;
+                    enabled: root.enabled;
+                    toggled => { root.preview-toggled(self.on); }
+                }
+            }
+        }
+    }
+}

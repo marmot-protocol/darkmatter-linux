@@ -3,6 +3,8 @@ import { ArchiveIcon } from "../icons/archive-icon.slint";
 import { BanIcon } from "../icons/ban-icon.slint";
 import { CheckMark } from "../icons/check-mark.slint";
 import { PeopleIcon } from "../icons/people-icon.slint";
+import { BellIcon } from "../icons/bell-icon.slint";
+import { MuteIcon } from "../icons/mute-icon.slint";
 import { Avatar } from "../primitives/avatar.slint";
 import { Pill } from "../primitives/pill.slint";
 import { Button } from "../primitives/button.slint";
@@ -15,10 +17,12 @@ export component ChatHeader inherits Rectangle {
     in property <bool> can-show-members: false;
     in property <int> member-count: 0;
     in property <bool> members-open: false;
+    in property <bool> muted: false;
     callback accept-clicked();
     callback block-clicked();
     callback archive-clicked();
     callback members-toggle-clicked();
+    callback mute-toggle-clicked();
 
     height: 72px;
     background: Palette.bg;
@@ -88,6 +92,32 @@ export component ChatHeader inherits Rectangle {
                     : root.chat.last-seen;
                 color: Palette.text-lo;
                 font-size: (11px) * Theme.fs-scale;
+            }
+        }
+
+        // Mute toggle — silences this chat's desktop notifications. Shown for
+        // any established chat (not pending requests). Muted = mint bell-off.
+        if !root.chat.is-chat-request : Rectangle {
+            width: 36px;
+            height: 36px;
+            y: (parent.height - self.height) / 2;
+            background: root.muted ? Palette.selected : (mute-touch.has-hover ? Palette.hover : transparent);
+            border-radius: (6px) * Theme.r-scale;
+            border-width: root.muted ? 1px : 0px;
+            border-color: Palette.border-2;
+            animate background { duration: 100ms; }
+            mute-touch := TouchArea {
+                clicked => { root.mute-toggle-clicked(); }
+                if root.muted : MuteIcon {
+                    stroke: Palette.mint;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                }
+                if !root.muted : BellIcon {
+                    stroke: Palette.text-mid;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                }
             }
         }
 

@@ -18,6 +18,7 @@ mod backend;
 mod blossom;
 mod media_cache;
 mod mpv;
+mod notify;
 mod observability;
 mod settings;
 mod vault;
@@ -420,6 +421,18 @@ fn main() -> Result<(), slint::PlatformError> {
     apply_stamp_formats(&initial_settings);
     ui.set_time_format(s(&initial_settings.time_format));
     ui.set_date_format(s(&initial_settings.date_format));
+    ui.set_notifications_enabled(initial_settings.notifications_enabled);
+    ui.set_notification_sound(initial_settings.notification_sound);
+    ui.set_notification_preview(initial_settings.notification_preview);
+    // Live notification state shared with the chat watcher (which runs on the
+    // tokio thread, so it can't reach the Rc<RefCell<Settings>>). The toggle
+    // callbacks keep both in sync.
+    let notif = Arc::new(notify::NotifState::new(
+        initial_settings.notifications_enabled,
+        initial_settings.notification_sound,
+        initial_settings.notification_preview,
+        initial_settings.muted_chats.clone(),
+    ));
     let settings_cell: Rc<RefCell<Settings>> = Rc::new(RefCell::new(initial_settings));
 
     // All models start empty; they're filled from marmot-app after login.
@@ -517,6 +530,7 @@ fn main() -> Result<(), slint::PlatformError> {
         let archived_group_ids = archived_group_ids.clone();
         let vault_cell = vault_cell.clone();
         let chats_watcher = chats_watcher.clone();
+        let notif = notif.clone();
         let pending_profile_seed = pending_profile_seed.clone();
         let pending_profile_name = pending_profile_name.clone();
         let encryption_banner_seen = encryption_banner_seen.clone();
@@ -542,6 +556,7 @@ fn main() -> Result<(), slint::PlatformError> {
             let group_ids = group_ids.clone();
             let archived_group_ids = archived_group_ids.clone();
             let chats_watcher = chats_watcher.clone();
+            let notif = notif.clone();
             let pending_profile_seed = pending_profile_seed.clone();
             let pending_profile_name = pending_profile_name.clone();
             let encryption_banner_seen = encryption_banner_seen.clone();
@@ -679,7 +694,7 @@ fn main() -> Result<(), slint::PlatformError> {
                                     }
                                 });
                             }
-                            install_chat_watcher(&b, ui.as_weak(), group_ids.clone(), backend_cell.clone(), &chats_watcher);
+                            install_chat_watcher(&b, ui.as_weak(), group_ids.clone(), backend_cell.clone(), notif.clone(), now_unix_secs(), &chats_watcher);
                             *backend_cell.lock().unwrap() = Some(b.clone());
                             ui.set_backend_ready(true);
                             ui.set_booting(false);
@@ -762,6 +777,7 @@ fn main() -> Result<(), slint::PlatformError> {
         let staged_files = staged_files.clone();
         let active_message_watcher = active_message_watcher.clone();
         let chats_watcher = chats_watcher.clone();
+        let notif = notif.clone();
         Arc::new(move |account_id: String| {
             let Some(ui) = weak.upgrade() else { return };
             let Some(backend) = backend_cell.lock().unwrap().clone() else {
@@ -858,6 +874,8 @@ fn main() -> Result<(), slint::PlatformError> {
                 ui.as_weak(),
                 group_ids.clone(),
                 backend_cell.clone(),
+                notif.clone(),
+                now_unix_secs(),
                 &chats_watcher,
             );
             refresh_accounts_model(&ui, &backend);
@@ -1338,6 +1356,64 @@ fn main() -> Result<(), slint::PlatformError> {
             let mut s = settings_cell.borrow_mut();
             s.outgoing_on_right = on;
             s.save();
+        }
+    });
+
+    ui.on_notifications_toggled({
+        let settings_cell = settings_cell.clone();
+        let notif = notif.clone();
+        move |on| {
+            notif.enabled.store(on, std::sync::atomic::Ordering::Relaxed);
+            let mut s = settings_cell.borrow_mut();
+            s.notifications_enabled = on;
+            s.save();
+        }
+    });
+    ui.on_notification_sound_toggled({
+        let settings_cell = settings_cell.clone();
+        let notif = notif.clone();
+        move |on| {
+            notif.sound.store(on, std::sync::atomic::Ordering::Relaxed);
+            let mut s = settings_cell.borrow_mut();
+            s.notification_sound = on;
+            s.save();
+        }
+    });
+    ui.on_notification_preview_toggled({
+        let settings_cell = settings_cell.clone();
+        let notif = notif.clone();
+        move |on| {
+            notif.preview.store(on, std::sync::atomic::Ordering::Relaxed);
+            let mut s = settings_cell.borrow_mut();
+            s.notification_preview = on;
+            s.save();
+        }
+    });
+
+    // Mute / unmute the currently-open chat (header bell). Flips the live
+    // NotifState set + the persisted settings, and updates the header.
+    ui.on_toggle_mute_chat({
+        let weak = ui.as_weak();
+        let group_ids = group_ids.clone();
+        let settings_cell = settings_cell.clone();
+        let notif = notif.clone();
+        move || {
+            let Some(ui) = weak.upgrade() else { return };
+            let idx = ui.get_active_chat();
+            let group_hex = group_ids.lock().unwrap().get(idx as usize).cloned();
+            let Some(group_hex) = group_hex else { return };
+            let now_muted = !notif.is_muted(&group_hex);
+            notif.set_muted(&group_hex, now_muted);
+            {
+                let mut s = settings_cell.borrow_mut();
+                if now_muted {
+                    s.muted_chats.insert(group_hex);
+                } else {
+                    s.muted_chats.remove(&group_hex);
+                }
+                s.save();
+            }
+            ui.set_active_chat_muted(now_muted);
         }
     });
 
@@ -1851,15 +1927,60 @@ fn main() -> Result<(), slint::PlatformError> {
     };
     refresh_breadcrumb();
 
+    // Recompute the Storage pane's media-cache size off the UI thread (disk
+    // walk) and push the formatted label back. Cheap, but IO — never inline.
+    let refresh_storage_size = {
+        let weak = ui.as_weak();
+        move || {
+            let weak = weak.clone();
+            std::thread::spawn(move || {
+                let label = human_bytes(media_cache::size_bytes());
+                let _ = slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = weak.upgrade() {
+                        ui.set_storage_cache_size(label.into());
+                    }
+                });
+            });
+        }
+    };
+    refresh_storage_size();
+
     let go_to_page = {
         let weak = ui.as_weak();
         let refresh = refresh_breadcrumb.clone();
+        let refresh_storage = refresh_storage_size.clone();
         move |page: Page| {
             let Some(ui) = weak.upgrade() else { return };
             ui.set_active_page(page as i32);
             refresh();
+            // Settings can land on the Storage tab — make sure the size is fresh.
+            if matches!(page, Page::Settings) {
+                refresh_storage();
+            }
         }
     };
+
+    ui.on_storage_clear_cache({
+        let weak = ui.as_weak();
+        let refresh_storage = refresh_storage_size.clone();
+        move || {
+            if let Some(ui) = weak.upgrade() {
+                ui.set_storage_clearing(true);
+            }
+            let weak = weak.clone();
+            let refresh_storage = refresh_storage.clone();
+            std::thread::spawn(move || {
+                media_cache::clear();
+                let _ = slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = weak.upgrade() {
+                        ui.set_storage_clearing(false);
+                    }
+                });
+                // Repopulate the (now ~0) size label.
+                refresh_storage();
+            });
+        }
+    });
 
     ui.on_nav_requested({
         let go = go_to_page.clone();
@@ -2495,6 +2616,7 @@ fn main() -> Result<(), slint::PlatformError> {
         let active_watcher = active_message_watcher.clone();
         let pending_state = pending_state.clone();
         let banner_seen = encryption_banner_seen.clone();
+        let notif = notif.clone();
         move |idx| {
             if let Some(ui) = weak.upgrade() {
                 ui.set_active_chat(idx);
@@ -2508,6 +2630,10 @@ fn main() -> Result<(), slint::PlatformError> {
                     return;
                 };
                 let group_hex = group_ids.lock().unwrap().get(idx as usize).cloned();
+                // Reflect this chat's mute state in the header bell.
+                ui.set_active_chat_muted(
+                    group_hex.as_deref().is_some_and(|g| notif.is_muted(g)),
+                );
                 trigger_encryption_banner_entrance(
                     &ui,
                     group_hex.as_deref(),
@@ -7700,17 +7826,63 @@ fn vault_set_async(vault: &Arc<Mutex<Vault>>, key: String, value: String) {
     });
 }
 
+/// Clock-skew margin for the notification recency gate: a peer's clock can run
+/// up to this many seconds behind ours and its genuinely-new message still
+/// notifies. Wide enough for everyday NTP drift, narrow enough that the relay
+/// backlog (messages authored long before this session) stays silent.
+const NOTIF_SKEW_SECS: u64 = 120;
+
+fn now_unix_secs() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
+/// Build the notification body for an incoming message. Group chats prefix the
+/// sender's display name; 1:1 chats let the title (the peer's name) carry that.
+/// These strings are Rust-side and intentionally not run through gettext (the
+/// project keeps i18n to the Slint `@tr` catalogs).
+fn notification_body(
+    backend: &Backend,
+    msg: &AppMessageRecord,
+    group_hex: &str,
+    preview: bool,
+) -> String {
+    if !preview {
+        return "New message".to_string();
+    }
+    let (text, _) = split_effect_marker(&msg.plaintext);
+    let text = text.trim();
+    let text = if text.is_empty() {
+        "Sent an attachment".to_string()
+    } else {
+        text.to_string()
+    };
+    if backend.group_member_count(group_hex) > 2 {
+        format!("{}: {}", backend.account_display_name(&msg.sender), text)
+    } else {
+        text
+    }
+}
+
 fn install_chat_watcher(
     backend: &Backend,
     weak: Weak<DarkMatterLinux>,
     group_ids: Arc<Mutex<Vec<String>>>,
     backend_cell: Arc<Mutex<Option<Arc<Backend>>>>,
+    notif: Arc<notify::NotifState>,
+    // Unix-seconds the watcher was installed at. Messages authored before this
+    // (minus a skew margin) are treated as backlog and never notify — that's
+    // what keeps the relay catch-up sync (and an account switch) from storming.
+    since_secs: u64,
     watcher_cell: &Arc<Mutex<Option<JoinHandle<()>>>>,
 ) {
     let handle = backend.watch_chats(move |record| {
         let weak = weak.clone();
         let group_ids = group_ids.clone();
         let backend_cell = backend_cell.clone();
+        let notif = notif.clone();
         let _ = slint::invoke_from_event_loop(move || {
             let Some(ui) = weak.upgrade() else { return };
             // The watcher fires on the tokio thread; the backend lives behind
@@ -7732,28 +7904,69 @@ fn install_chat_watcher(
                 .as_ref()
                 .map(|b| b.account().account_id_hex.clone())
                 .unwrap_or_default();
-            let meta = |b: Option<&Backend>| match b {
+            let row_meta = match guard.as_deref() {
                 Some(b) => chat_meta_from(&record, None, &my_id, b),
                 None => fallback_chat_meta(&record),
             };
-            let mut ids = group_ids.lock().unwrap();
-            if let Some(pos) = ids.iter().position(|g| g == &id) {
-                if let Some(vm) = chats.as_any().downcast_ref::<VecModel<ChatMeta>>() {
-                    vm.set_row_data(pos, meta(guard.as_deref()));
+            // Title for any notification below = the chat's display name.
+            let chat_name = row_meta.name.to_string();
+            let pos = {
+                let mut ids = group_ids.lock().unwrap();
+                if let Some(pos) = ids.iter().position(|g| g == &id) {
+                    if let Some(vm) = chats.as_any().downcast_ref::<VecModel<ChatMeta>>() {
+                        vm.set_row_data(pos, row_meta);
+                    }
+                    pos
+                } else {
+                    let pos = ids.len();
+                    ids.push(id.clone());
+                    if let Some(vm) = chats.as_any().downcast_ref::<VecModel<ChatMeta>>() {
+                        vm.push(row_meta);
+                    }
+                    if let Some(vm) = chats_messages
+                        .as_any()
+                        .downcast_ref::<VecModel<ModelRc<ChatMessage>>>()
+                    {
+                        vm.push(ModelRc::new(VecModel::from(Vec::<ChatMessage>::new())));
+                    }
+                    pos
                 }
-            } else {
-                ids.push(id);
-                if let Some(vm) = chats.as_any().downcast_ref::<VecModel<ChatMeta>>() {
-                    vm.push(meta(guard.as_deref()));
-                }
-                if let Some(vm) = chats_messages
-                    .as_any()
-                    .downcast_ref::<VecModel<ModelRc<ChatMessage>>>()
-                {
-                    vm.push(ModelRc::new(VecModel::from(Vec::<ChatMessage>::new())));
+            };
+            set_rail_badges(&ui, &chats);
+
+            // Desktop notification for a fresh incoming message in a chat the
+            // user isn't currently viewing. Gates, in order: master toggle →
+            // backend ready → there is a latest message → it's incoming →
+            // recent enough (not backlog) → a visible chat message → its id
+            // changed since we last saw this chat → not the on-screen chat.
+            if notif.enabled.load(std::sync::atomic::Ordering::Relaxed) {
+                if let Some(b) = guard.as_ref() {
+                    if let Some(m) = b.latest_message(&id) {
+                        let incoming = !m.sender.eq_ignore_ascii_case(&my_id);
+                        let recent = m.recorded_at.saturating_add(NOTIF_SKEW_SECS) >= since_secs;
+                        if incoming
+                            && recent
+                            && !notif.is_muted(&id)
+                            && is_visible_chat_message(&m)
+                            && notif.note_latest(&id, &m.message_id_hex)
+                        {
+                            let viewing = ui.get_active_page() == Page::Chats as i32
+                                && ui.get_active_chat() == pos as i32;
+                            if !viewing {
+                                let preview =
+                                    notif.preview.load(std::sync::atomic::Ordering::Relaxed);
+                                let sound =
+                                    notif.sound.load(std::sync::atomic::Ordering::Relaxed);
+                                let body = notification_body(b, &m, &id, preview);
+                                // dbus IO — keep it off the UI thread.
+                                std::thread::spawn(move || {
+                                    notify::show(&chat_name, &body, sound);
+                                });
+                            }
+                        }
+                    }
                 }
             }
-            set_rail_badges(&ui, &chats);
         });
     });
     // Replace (and stop) any watcher from a previously-active account.

@@ -3,7 +3,7 @@
 // Failures (read, parse, write) are swallowed — defaults keep the app
 // booting even if the config file is corrupt or missing.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::PathBuf;
 
@@ -35,6 +35,20 @@ pub struct Settings {
     /// Local-only — never published to relays.
     #[serde(default)]
     pub nicknames: BTreeMap<String, String>,
+    /// Fire a desktop notification for incoming messages in chats you aren't
+    /// currently viewing. Master switch for the two below.
+    #[serde(default = "default_true")]
+    pub notifications_enabled: bool,
+    /// Ask the notification server to play its message sound.
+    #[serde(default = "default_true")]
+    pub notification_sound: bool,
+    /// Include the message text in the notification body (off = "New message").
+    #[serde(default = "default_true")]
+    pub notification_preview: bool,
+    /// Chats (group_id_hex) the user has muted — suppresses their desktop
+    /// notifications. Local-only, like nicknames.
+    #[serde(default)]
+    pub muted_chats: BTreeSet<String>,
 }
 
 fn default_locale() -> String {
@@ -61,6 +75,10 @@ fn default_date_format() -> String {
     "mdy".into()
 }
 
+fn default_true() -> bool {
+    true
+}
+
 impl Default for Settings {
     fn default() -> Self {
         Self {
@@ -72,6 +90,10 @@ impl Default for Settings {
             time_format: default_time_format(),
             date_format: default_date_format(),
             nicknames: BTreeMap::new(),
+            notifications_enabled: true,
+            notification_sound: true,
+            notification_preview: true,
+            muted_chats: BTreeSet::new(),
         }
     }
 }

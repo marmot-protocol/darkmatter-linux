@@ -65,6 +65,19 @@ export component DarkMatterLinux inherits Window {
     in-out property <bool> retro-mode: false;
     // Set once from Rust (cfg!(target_os = "macos")); drives ⌘-vs-Ctrl hints.
     in property <bool> is-macos: false;
+    // Storage settings pane (Settings → Storage). `storage-cache-size` is a
+    // preformatted label like "12.4 MB"; clearing wipes the encrypted media cache.
+    in property <string> storage-cache-size;
+    in property <bool> storage-clearing: false;
+    callback storage-clear-cache();
+    // Desktop-notification preferences (Settings → Notifications). Rust mirrors
+    // these to settings.json and to the live NotifState the chat watcher reads.
+    in-out property <bool> notifications-enabled: true;
+    in-out property <bool> notification-sound: true;
+    in-out property <bool> notification-preview: true;
+    callback notifications-toggled(bool);
+    callback notification-sound-toggled(bool);
+    callback notification-preview-toggled(bool);
     in-out property <int> accent-color: 0;
     in property <string> my-npub;
     // QR of the nostr:npub URI, rasterized Rust-side on login.
@@ -390,6 +403,10 @@ export component DarkMatterLinux inherits Window {
     in property <[GroupMember]> chat-members;
     in property <bool> chat-is-group: false;
     in property <bool> chat-can-show-members: false;
+    // Mute state of the currently-open chat (Rust sets it on chat switch /
+    // toggle); the header bell reflects it and `toggle-mute-chat` flips it.
+    in property <bool> active-chat-muted: false;
+    callback toggle-mute-chat();
     in property <int> chat-member-count: 0;
     in property <bool> chat-can-add-members: false;
     in property <bool> add-member-busy: false;
@@ -637,6 +654,8 @@ export component DarkMatterLinux inherits Window {
                             cancel-recording => { root.cancel-recording(); }
                             is-group: root.chat-is-group;
                             can-show-members: root.chat-can-show-members;
+                            chat-muted: root.active-chat-muted;
+                            mute-toggle-clicked => { root.toggle-mute-chat(); }
                             encryption-banner-first-show: root.encryption-banner-first-show;
                             member-count: root.chat-member-count;
                             members: root.chat-members;
@@ -773,6 +792,15 @@ export component DarkMatterLinux inherits Window {
                         theme-mode-selected(mode) => { root.theme-mode-selected(mode); }
                         accent-selected(idx) => { root.accent-selected(idx); }
                         outgoing-on-right-toggled(v) => { root.outgoing-on-right-toggled(v); }
+                        storage-cache-size: root.storage-cache-size;
+                        storage-clearing: root.storage-clearing;
+                        storage-clear-cache => { root.storage-clear-cache(); }
+                        notifications-enabled <=> root.notifications-enabled;
+                        notification-sound <=> root.notification-sound;
+                        notification-preview <=> root.notification-preview;
+                        notifications-toggled(v) => { root.notifications-toggled(v); }
+                        notification-sound-toggled(v) => { root.notification-sound-toggled(v); }
+                        notification-preview-toggled(v) => { root.notification-preview-toggled(v); }
                     }
                 }
 

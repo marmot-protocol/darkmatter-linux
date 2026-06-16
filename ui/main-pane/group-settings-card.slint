@@ -1,0 +1,148 @@
+import { Palette, Theme } from "../tokens.slint";
+import { GroupCard } from "../shells/group-card.slint";
+import { Section } from "../shells/section.slint";
+import { LineInput } from "../primitives/line-input.slint";
+import { Button } from "../primitives/button.slint";
+import { Avatar } from "../primitives/avatar.slint";
+
+// Admin-only group-settings surface: avatar + image controls and rename.
+export component GroupSettingsCard inherits Section {
+    in property <image> group-picture;
+    in property <bool> group-has-picture: false;
+    in property <color> group-av-a;
+    in property <color> group-av-b;
+    in property <string> group-av-initials;
+    in property <bool> rename-busy: false;
+    in property <bool> image-busy: false;
+    in property <string> group-status;
+    in-out property <string> rename-draft;
+    callback rename-group(string);
+    callback change-image();
+    callback clear-image();
+
+    vertical-stretch: 0;
+    label: @tr("Group settings");
+
+    GroupCard {
+        VerticalLayout {
+            padding-left: 12px; padding-right: 12px;
+            padding-top: 12px; padding-bottom: 12px;
+            spacing: 10px;
+
+            HorizontalLayout {
+                spacing: 12px;
+                alignment: start;
+                Avatar {
+                    size: 56px;
+                    initials: root.group-av-initials;
+                    color-a: root.group-av-a;
+                    color-b: root.group-av-b;
+                    picture: root.group-picture;
+                    has-picture: root.group-has-picture;
+                    font-size: (Theme.retro ? 20px : 18px) * Theme.fs-scale;
+                }
+                VerticalLayout {
+                    alignment: center;
+                    spacing: 6px;
+                    Button {
+                        label: root.image-busy ? @tr("Uploading…") : @tr("Change image");
+                        button-height: 28px;
+                        pad-left: 10px;
+                        pad-right: 10px;
+                        font-size: Theme.retro ? 14px : 11px;
+                        clicked => {
+                            if (!root.image-busy) { root.change-image(); }
+                        }
+                    }
+                    if root.group-has-picture && !root.image-busy : Button {
+                        label: @tr("Remove image");
+                        button-height: 26px;
+                        pad-left: 10px;
+                        pad-right: 10px;
+                        font-size: Theme.retro ? 14px : 11px;
+                        bg-color: transparent;
+                        outline: transparent;
+                        has-fill: false;
+                        use-hover: true;
+                        hover-bg: Palette.hover;
+                        fg: Palette.text-mid;
+                        hover-fg: Palette.text-hi;
+                        clicked => { root.clear-image(); }
+                    }
+                }
+            }
+
+            VerticalLayout {
+                spacing: 6px;
+                Text {
+                    text: @tr("Group name");
+                    color: Palette.text-hi;
+                    font-size: (12px) * Theme.fs-scale;
+                    font-weight: 700;
+                }
+                Rectangle {
+                    height: 36px;
+                    border-radius: (6px) * Theme.r-scale;
+                    background: Palette.field;
+                    border-width: Theme.border-w;
+                    border-color: rename-input.has-focus ? Palette.mint-dim : Palette.field-border;
+                    drop-shadow-blur: rename-input.has-focus && !Theme.retro ? 10px : 0px;
+                    drop-shadow-color: Palette.mint-glow;
+                    animate border-color { duration: 140ms; easing: ease-out; }
+                    HorizontalLayout {
+                        padding-left: 10px; padding-right: 10px;
+                        rename-input := LineInput {
+                            placeholder: @tr("Group name");
+                            text <=> root.rename-draft;
+                            font-size: (Theme.retro ? 14px : 12px);
+                            fg: Palette.text-hi;
+                            placeholder-color: Palette.text-vlo;
+                            submit => {
+                                if (!root.rename-busy && root.rename-draft != "") {
+                                    root.rename-group(root.rename-draft);
+                                }
+                            }
+                        }
+                    }
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: start;
+                    Button {
+                        label: root.rename-busy ? @tr("Saving…") : @tr("Save name");
+                        button-height: 28px;
+                        pad-left: 10px;
+                        pad-right: 10px;
+                        font-size: Theme.retro ? 14px : 11px;
+                        bg-color: Palette.mint-surface;
+                        fg: Palette.mint;
+                        outline: Palette.mint;
+                        hover-bg: Palette.mint-surface;
+                        clicked => {
+                            if (!root.rename-busy && root.rename-draft != "") {
+                                root.rename-group(root.rename-draft);
+                            }
+                        }
+                    }
+                    if root.group-status != "" : Rectangle {
+                        height: 28px;
+                        border-radius: (4px) * Theme.r-scale;
+                        background: Palette.panel-2;
+                        border-width: Theme.border-w;
+                        border-color: Palette.border-2;
+                        HorizontalLayout {
+                            padding-left: 8px; padding-right: 8px;
+                            Text {
+                                text: root.group-status;
+                                color: Palette.text-lo;
+                                font-size: (10px) * Theme.fs-scale;
+                                vertical-alignment: center;
+                                overflow: elide;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

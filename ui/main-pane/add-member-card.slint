@@ -1,0 +1,88 @@
+import { Palette, Theme } from "../tokens.slint";
+import { GroupCard } from "../shells/group-card.slint";
+import { Section } from "../shells/section.slint";
+import { LineInput } from "../primitives/line-input.slint";
+import { Button } from "../primitives/button.slint";
+
+// Admin-only invite surface: npub input + invite button with status.
+export component AddMemberCard inherits Section {
+    in property <bool> add-busy: false;
+    in property <string> add-status;
+    in-out property <string> add-draft;
+    callback add-member(string);
+
+    vertical-stretch: 0;
+    label: @tr("Add member");
+
+    GroupCard {
+        VerticalLayout {
+            padding-left: 12px; padding-right: 12px;
+            padding-top: 12px; padding-bottom: 12px;
+            spacing: 8px;
+
+            Rectangle {
+                height: 36px;
+                border-radius: (6px) * Theme.r-scale;
+                background: Palette.field;
+                border-width: Theme.border-w;
+                border-color: add-input.has-focus ? Palette.mint-dim : Palette.field-border;
+                drop-shadow-blur: add-input.has-focus && !Theme.retro ? 10px : 0px;
+                drop-shadow-color: Palette.mint-glow;
+                animate border-color { duration: 140ms; easing: ease-out; }
+                HorizontalLayout {
+                    padding-left: 10px; padding-right: 10px;
+                    add-input := LineInput {
+                        placeholder: "npub1…";
+                        text <=> root.add-draft;
+                        font-size: (Theme.retro ? 14px : 12px);
+                        fg: Palette.text-hi;
+                        placeholder-color: Palette.text-vlo;
+                        submit => {
+                            if (!root.add-busy && root.add-draft != "") {
+                                root.add-member(root.add-draft);
+                            }
+                        }
+                    }
+                }
+            }
+
+            HorizontalLayout {
+                spacing: 8px;
+                alignment: start;
+                Button {
+                    label: root.add-busy ? @tr("Inviting…") : @tr("Invite");
+                    button-height: 28px;
+                    pad-left: 10px;
+                    pad-right: 10px;
+                    font-size: Theme.retro ? 14px : 11px;
+                    bg-color: Palette.mint-surface;
+                    fg: Palette.mint;
+                    outline: Palette.mint;
+                    hover-bg: Palette.mint-surface;
+                    clicked => {
+                        if (!root.add-busy && root.add-draft != "") {
+                            root.add-member(root.add-draft);
+                        }
+                    }
+                }
+                if root.add-status != "" : Rectangle {
+                    height: 28px;
+                    border-radius: (4px) * Theme.r-scale;
+                    background: Palette.panel-2;
+                    border-width: Theme.border-w;
+                    border-color: Palette.border-2;
+                    HorizontalLayout {
+                        padding-left: 8px; padding-right: 8px;
+                        Text {
+                            text: root.add-status;
+                            color: Palette.text-lo;
+                            font-size: (10px) * Theme.fs-scale;
+                            vertical-alignment: center;
+                            overflow: elide;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

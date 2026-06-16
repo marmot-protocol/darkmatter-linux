@@ -1,0 +1,41 @@
+import { Palette, Theme } from "../tokens.slint";
+import { PeopleIcon } from "../icons/people-icon.slint";
+
+// Members panel title row: people icon, count, and close button.
+export component GroupMembersHeader inherits HorizontalLayout {
+    in property <int> member-count;
+    callback close-clicked();
+
+    height: 28px;
+    spacing: 8px;
+    alignment: stretch;
+    PeopleIcon { stroke: Palette.mint; }
+    VerticalLayout {
+        horizontal-stretch: 1;
+        spacing: 2px;
+        alignment: center;
+        Text {
+            text: @tr("Members");
+            color: Palette.text-hi;
+            font-size: (13px) * Theme.fs-scale;
+            font-weight: 700;
+        }
+        Text {
+            text: @tr("1 in this group" | "{n} in this group" % root.member-count);
+            color: Palette.text-lo;
+            font-size: (10px) * Theme.fs-scale;
+            letter-spacing: 0.8px;
+        }
+    }
+    TouchArea {
+        width: 28px; height: 28px;
+        clicked => { root.close-clicked(); }
+        Text {
+            text: "✕";
+            color: Palette.text-mid;
+            font-size: (14px) * Theme.fs-scale;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+}

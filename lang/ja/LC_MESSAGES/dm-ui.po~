@@ -2,7 +2,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-06-12 05:18+0000\n"
+"POT-Creation-Date: 2026-06-13 03:49+0000\n"
 "PO-Revision-Date: 2026-05-27 13:20+0000\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -255,25 +255,25 @@ msgctxt "ContactsSidebar"
 msgid "Search contacts…"
 msgstr "連絡先を検索…"
 
-#: ui/dark-matter-linux.slint:272
+#: ui/dark-matter-linux.slint:286
 msgctxt "DarkMatterLinux"
 msgid "Connecting to relays…"
 msgstr "リレーに接続中…"
 
-#: ui/dark-matter-linux.slint:821
+#: ui/dark-matter-linux.slint:838
 #, fuzzy
 msgctxt "DarkMatterLinux"
 msgid "Block this chat request?"
 msgstr "チャットリクエスト"
 
-#: ui/dark-matter-linux.slint:822
+#: ui/dark-matter-linux.slint:839
 msgctxt "DarkMatterLinux"
 msgid ""
 "This declines the invite from {}. It can't be restored unless they invite "
 "you again."
 msgstr ""
 
-#: ui/dark-matter-linux.slint:823
+#: ui/dark-matter-linux.slint:840
 #, fuzzy
 msgctxt "DarkMatterLinux"
 msgid "Block"
@@ -753,32 +753,32 @@ msgctxt "ChatRequestBanner"
 msgid "session."
 msgstr "セッションを開始。"
 
-#: ui/main-pane/composer.slint:66
+#: ui/main-pane/composer.slint:76
 msgctxt "Composer"
 msgid "Editing message  ·  Enter to save"
 msgstr ""
 
-#: ui/main-pane/composer.slint:119
+#: ui/main-pane/composer.slint:129
 msgctxt "Composer"
 msgid "Replying to message:"
 msgstr "返信先メッセージ:"
 
-#: ui/main-pane/composer.slint:120
+#: ui/main-pane/composer.slint:130
 msgctxt "Composer"
 msgid "Replying to {}:"
 msgstr "{} への返信:"
 
-#: ui/main-pane/composer.slint:197
+#: ui/main-pane/composer.slint:298
 msgctxt "Composer"
 msgid "Send a message  ·  encrypted with"
 msgstr "メッセージを送信  ·  暗号化:"
 
-#: ui/main-pane/composer.slint:197
+#: ui/main-pane/composer.slint:298
 msgctxt "Composer"
 msgid "for newline"
 msgstr "改行"
 
-#: ui/main-pane/composer.slint:236
+#: ui/main-pane/composer.slint:338
 msgctxt "Composer"
 msgid "Send"
 msgstr "送信"
@@ -895,12 +895,12 @@ msgctxt "GroupMembersPanel"
 msgid "Invite"
 msgstr ""
 
-#: ui/main-pane/main-pane.slint:114
+#: ui/main-pane/main-pane.slint:117
 msgctxt "MainPane"
 msgid "CHAT REQUEST"
 msgstr "チャットリクエスト"
 
-#: ui/main-pane/main-pane.slint:115
+#: ui/main-pane/main-pane.slint:118
 msgctxt "MainPane"
 msgid "SESSION ESTABLISHED"
 msgstr "セッション確立"
@@ -1044,6 +1044,12 @@ msgstr "キャンセル"
 msgctxt "EditHistoryModal"
 msgid "Edit history"
 msgstr ""
+
+#: ui/modals/image-viewer-modal.slint:76
+#, fuzzy
+msgctxt "ImageViewerModal"
+msgid "Loading…"
+msgstr "保存中…"
 
 #: ui/modals/language-picker-modal.slint:53
 msgctxt "LanguagePickerModal"

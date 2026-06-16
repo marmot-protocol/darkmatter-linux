@@ -2,7 +2,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-06-13 03:49+0000\n"
+"POT-Creation-Date: 2026-06-16 05:36+0000\n"
 "PO-Revision-Date: 2026-05-27 13:20+0000\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -255,25 +255,25 @@ msgctxt "ContactsSidebar"
 msgid "Search contacts…"
 msgstr "連絡先を検索…"
 
-#: ui/dark-matter-linux.slint:286
+#: ui/dark-matter-linux.slint:320
 msgctxt "DarkMatterLinux"
 msgid "Connecting to relays…"
 msgstr "リレーに接続中…"
 
-#: ui/dark-matter-linux.slint:838
+#: ui/dark-matter-linux.slint:885
 #, fuzzy
 msgctxt "DarkMatterLinux"
 msgid "Block this chat request?"
 msgstr "チャットリクエスト"
 
-#: ui/dark-matter-linux.slint:839
+#: ui/dark-matter-linux.slint:886
 msgctxt "DarkMatterLinux"
 msgid ""
 "This declines the invite from {}. It can't be restored unless they invite "
 "you again."
 msgstr ""
 
-#: ui/dark-matter-linux.slint:840
+#: ui/dark-matter-linux.slint:887
 #, fuzzy
 msgctxt "DarkMatterLinux"
 msgid "Block"
@@ -590,82 +590,87 @@ msgctxt "LeftRail"
 msgid "Accounts"
 msgstr ""
 
-#: ui/login/login-screen.slint:161
+#: ui/login/login-screen.slint:182
 msgctxt "LoginScreen"
 msgid "Sign in to your Nostr identity"
 msgstr "Nostr ID でサインイン"
 
-#: ui/login/login-screen.slint:163
+#: ui/login/login-screen.slint:184
 msgctxt "LoginScreen"
 msgid "Import a key & set a password"
 msgstr ""
 
-#: ui/login/login-screen.slint:165
+#: ui/login/login-screen.slint:186
 msgctxt "LoginScreen"
 msgid "Enter your password to unlock"
 msgstr ""
 
-#: ui/login/login-screen.slint:166
+#: ui/login/login-screen.slint:187
 msgctxt "LoginScreen"
 msgid "Save your new key"
 msgstr "新しい鍵を保存"
 
-#: ui/login/login-screen.slint:178
+#: ui/login/login-screen.slint:199
 msgctxt "LoginScreen"
 msgid "I have an nsec"
 msgstr "nsec がある"
 
-#: ui/login/login-screen.slint:198
+#: ui/login/login-screen.slint:219
 msgctxt "LoginScreen"
 msgid "Generate a new key"
 msgstr "新しい鍵を生成"
 
-#: ui/login/login-screen.slint:218
+#: ui/login/login-screen.slint:239
 msgctxt "LoginScreen"
 msgid "Your key never leaves this device."
 msgstr "鍵がこのデバイス外に出ることはありません。"
 
-#: ui/login/login-screen.slint:237 ui/login/login-screen.slint:410
+#: ui/login/login-screen.slint:258 ui/login/login-screen.slint:476
 msgctxt "LoginScreen"
 msgid "VAULT PASSWORD"
 msgstr ""
 
-#: ui/login/login-screen.slint:238 ui/login/login-screen.slint:411
+#: ui/login/login-screen.slint:259 ui/login/login-screen.slint:477
 msgctxt "LoginScreen"
 msgid "Choose a password"
 msgstr ""
 
-#: ui/login/login-screen.slint:244 ui/login/login-screen.slint:417
+#: ui/login/login-screen.slint:265 ui/login/login-screen.slint:483
 msgctxt "LoginScreen"
 msgid "CONFIRM PASSWORD"
 msgstr ""
 
-#: ui/login/login-screen.slint:245 ui/login/login-screen.slint:418
+#: ui/login/login-screen.slint:266 ui/login/login-screen.slint:484
 msgctxt "LoginScreen"
 msgid "Re-enter password"
 msgstr ""
 
-#: ui/login/login-screen.slint:263 ui/login/login-screen.slint:436
+#: ui/login/login-screen.slint:284 ui/login/login-screen.slint:502
 msgctxt "LoginScreen"
 msgid "Back"
 msgstr "戻る"
 
-#: ui/login/login-screen.slint:273
+#: ui/login/login-screen.slint:294
 msgctxt "LoginScreen"
 msgid "Signing in…"
 msgstr "サインイン中…"
 
-#: ui/login/login-screen.slint:273
+#: ui/login/login-screen.slint:294
 msgctxt "LoginScreen"
 msgid "Continue"
 msgstr "続行"
 
-#: ui/login/login-screen.slint:310
+#: ui/login/login-screen.slint:339
+msgctxt "LoginScreen"
+msgid "YOUR DISPLAY NAME"
+msgstr ""
+
+#: ui/login/login-screen.slint:376
 msgctxt "LoginScreen"
 msgid "Back up your nsec before saving"
 msgstr "保存前に nsec をバックアップ"
 
-#: ui/login/login-screen.slint:316
+#: ui/login/login-screen.slint:382
 #, fuzzy
 msgctxt "LoginScreen"
 msgid ""
@@ -675,46 +680,63 @@ msgstr ""
 "保存すると OS のキーリングに格納されます。自分でもコピーを保管してください。"
 "失うとこの ID は復元できません。"
 
-#: ui/login/login-screen.slint:385
+#: ui/login/login-screen.slint:451
 msgctxt "LoginScreen"
 msgid "Regenerate"
 msgstr "再生成"
 
-#: ui/login/login-screen.slint:396
+#: ui/login/login-screen.slint:462
 msgctxt "LoginScreen"
 msgid "Copy"
 msgstr "コピー"
 
-#: ui/login/login-screen.slint:443
+#: ui/login/login-screen.slint:509
 msgctxt "LoginScreen"
 msgid "Saving…"
 msgstr "保存中…"
 
-#: ui/login/login-screen.slint:443
+#: ui/login/login-screen.slint:509
 msgctxt "LoginScreen"
 msgid "Create vault"
 msgstr ""
 
-#: ui/login/login-screen.slint:462
+#: ui/login/login-screen.slint:528
 msgctxt "LoginScreen"
 msgid "Enter your password"
 msgstr ""
 
-#: ui/login/login-screen.slint:481
+#: ui/login/login-screen.slint:547
 msgctxt "LoginScreen"
 msgid "Use another key"
 msgstr ""
 
-#: ui/login/login-screen.slint:488
+#: ui/login/login-screen.slint:554
 msgctxt "LoginScreen"
 msgid "Unlocking…"
 msgstr ""
 
-#: ui/login/login-screen.slint:488
+#: ui/login/login-screen.slint:554
 #, fuzzy
 msgctxt "LoginScreen"
 msgid "Unlock"
 msgstr "ブロック"
+
+#: ui/main-pane/add-member-card.slint:15
+#, fuzzy
+msgctxt "AddMemberCard"
+msgid "Add member"
+msgstr "1 メンバー"
+
+#: ui/main-pane/add-member-card.slint:53
+#, fuzzy
+msgctxt "AddMemberCard"
+msgid "Inviting…"
+msgstr "保存中…"
+
+#: ui/main-pane/add-member-card.slint:53
+msgctxt "AddMemberCard"
+msgid "Invite"
+msgstr ""
 
 #: ui/main-pane/chat-header.slint:87
 msgctxt "ChatHeader"
@@ -753,47 +775,54 @@ msgctxt "ChatRequestBanner"
 msgid "session."
 msgstr "セッションを開始。"
 
-#: ui/main-pane/composer.slint:76
+#: ui/main-pane/composer.slint:89
 msgctxt "Composer"
 msgid "Editing message  ·  Enter to save"
 msgstr ""
 
-#: ui/main-pane/composer.slint:129
+#: ui/main-pane/composer.slint:142
 msgctxt "Composer"
 msgid "Replying to message:"
 msgstr "返信先メッセージ:"
 
-#: ui/main-pane/composer.slint:130
+#: ui/main-pane/composer.slint:143
 msgctxt "Composer"
 msgid "Replying to {}:"
 msgstr "{} への返信:"
 
-#: ui/main-pane/composer.slint:298
+#: ui/main-pane/composer.slint:312
+#, fuzzy
 msgctxt "Composer"
-msgid "Send a message  ·  encrypted with"
-msgstr "メッセージを送信  ·  暗号化:"
+msgid "Send a message…"
+msgstr "最後のメッセージ"
 
-#: ui/main-pane/composer.slint:298
+#: ui/main-pane/composer.slint:423
 msgctxt "Composer"
-msgid "for newline"
-msgstr "改行"
+msgid "{}s"
+msgstr ""
 
-#: ui/main-pane/composer.slint:338
+#: ui/main-pane/composer.slint:433
 msgctxt "Composer"
 msgid "Send"
 msgstr "送信"
 
-#: ui/main-pane/encryption-banner.slint:41
+#: ui/main-pane/composer.slint:526
+#, fuzzy
+msgctxt "Composer"
+msgid "Shift+Enter for newline"
+msgstr "改行"
+
+#: ui/main-pane/encryption-banner.slint:66
 msgctxt "EncryptionBanner"
 msgid "End-to-end encrypted with"
 msgstr "エンドツーエンド暗号化:"
 
-#: ui/main-pane/encryption-banner.slint:49
+#: ui/main-pane/encryption-banner.slint:99
 msgctxt "EncryptionBanner"
 msgid "Forward secret"
 msgstr "フォワードシークレット"
 
-#: ui/main-pane/encryption-banner.slint:51
+#: ui/main-pane/encryption-banner.slint:101
 msgctxt "EncryptionBanner"
 msgid "post-compromise secure"
 msgstr "侵害後も安全"
@@ -824,83 +853,73 @@ msgctxt "GroupMemberRow"
 msgid "Step down"
 msgstr ""
 
-#: ui/main-pane/group-members-panel.slint:62
-msgctxt "GroupMembersPanel"
+#: ui/main-pane/group-members-header.slint:18
+#, fuzzy
+msgctxt "GroupMembersHeader"
 msgid "Members"
 msgstr "メンバー"
 
-#: ui/main-pane/group-members-panel.slint:68
-msgctxt "GroupMembersPanel"
+#: ui/main-pane/group-members-header.slint:24
+#, fuzzy
+msgctxt "GroupMembersHeader"
 msgid "1 in this group"
 msgid_plural "{n} in this group"
 msgstr[0] "このグループに 1 人"
 msgstr[1] "このグループに {n} 人"
 
-#: ui/main-pane/group-members-panel.slint:89
-#, fuzzy
+#: ui/main-pane/group-members-panel.slint:73
 msgctxt "GroupMembersPanel"
+msgid "Members"
+msgstr "メンバー"
+
+#: ui/main-pane/group-settings-card.slint:24
+#, fuzzy
+msgctxt "GroupSettingsCard"
 msgid "Group settings"
 msgstr "グループ ID"
 
-#: ui/main-pane/group-members-panel.slint:112
+#: ui/main-pane/group-settings-card.slint:48
 #, fuzzy
-msgctxt "GroupMembersPanel"
+msgctxt "GroupSettingsCard"
 msgid "Uploading…"
 msgstr "保存中…"
 
-#: ui/main-pane/group-members-panel.slint:112
+#: ui/main-pane/group-settings-card.slint:48
 #, fuzzy
-msgctxt "GroupMembersPanel"
+msgctxt "GroupSettingsCard"
 msgid "Change image"
 msgstr "変更"
 
-#: ui/main-pane/group-members-panel.slint:122
+#: ui/main-pane/group-settings-card.slint:58
 #, fuzzy
-msgctxt "GroupMembersPanel"
+msgctxt "GroupSettingsCard"
 msgid "Remove image"
 msgstr "連絡先を削除"
 
-#: ui/main-pane/group-members-panel.slint:142
+#: ui/main-pane/group-settings-card.slint:78
 #, fuzzy
-msgctxt "GroupMembersPanel"
+msgctxt "GroupSettingsCard"
 msgid "Group name"
 msgstr "グループ ID"
 
-#: ui/main-pane/group-members-panel.slint:176
+#: ui/main-pane/group-settings-card.slint:112
 #, fuzzy
-msgctxt "GroupMembersPanel"
+msgctxt "GroupSettingsCard"
 msgid "Saving…"
 msgstr "保存中…"
 
-#: ui/main-pane/group-members-panel.slint:176
+#: ui/main-pane/group-settings-card.slint:112
 #, fuzzy
-msgctxt "GroupMembersPanel"
+msgctxt "GroupSettingsCard"
 msgid "Save name"
 msgstr "保存"
 
-#: ui/main-pane/group-members-panel.slint:236
-#, fuzzy
-msgctxt "GroupMembersPanel"
-msgid "Add member"
-msgstr "1 メンバー"
-
-#: ui/main-pane/group-members-panel.slint:273
-#, fuzzy
-msgctxt "GroupMembersPanel"
-msgid "Inviting…"
-msgstr "保存中…"
-
-#: ui/main-pane/group-members-panel.slint:273
-msgctxt "GroupMembersPanel"
-msgid "Invite"
-msgstr ""
-
-#: ui/main-pane/main-pane.slint:117
+#: ui/main-pane/main-pane.slint:130
 msgctxt "MainPane"
 msgid "CHAT REQUEST"
 msgstr "チャットリクエスト"
 
-#: ui/main-pane/main-pane.slint:118
+#: ui/main-pane/main-pane.slint:131
 msgctxt "MainPane"
 msgid "SESSION ESTABLISHED"
 msgstr "セッション確立"
@@ -910,7 +929,7 @@ msgctxt "MentionPicker"
 msgid "(you)"
 msgstr ""
 
-#: ui/messages.slint:108
+#: ui/messages.slint:149
 #, fuzzy
 msgctxt "MessagesArea"
 msgid "Load earlier messages"
@@ -1163,6 +1182,12 @@ msgctxt "StartNewChatModal"
 msgid "MEMBERS"
 msgstr "メンバー一覧"
 
+#: ui/modals/video-viewer-modal.slint:80
+#, fuzzy
+msgctxt "VideoViewerModal"
+msgid "Loading…"
+msgstr "保存中…"
+
 #: ui/primitives/context-menu.slint:110
 msgctxt "MessageContextMenu"
 msgid "Add reaction"
@@ -1179,43 +1204,43 @@ msgctxt "MessageContextMenu"
 msgid "Edit message"
 msgstr "最後のメッセージ"
 
-#: ui/primitives/message-bubble.slint:228
+#: ui/primitives/message-bubble.slint:363
 msgctxt "MessageBubble"
 msgid "Original message"
 msgstr "元のメッセージ"
 
-#: ui/primitives/message-bubble.slint:238
+#: ui/primitives/message-bubble.slint:373
 msgctxt "MessageBubble"
 msgid "(message unavailable)"
 msgstr "(メッセージを表示できません)"
 
-#: ui/primitives/message-bubble.slint:281
+#: ui/primitives/message-bubble.slint:588
+msgctxt "MessageBubble"
+msgid "failed · tap to retry"
+msgstr "失敗 · タップして再試行"
+
+#: ui/primitives/message-bubble.slint:638
 msgctxt "MessageBubble"
 msgid "decrypting…"
 msgstr ""
 
-#: ui/primitives/message-bubble.slint:283
+#: ui/primitives/message-bubble.slint:640
 #, fuzzy
 msgctxt "MessageBubble"
 msgid "tap to retry"
 msgstr "失敗 · タップして再試行"
 
-#: ui/primitives/message-bubble.slint:284
+#: ui/primitives/message-bubble.slint:641
 msgctxt "MessageBubble"
 msgid "tap to load"
 msgstr ""
 
-#: ui/primitives/message-bubble.slint:330
-msgctxt "MessageBubble"
-msgid "failed · tap to retry"
-msgstr "失敗 · タップして再試行"
-
-#: ui/primitives/message-bubble.slint:439
+#: ui/primitives/message-bubble.slint:800
 msgctxt "MessageBubble"
 msgid "edited"
 msgstr ""
 
-#: ui/primitives/outgoing-row.slint:129 ui/primitives/outgoing-row.slint:139
+#: ui/primitives/outgoing-row.slint:172 ui/primitives/outgoing-row.slint:183
 msgctxt "OutgoingRow"
 msgid "You"
 msgstr "あなた"
@@ -1898,7 +1923,7 @@ msgctxt "SidePanel"
 msgid "Add"
 msgstr "追加"
 
-#: ui/splash.slint:8
+#: ui/splash.slint:6
 msgctxt "SplashScreen"
 msgid "Connecting to relays…"
 msgstr "リレーに接続中…"
@@ -1928,6 +1953,15 @@ msgstr "リレー"
 msgctxt "StatusBar"
 msgid "COMMAND"
 msgstr "コマンド"
+
+#~ msgctxt "Composer"
+#~ msgid "Send a message  ·  encrypted with"
+#~ msgstr "メッセージを送信  ·  暗号化:"
+
+#, fuzzy
+#~ msgctxt "GroupMembersPanel"
+#~ msgid "Saving…"
+#~ msgstr "保存中…"
 
 #~ msgctxt "LoginScreen"
 #~ msgid "Paste your nsec"

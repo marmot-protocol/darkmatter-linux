@@ -308,24 +308,8 @@ export component Composer inherits Rectangle {
                         clicked => { root.attach-clicked(); }
                     }
                 }
-                // Microphone — tap to start recording.
-                Rectangle {
-                    width: 22px;
-                    height: parent.height;
-                    border-radius: (4px) * Theme.r-scale;
-                    background: mic-touch.has-hover ? Palette.panel-2 : transparent;
-                    animate background { duration: 100ms; }
-                    MicIcon {
-                        stroke: mic-touch.has-hover ? Palette.text-hi : Palette.text-lo;
-                        y: (parent.height - self.height) / 2;
-                    }
-                    mic-touch := TouchArea {
-                        mouse-cursor: pointer;
-                        clicked => { root.record-clicked(); }
-                    }
-                }
                 composer-input := LineInput {
-                    placeholder: @tr("Send a message  ·  encrypted with") + " MLS  ·  Shift+Enter " + @tr("for newline");
+                    placeholder: @tr("Send a message…");
                     font-size: (Theme.retro ? 16px : 13px) * Theme.fs-scale;
                     fg: Palette.text-hi;
                     placeholder-color: Palette.text-lo;
@@ -364,43 +348,46 @@ export component Composer inherits Rectangle {
                         }
                     }
                 }
+                // Icon-only circular action: with content it's Send (mint);
+                // empty it becomes the mic, so the draft governs which action
+                // sits in the slot. Dropping the 92px "Send" word frees that
+                // width back to the input. Stays named `send-button` so the
+                // effect badge/popover anchor math below is unchanged.
                 send-button := Button {
-                    label: @tr("Send");
-                    // Rust trims and drops empty sends anyway; disabling here
-                    // makes the affordance honest (no mint hover on a button
-                    // that would do nothing). Staged attachments count as
-                    // sendable content even with an empty draft.
-                    enabled: root.can-send;
                     focusable: true;
-                    clicked => { root.send-clicked(); }
-                    // Right-click / long-press opens the effect picker.
-                    alt-action => { root.show-effects = !root.show-effects; }
-                    button-width: 92px;
+                    clicked => {
+                        if (root.can-send) { root.send-clicked(); }
+                        else { root.record-clicked(); }
+                    }
+                    // Right-click / long-press arms a message effect — only
+                    // meaningful when there's actually a message to send.
+                    alt-action => { if (root.can-send) { root.show-effects = !root.show-effects; } }
+                    button-width: 36px;
                     button-height: 36px;
                     y: (parent.height - self.height) / 2;
-                    radius: 8px;
-                    pad-left: 12px;
-                    pad-right: 14px;
-                    spacing: 8px;
+                    radius: 18px;
+                    pad-left: 0px;
+                    pad-right: 0px;
+                    spacing: 0px;
                     use-hover: true;
                     bg-color: root.can-send ? Palette.mint : Palette.panel-2;
-                    hover-bg: Palette.mint-hi;
-                    outline: root.can-send ? Palette.mint : Palette.border;
-                    hover-outline: Palette.mint-hi;
-                    fg: root.can-send ? Palette.bubble-out-fg : Palette.text-hi;
-                    hover-fg: Palette.bubble-out-fg;
-                    animate bg-color, outline, fg { duration: 140ms; easing: ease-out; }
-                    Rectangle {
-                        width: 14px;
+                    hover-bg: root.can-send ? Palette.mint-hi : Palette.panel-2;
+                    outline: root.can-send ? Palette.mint : Palette.border-2;
+                    hover-outline: root.can-send ? Palette.mint-hi : Palette.border;
+                    animate bg-color, outline { duration: 140ms; easing: ease-out; }
+                    if root.can-send : Rectangle {
+                        width: 16px;
+                        height: 16px;
                         SendIcon {
-                            fill-color: (send-button.has-hover || root.can-send)
-                                ? Palette.bubble-out-fg
-                                : Palette.text-mid;
-                            size: 14px;
-                            x: 0;
+                            fill-color: Palette.bubble-out-fg;
+                            size: 16px;
+                            // optical-center the asymmetric arrow in the circle
+                            x: (parent.width - self.width) / 2 - 1px;
                             y: (parent.height - self.height) / 2;
-                            animate fill-color { duration: 100ms; }
                         }
+                    }
+                    if !root.can-send : MicIcon {
+                        stroke: send-button.has-hover ? Palette.text-hi : Palette.text-lo;
                     }
                 }
             }
@@ -491,7 +478,7 @@ export component Composer inherits Rectangle {
     // Badge: the chosen effect's emoji over the top-right of Send, when an
     // effect is armed. Lives at the composer root (not in the Button's layout
     // slot, which ignores explicit x/y) and floats over the button corner.
-    if EffectCatalog.selected > 0 : Rectangle {
+    if EffectCatalog.selected > 0 && root.can-send : Rectangle {
         x: send-button.absolute-position.x - root.absolute-position.x + send-button.width - self.width + 4px;
         y: send-button.absolute-position.y - root.absolute-position.y - 4px;
         width: 18px;
@@ -511,6 +498,37 @@ export component Composer inherits Rectangle {
                 source-clip-y: c.clip-y;
                 source-clip-width: EmojiSheet.tile;
                 source-clip-height: EmojiSheet.tile;
+            }
+        }
+    }
+
+    // Newline hint — teaches Shift+Enter on entry, then gets out of the way:
+    // shown only while the input is focused and still empty, floating above the
+    // pill so it never covers typed text. Replaces the old crammed placeholder.
+    if composer-input.has-focus && root.draft == "" : Rectangle {
+        x: send-button.absolute-position.x - root.absolute-position.x
+           + send-button.width - self.width;
+        y: send-button.absolute-position.y - root.absolute-position.y - self.height - 6px;
+        width: hint-row.preferred-width + 16px;
+        height: 24px;
+        border-radius: (6px) * Theme.r-scale;
+        background: Palette.elevated;
+        border-width: Theme.border-w;
+        border-color: Palette.elevated-border;
+        drop-shadow-color: Theme.retro ? Palette.shadow : #00000033;
+        drop-shadow-blur: Theme.retro ? 0px : 4px;
+        drop-shadow-offset-y: Theme.retro ? 2px : 1px;
+        hint-row := HorizontalLayout {
+            padding-left: 8px;
+            padding-right: 8px;
+            alignment: center;
+            Text {
+                text: @tr("Shift+Enter for newline");
+                color: Palette.text-mid;
+                font-size: (10px) * Theme.fs-scale;
+                font-weight: 600;
+                font-family: Theme.font;
+                vertical-alignment: center;
             }
         }
     }

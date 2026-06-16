@@ -752,32 +752,47 @@ msgctxt "Composer"
 msgid "Editing message  ·  Enter to save"
 msgstr ""
 
-#: ui/main-pane/composer.slint:142
+#: ui/main-pane/composer.slint:98
+msgctxt "Composer"
+msgid "Cancel edit"
+msgstr ""
+
+#: ui/main-pane/composer.slint:137
 msgctxt "Composer"
 msgid "Replying to message:"
 msgstr ""
 
-#: ui/main-pane/composer.slint:143
+#: ui/main-pane/composer.slint:138
 msgctxt "Composer"
 msgid "Replying to {}:"
 msgstr ""
 
-#: ui/main-pane/composer.slint:312
+#: ui/main-pane/composer.slint:157
+msgctxt "Composer"
+msgid "Cancel reply"
+msgstr ""
+
+#: ui/main-pane/composer.slint:239
+msgctxt "Composer"
+msgid "Remove"
+msgstr ""
+
+#: ui/main-pane/composer.slint:296
 msgctxt "Composer"
 msgid "Send a message…"
 msgstr ""
 
-#: ui/main-pane/composer.slint:423
+#: ui/main-pane/composer.slint:407
 msgctxt "Composer"
 msgid "{}s"
 msgstr ""
 
-#: ui/main-pane/composer.slint:433
+#: ui/main-pane/composer.slint:417
 msgctxt "Composer"
 msgid "Send"
 msgstr ""
 
-#: ui/main-pane/composer.slint:526
+#: ui/main-pane/composer.slint:510
 msgctxt "Composer"
 msgid "Shift+Enter for newline"
 msgstr ""

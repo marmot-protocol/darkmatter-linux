@@ -4,7 +4,7 @@ import { MicIcon } from "../icons/mic-icon.slint";
 import { SmileyIcon } from "../icons/smiley-icon.slint";
 import { SendIcon } from "../icons/send-icon.slint";
 import { LineInput } from "../primitives/line-input.slint";
-import { Button } from "../primitives/button.slint";
+import { Button, MicroButton } from "../primitives/button.slint";
 
 export component Composer inherits Rectangle {
     in-out property <string> draft <=> composer-input.text;
@@ -51,7 +51,7 @@ export component Composer inherits Rectangle {
     property <length> min-row-h: 52px;
     property <length> max-row-h: 132px;
     property <length> row-h: clamp(composer-input.preferred-height + 20px, root.min-row-h, root.max-row-h);
-    property <length> chip-h: (root.reply-target-id == "" && root.editing-message-id == "") ? 0px : 30px;
+    property <length> chip-h: (root.reply-target-id == "" && root.editing-message-id == "") ? 0px : 36px;
     property <length> staged-h: root.staged.length == 0 ? 0px : 58px;
     property <bool> can-send: root.draft != "" || root.staged.length > 0;
     // Message-effect picker (Telegram-style): opened by right-click / long-press
@@ -66,7 +66,7 @@ export component Composer inherits Rectangle {
         spacing: 0;
 
     if root.editing-message-id != "" : Rectangle {
-        height: 30px;
+        height: root.chip-h;
         background: Palette.panel;
         border-width: 1px;
         border-color: Palette.border-2;
@@ -94,29 +94,24 @@ export component Composer inherits Rectangle {
                     vertical-alignment: center;
                 }
             }
-            edit-cancel-rect := Rectangle {
-                width: 24px;
-                height: 22px;
+            MicroButton {
+                label: @tr("Cancel edit");
+                button-height: 32px;
                 y: (parent.height - self.height) / 2;
-                border-radius: (4px) * Theme.r-scale;
-                background: edit-cancel-touch.has-hover ? Palette.panel-2 : transparent;
-                animate background { duration: 100ms; }
-                Text {
-                    text: "✕";
-                    color: Palette.text-mid;
-                    font-size: (12px) * Theme.fs-scale;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                }
-                edit-cancel-touch := TouchArea {
-                    clicked => { root.cancel-edit(); }
-                }
+                focusable: true;
+                fg: Palette.text-mid;
+                hover-fg: Palette.text-hi;
+                bg-color: transparent;
+                hover-bg: Palette.panel-2;
+                outline: Palette.border-2;
+                hover-outline: Palette.border;
+                clicked => { root.cancel-edit(); }
             }
         }
     }
 
     if root.reply-target-id != "" : Rectangle {
-        height: 30px;
+        height: root.chip-h;
         background: Palette.panel;
         border-width: 1px;
         border-color: Palette.border-2;
@@ -158,23 +153,18 @@ export component Composer inherits Rectangle {
                     }
                 }
             }
-            cancel-rect := Rectangle {
-                width: 24px;
-                height: 22px;
+            MicroButton {
+                label: @tr("Cancel reply");
+                button-height: 32px;
                 y: (parent.height - self.height) / 2;
-                border-radius: (4px) * Theme.r-scale;
-                background: cancel-touch.has-hover ? Palette.panel-2 : transparent;
-                animate background { duration: 100ms; }
-                Text {
-                    text: "✕";
-                    color: Palette.text-mid;
-                    font-size: (12px) * Theme.fs-scale;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                }
-                cancel-touch := TouchArea {
-                    clicked => { root.cancel-reply(); }
-                }
+                focusable: true;
+                fg: Palette.text-mid;
+                hover-fg: Palette.text-hi;
+                bg-color: transparent;
+                hover-bg: Palette.panel-2;
+                outline: Palette.border-2;
+                hover-outline: Palette.border;
+                clicked => { root.cancel-reply(); }
             }
         }
     }
@@ -245,24 +235,18 @@ export component Composer inherits Rectangle {
                                 overflow: elide;
                             }
                         }
-                        Rectangle {
-                            width: 22px;
-                            height: 22px;
+                        MicroButton {
+                            label: @tr("Remove");
+                            button-height: 32px;
                             y: (parent.height - self.height) / 2;
-                            border-radius: (4px) * Theme.r-scale;
-                            background: staged-x-touch.has-hover ? Palette.panel-2 : transparent;
-                            animate background { duration: 100ms; }
-                            Text {
-                                text: "✕";
-                                color: staged-x-touch.has-hover ? Palette.text-hi : Palette.text-mid;
-                                font-size: (12px) * Theme.fs-scale;
-                                horizontal-alignment: center;
-                                vertical-alignment: center;
-                            }
-                            staged-x-touch := TouchArea {
-                                mouse-cursor: pointer;
-                                clicked => { root.remove-staged(att-i); }
-                            }
+                            focusable: true;
+                            fg: Palette.text-mid;
+                            hover-fg: Palette.text-hi;
+                            bg-color: transparent;
+                            hover-bg: Palette.panel-2;
+                            outline: Palette.border-2;
+                            hover-outline: Palette.border;
+                            clicked => { root.remove-staged(att-i); }
                         }
                     }
                 }

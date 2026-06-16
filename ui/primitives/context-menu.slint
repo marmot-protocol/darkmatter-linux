@@ -7,12 +7,17 @@ component MenuItem inherits Rectangle {
     in property <string> glyph;
     in property <string> label;
     in property <bool> shown: true;
+    // Keyboard selection — highlighted exactly like hover so arrow-key users
+    // get the same visible focus indicator mouse users get.
+    in property <bool> selected: false;
     callback activated();
+
+    property <bool> highlighted: touch.has-hover || root.selected;
 
     visible: root.shown;
     height: root.shown ? 32px : 0px;
     border-radius: (6px) * Theme.r-scale;
-    background: touch.has-hover ? Palette.hover : transparent;
+    background: root.highlighted ? Palette.hover : transparent;
     animate background { duration: 100ms; }
 
     HorizontalLayout {
@@ -20,7 +25,7 @@ component MenuItem inherits Rectangle {
         spacing: 9px;
         Text {
             text: root.glyph;
-            color: touch.has-hover ? Palette.text-hi : Palette.text-mid;
+            color: root.highlighted ? Palette.text-hi : Palette.text-mid;
             font-size: (13px) * Theme.fs-scale;
             font-family: Theme.font;
             width: 16px;
@@ -40,7 +45,12 @@ component MenuItem inherits Rectangle {
         enabled: root.shown;
         mouse-cursor: pointer;
         clicked => { root.activated(); }
+        // Pointer movement keeps keyboard selection in sync so hovering one
+        // row and then pressing Return acts on the row under the cursor.
+        moved => { root.activated-hover(); }
     }
+    // Internal hover-sync hook so the parent can mirror the selected index.
+    callback activated-hover();
 }
 
 // Right-click context menu for a message bubble. Mounted full-window (like
@@ -57,6 +67,37 @@ export component MessageContextMenu inherits Rectangle {
     callback reply();
     callback edit();
     callback dismissed();
+
+    // Keyboard navigation. Items are fixed indices: 0 = Add reaction,
+    // 1 = Reply, 2 = Edit (only present when can-edit). The Edit row is the
+    // only conditional one and it's last, so the selectable range is simply
+    // [0, count-1].
+    property <int> item-count: root.can-edit ? 3 : 2;
+    property <int> selected-index: 0;
+
+    function move-selection(delta: int) {
+        root.selected-index = min(max(0, root.selected-index + delta), root.item-count - 1);
+    }
+    // Tab wraps around the list rather than escaping the menu.
+    function wrap-selection(delta: int) {
+        // Manual modulo so this doesn't depend on a Math.mod builtin.
+        if (root.selected-index + delta < 0) {
+            root.selected-index = root.item-count - 1;
+        } else if (root.selected-index + delta >= root.item-count) {
+            root.selected-index = 0;
+        } else {
+            root.selected-index = root.selected-index + delta;
+        }
+    }
+    function activate-selected() {
+        if (root.selected-index == 0) {
+            root.add-reaction(root.px, root.py);
+        } else if (root.selected-index == 1) {
+            root.reply();
+        } else if (root.selected-index == 2 && root.can-edit) {
+            root.edit();
+        }
+    }
 
     // Backdrop — invisible, dismisses on a click or another right-click
     // outside the panel.
@@ -78,7 +119,8 @@ export component MessageContextMenu inherits Rectangle {
     property <bool> opened: false;
     init => {
         root.opened = true;
-        esc.focus();
+        root.selected-index = 0;
+        keys.focus();
     }
 
     panel := Rectangle {
@@ -108,28 +150,55 @@ export component MessageContextMenu inherits Rectangle {
                 MenuItem {
                     glyph: "☺";
                     label: @tr("Add reaction");
+                    selected: root.selected-index == 0;
                     activated => { root.add-reaction(root.px, root.py); }
+                    activated-hover => { root.selected-index = 0; }
                 }
                 MenuItem {
                     glyph: "↩";
                     label: @tr("Reply");
+                    selected: root.selected-index == 1;
                     activated => { root.reply(); }
+                    activated-hover => { root.selected-index = 1; }
                 }
                 MenuItem {
                     glyph: "✎";
                     label: @tr("Edit message");
                     shown: root.can-edit;
+                    selected: root.selected-index == 2;
                     activated => { root.edit(); }
+                    activated-hover => { root.selected-index = 2; }
                 }
             }
         }
     }
 
-    // Esc dismiss — focused on mount so the key lands here.
-    esc := FocusScope {
+    // Keyboard handling — focused on mount so keys land here. Esc dismisses;
+    // Up/Down (and Tab/Backtab) move the selection; Return/Enter activates.
+    keys := FocusScope {
         key-pressed(e) => {
             if (e.text == Key.Escape) {
                 root.dismissed();
+                return accept;
+            }
+            if (e.text == Key.UpArrow) {
+                root.move-selection(-1);
+                return accept;
+            }
+            if (e.text == Key.DownArrow) {
+                root.move-selection(1);
+                return accept;
+            }
+            if (e.text == Key.Tab) {
+                root.wrap-selection(1);
+                return accept;
+            }
+            if (e.text == Key.Backtab) {
+                root.wrap-selection(-1);
+                return accept;
+            }
+            if (e.text == Key.Return) {
+                root.activate-selected();
                 return accept;
             }
             return reject;

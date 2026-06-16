@@ -1,0 +1,36 @@
+# Release: triggered by pushing a `v*` tag (e.g. v0.1.0). Builds optimized
+# binaries for every platform via the reusable build workflow, then collects
+# the per-platform tarballs and publishes them on a GitHub Release.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    name: build
+    uses: ./.github/workflows/_build.yml
+    with:
+      release: true
+    secrets: inherit
+
+  publish:
+    name: publish GitHub Release
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*.tar.gz
+          generate_release_notes: true
+          fail_on_unmatched_files: true

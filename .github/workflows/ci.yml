@@ -1,0 +1,52 @@
+# CI: runs on every push to master and every PR. Formatting + clippy gate on a
+# single x86_64 Linux runner, then a debug build of all five target platforms
+# via the reusable build workflow.
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+# A new push to a branch/PR cancels the in-flight run for that ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: fmt + clippy
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            pkg-config libmpv-dev libfontconfig-dev libasound2-dev libdbus-1-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: lint
+
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DARKMATTER_DEPLOY_KEY }}
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        run: cargo clippy --locked --all-targets -- -D warnings
+
+  build:
+    name: build
+    uses: ./.github/workflows/_build.yml
+    with:
+      release: false
+    secrets: inherit

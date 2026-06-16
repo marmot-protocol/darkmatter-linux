@@ -6,7 +6,7 @@
 //! because our own avatar pipeline (and most Nostr clients) decode profile
 //! pictures with raster codecs only.
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use resvg::tiny_skia;
 use resvg::usvg;
 

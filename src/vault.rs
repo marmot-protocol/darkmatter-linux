@@ -244,7 +244,7 @@ impl Vault {
         use sha2::{Digest, Sha256};
         let mut h = Sha256::new();
         h.update(MEDIA_CACHE_KDF_LABEL);
-        h.update(&*self.key);
+        h.update(*self.key);
         let mut k = Zeroizing::new([0u8; 32]);
         k.copy_from_slice(&h.finalize());
         k
@@ -385,8 +385,11 @@ impl AccountSecretStore for VaultSecretStore {
 
     fn write_secret(&self, account: &AccountSummary, keys: &nostr::Keys) -> AccountHomeResult<()> {
         let mut v = self.vault.lock().unwrap();
-        v.set(&account_key(&account.label), &keys.secret_key().to_secret_hex())
-            .map_err(|e| AccountHomeError::SecretStore(e.to_string()))
+        v.set(
+            &account_key(&account.label),
+            &keys.secret_key().to_secret_hex(),
+        )
+        .map_err(|e| AccountHomeError::SecretStore(e.to_string()))
     }
 
     fn load_secret(&self, account: &AccountSummary) -> AccountHomeResult<nostr::Keys> {

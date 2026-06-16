@@ -14,5 +14,4 @@ pub mod emoji_sprite_map {
 }
 
 /// The composed Twemoji sprite PNG, embedded as bytes by build.rs.
-pub const EMOJI_SPRITE_PNG: &[u8] =
-    include_bytes!(concat!(env!("OUT_DIR"), "/twemoji_sprite.png"));
+pub const EMOJI_SPRITE_PNG: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/twemoji_sprite.png"));

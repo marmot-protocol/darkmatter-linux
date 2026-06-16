@@ -1,0 +1,34 @@
+[
+  {
+    "title": "Make the Settings appearance and language pickers keyboard-accessible",
+    "location": "ui/settings/theme-picker.slint (trigger lines 82-85, dropdown rows 141-147), ui/settings/accent-picker.slint (swatch TouchArea line 47), ui/modals/language-picker-modal.slint (row TouchArea line 15)",
+    "problem": "The theme picker dropdown, the accent-color swatch grid, and the language-picker modal rows are each driven by a bare TouchArea with no FocusScope and no key handling. There is no way to Tab to them, open the dropdown, or move between options with the keyboard.",
+    "impact": "Keyboard-only users and people using assistive technology cannot change the theme, accent color, or app language at all — these settings are reachable only with a mouse or touch.",
+    "suggested_fix": "Wrap each control in a FocusScope, make the trigger/swatches/rows focusable, and handle Enter/Space to activate plus arrow keys to move between options (and Esc to close the theme dropdown). Mirror whatever focus pattern the rest of the settings forms use.",
+    "severity": "medium"
+  },
+  {
+    "title": "Localize the user-facing strings that still bypass translation",
+    "location": "ui/login/login-screen.slint:251 (NSEC field label), ui/profile/profile-page.slint:94 (picture placeholder), ui/profile/profile-page.slint:505 and :526 (NIP-05 labels), src/main.rs:5512 (file-dialog title \"Choose a profile picture\")",
+    "problem": "Several visible strings are hardcoded English instead of going through @tr() (Slint) or the s() translation helper (Rust): the login NSEC field label, the profile picture-field placeholder \"https://… or upload a file →\", both NIP-05 labels on the profile page, and the native file-picker title when uploading a profile picture.",
+    "impact": "Users running the app in Italian, German, or Japanese see these fragments in English mixed into otherwise-translated screens — most jarring on the first-run login and profile-edit flows, and the file dialog placeholder is instructional copy, not just a hint.",
+    "suggested_fix": "Wrap the Slint labels/placeholder in @tr(\"…\") and run scripts/update-translations.sh to add them to the catalogs; route the file-dialog title through the same s() helper already used for other Rust-side status strings.",
+    "severity": "medium"
+  },
+  {
+    "title": "Disable taps on album image cells while they are still decrypting",
+    "location": "ui/primitives/message-bubble.slint:415-418 (album grid cell TouchArea)",
+    "problem": "Each album-grid cell has a TouchArea whose clicked handler fires album-cell-clicked(cell.key) with no enabled guard, even while cell.loading is true and the image is still being decrypted/decoded (the cell only shows a … placeholder). Single-image attachments in the same file correctly gate their tap with enabled: !att-loading, so album cells are inconsistent.",
+    "impact": "Tapping a still-loading image in a multi-image message opens the lightbox on content that hasn't decoded yet, producing an empty or broken viewer and giving no signal that the cell wasn't ready.",
+    "suggested_fix": "Add enabled: !cell.loading; (or !cell.loading && cell.has-image) to the album cell TouchArea on line 415 so loading cells don't respond to taps, matching the single-image path.",
+    "severity": "low"
+  },
+  {
+    "title": "Add the pointer cursor to clickable rows and chips that are missing it",
+    "location": "ui/primitives/reactions-row.slint:43 (ReactionChip), ui/main-pane/group-member-row.slint:77, :96, :115 (Make admin / Remove admin / Step down), ui/archived/archived-list-item.slint:87",
+    "problem": "Several interactive elements use a TouchArea without mouse-cursor: pointer, so hovering them shows the default arrow. Comparable controls right next to them do set it — the ActionButton in the same reactions file (line 97) and the member-row avatar (group-member-row.slint:23) both use the pointer cursor — so the omission is an inconsistency, not a deliberate style.",
+    "impact": "Reaction pills, the group admin action buttons, and archived-chat rows don't feel clickable on hover, hurting discoverability of features (especially the admin actions) and breaking the cursor consistency users rely on to tell what is interactive.",
+    "suggested_fix": "Add mouse-cursor: pointer; to each of these TouchAreas (reactions-row.slint:43; group-member-row.slint promote/demote/self-demote areas; archived-list-item.slint:87).",
+    "severity": "low"
+  }
+]

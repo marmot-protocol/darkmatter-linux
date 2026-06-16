@@ -116,11 +116,11 @@ impl Settings {
             Some(p) => p,
             None => return,
         };
-        if let Some(parent) = path.parent() {
-            if let Err(e) = fs::create_dir_all(parent) {
-                eprintln!("[settings] create_dir_all({}): {e}", parent.display());
-                return;
-            }
+        if let Some(parent) = path.parent()
+            && let Err(e) = fs::create_dir_all(parent)
+        {
+            eprintln!("[settings] create_dir_all({}): {e}", parent.display());
+            return;
         }
         let bytes = match serde_json::to_vec_pretty(self) {
             Ok(b) => b,

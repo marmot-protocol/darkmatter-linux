@@ -1,0 +1,128 @@
+# Reusable build workflow: compiles darkmatter-linux for every supported
+# platform (Linux x86_64/arm64, macOS x86_64/arm64, FreeBSD x86_64). Called by
+# ci.yml (debug, no artifacts) and release.yml (release, uploads artifacts).
+#
+# The marmot crates are a PRIVATE ssh git dependency
+# (ssh://git@github.com/marmot-protocol/darkmatter.git). Builds need an SSH key
+# with read access to that repo, provided via the DARKMATTER_DEPLOY_KEY secret.
+# `.cargo/config.toml` sets net.git-fetch-with-cli, so cargo fetches through the
+# git CLI + ssh-agent we set up here.
+name: build
+
+on:
+  workflow_call:
+    inputs:
+      release:
+        description: "Build with --release and upload packaged artifacts"
+        type: boolean
+        default: false
+    secrets:
+      DARKMATTER_DEPLOY_KEY:
+        description: "SSH private key with read access to marmot-protocol/darkmatter"
+        required: true
+
+jobs:
+  # Native runners: one per OS/arch. arm64 Linux uses GitHub's native arm
+  # runners and macOS arm64 uses the Apple-silicon image, so every job builds
+  # natively — no cross-compilation sysroot wrangling for the C deps (libmpv,
+  # ALSA, fontconfig).
+  native:
+    name: build (${{ matrix.triple }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-24.04,     triple: x86_64-unknown-linux-gnu }
+          - { os: ubuntu-24.04-arm, triple: aarch64-unknown-linux-gnu }
+          - { os: macos-13,         triple: x86_64-apple-darwin }
+          - { os: macos-14,         triple: aarch64-apple-darwin }
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux system deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            pkg-config libmpv-dev libfontconfig-dev libasound2-dev libdbus-1-dev
+
+      - name: Install macOS system deps
+        if: runner.os == 'macOS'
+        run: |
+          brew install mpv pkgconf
+          echo "PKG_CONFIG_PATH=$(brew --prefix)/lib/pkgconfig" >> "$GITHUB_ENV"
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.triple }}
+
+      # Loads the private deploy key into ssh-agent and registers github.com in
+      # known_hosts so the git CLI can fetch the marmot crates non-interactively.
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DARKMATTER_DEPLOY_KEY }}
+
+      - name: Build
+        run: cargo build --locked ${{ inputs.release && '--release' || '' }}
+
+      - name: Package
+        if: inputs.release
+        shell: bash
+        run: |
+          dist="darkmatter-linux-${{ matrix.triple }}"
+          mkdir -p "$dist"
+          cp "target/release/darkmatter-linux" "$dist/"
+          cp README.md AGENTS.md "$dist/" 2>/dev/null || true
+          tar -czf "$dist.tar.gz" "$dist"
+
+      - uses: actions/upload-artifact@v4
+        if: inputs.release
+        with:
+          name: darkmatter-linux-${{ matrix.triple }}
+          path: darkmatter-linux-${{ matrix.triple }}.tar.gz
+          if-no-files-found: error
+
+  # GitHub has no FreeBSD runner, so we boot a FreeBSD VM inside an x86_64 Linux
+  # runner (vmactions). The deploy key is forwarded into the VM via `envs` and
+  # written to ~/.ssh there; GIT_SSH_COMMAND points the git CLI at it.
+  freebsd:
+    name: build (x86_64-unknown-freebsd)
+    runs-on: ubuntu-24.04
+    env:
+      DEPLOY_KEY: ${{ secrets.DARKMATTER_DEPLOY_KEY }}
+      RELEASE: ${{ inputs.release && '1' || '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build in FreeBSD VM
+        uses: vmactions/freebsd-vm@v1
+        with:
+          release: "14.2"
+          usesh: true
+          envs: "DEPLOY_KEY RELEASE"
+          prepare: |
+            pkg install -y rust mpv pkgconf dbus alsa-lib fontconfig git
+          run: |
+            set -eu
+            mkdir -p ~/.ssh
+            printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/id_deploy
+            chmod 600 ~/.ssh/id_deploy
+            ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
+            export GIT_SSH_COMMAND="ssh -i $HOME/.ssh/id_deploy -o IdentitiesOnly=yes"
+            cargo build --locked ${RELEASE:+--release}
+            if [ -n "$RELEASE" ]; then
+              dist="darkmatter-linux-x86_64-unknown-freebsd"
+              mkdir -p "$dist"
+              cp target/release/darkmatter-linux "$dist/"
+              tar -czf "$dist.tar.gz" "$dist"
+            fi
+
+      - uses: actions/upload-artifact@v4
+        if: inputs.release
+        with:
+          name: darkmatter-linux-x86_64-unknown-freebsd
+          path: darkmatter-linux-x86_64-unknown-freebsd.tar.gz
+          if-no-files-found: error

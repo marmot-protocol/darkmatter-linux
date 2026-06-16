@@ -93,7 +93,10 @@ export component CommandPalette inherits Modal {
                             border-color: Palette.border-2;
                             background: Palette.panel-2;
                             kbd-text := Text {
-                                text: "Ctrl K";
+                                // macOS uses ⌘; everything else Ctrl. Modifier
+                                // glyphs are key labels, not prose, so they stay
+                                // out of @tr().
+                                text: Theme.is-mac ? "⌘ K" : "Ctrl K";
                                 color: Palette.text-mid;
                                 font-size: (10px) * Theme.fs-scale;
                                 font-weight: 700;
@@ -254,7 +257,9 @@ export component CommandPalette inherits Modal {
                     VerticalLayout {
                         alignment: center;
                         Text {
-                            text: "↑↓ Navigate";
+                            // Arrow/⏎/Esc glyphs are key labels; only the verbs
+                            // are translated.
+                            text: "↑↓ " + @tr("command palette footer" => "Navigate");
                             color: Palette.text-vlo;
                             font-size: (9px) * Theme.fs-scale;
                             font-weight: 700;
@@ -265,7 +270,7 @@ export component CommandPalette inherits Modal {
                     VerticalLayout {
                         alignment: center;
                         Text {
-                            text: "⏎ Select";
+                            text: "⏎ " + @tr("command palette footer" => "Select");
                             color: Palette.text-vlo;
                             font-size: (9px) * Theme.fs-scale;
                             font-weight: 700;
@@ -276,7 +281,7 @@ export component CommandPalette inherits Modal {
                     VerticalLayout {
                         alignment: center;
                         Text {
-                            text: "Esc Close";
+                            text: "Esc " + @tr("command palette footer" => "Close");
                             color: Palette.text-vlo;
                             font-size: (9px) * Theme.fs-scale;
                             font-weight: 700;

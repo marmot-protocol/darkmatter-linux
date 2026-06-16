@@ -415,6 +415,8 @@ fn main() -> Result<(), slint::PlatformError> {
     apply_theme_mode(&ui, &theme_mode);
     ui.set_accent_color(accent_color_idx(accent_color));
     ui.set_outgoing_on_right(initial_settings.outgoing_on_right);
+    // Drives ⌘-vs-Ctrl shortcut hints (command palette badge, etc.).
+    ui.set_is_macos(cfg!(target_os = "macos"));
     apply_stamp_formats(&initial_settings);
     ui.set_time_format(s(&initial_settings.time_format));
     ui.set_date_format(s(&initial_settings.date_format));

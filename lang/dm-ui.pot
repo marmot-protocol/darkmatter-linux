@@ -2,7 +2,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-06-16 05:36+0000\n"
+"POT-Creation-Date: 2026-06-16 06:19+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -249,24 +249,24 @@ msgctxt "ContactsSidebar"
 msgid "Search contacts…"
 msgstr ""
 
-#: ui/dark-matter-linux.slint:320
+#: ui/dark-matter-linux.slint:322
 msgctxt "DarkMatterLinux"
 msgid "Connecting to relays…"
 msgstr ""
 
-#: ui/dark-matter-linux.slint:885
+#: ui/dark-matter-linux.slint:888
 msgctxt "DarkMatterLinux"
 msgid "Block this chat request?"
 msgstr ""
 
-#: ui/dark-matter-linux.slint:886
+#: ui/dark-matter-linux.slint:889
 msgctxt "DarkMatterLinux"
 msgid ""
 "This declines the invite from {}. It can't be restored unless they invite "
 "you again."
 msgstr ""
 
-#: ui/dark-matter-linux.slint:887
+#: ui/dark-matter-linux.slint:890
 msgctxt "DarkMatterLinux"
 msgid "Block"
 msgstr ""
@@ -998,9 +998,25 @@ msgctxt "CommandPalette"
 msgid "Type a command…"
 msgstr ""
 
-#: ui/modals/command-palette.slint:229
+#: ui/modals/command-palette.slint:232
 msgctxt "CommandPalette"
 msgid "No matches"
+msgstr ""
+
+#. are translated.
+#: ui/modals/command-palette.slint:262
+msgctxt "command palette footer"
+msgid "Navigate"
+msgstr ""
+
+#: ui/modals/command-palette.slint:273
+msgctxt "command palette footer"
+msgid "Select"
+msgstr ""
+
+#: ui/modals/command-palette.slint:284
+msgctxt "command palette footer"
+msgid "Close"
 msgstr ""
 
 #: ui/modals/confirm-modal.slint:12

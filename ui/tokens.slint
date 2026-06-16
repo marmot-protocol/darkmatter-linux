@@ -12,6 +12,9 @@ export global Theme {
     in-out property <bool> retro: false;
     // 0=mint, 1=ocean, 2=berry, 3=coral, 4=lavender
     in-out property <int> accent: 0;
+    // true on macOS — lets shortcut hints render ⌘ instead of Ctrl. Set from
+    // Rust at startup via the root `is-macos` property.
+    in-out property <bool> is-mac: false;
     out property <string> font: root.retro ? "Zpix" : "JetBrains Mono";
     // multiplier applied to every border-radius — 0 in retro for pixel-sharp corners.
     out property <float> r-scale: root.retro ? 0.0 : 1.0;

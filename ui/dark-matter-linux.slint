@@ -63,6 +63,8 @@ export component DarkMatterLinux inherits Window {
     in-out property <bool> outgoing-on-right: true;
     in-out property <bool> light-theme: false;
     in-out property <bool> retro-mode: false;
+    // Set once from Rust (cfg!(target_os = "macos")); drives ⌘-vs-Ctrl hints.
+    in property <bool> is-macos: false;
     in-out property <int> accent-color: 0;
     in property <string> my-npub;
     // QR of the nostr:npub URI, rasterized Rust-side on login.
@@ -416,6 +418,7 @@ export component DarkMatterLinux inherits Window {
     changed light-theme => { Theme.light = root.light-theme; }
     changed retro-mode => { Theme.retro = root.retro-mode; }
     changed accent-color => { Theme.accent = root.accent-color; }
+    changed is-macos => { Theme.is-mac = root.is-macos; }
 
     // New-chat modal state. `new-chat-status` surfaces validation errors
     // inline ("invalid npub", "you can't invite yourself", etc.) — Rust

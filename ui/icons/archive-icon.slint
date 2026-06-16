@@ -3,28 +3,28 @@ import { Palette, Theme } from "../tokens.slint";
 export component ArchiveIcon inherits Rectangle {
     in property <color> stroke: Palette.text-mid;
     width: 18px; height: 16px;
-    if !Theme.retro : Rectangle {
+    if !Theme.pixel-icons : Rectangle {
         x: 0px; y: 0px;
         width: 18px; height: 4px;
         border-radius: 1px;
         border-width: 1.4px; border-color: root.stroke;
     }
-    if !Theme.retro : Rectangle {
+    if !Theme.pixel-icons : Rectangle {
         x: 1px; y: 4px;
         width: 16px; height: 12px;
         border-radius: 1px;
         border-width: 1.4px; border-color: root.stroke;
     }
-    if !Theme.retro : Rectangle {
+    if !Theme.pixel-icons : Rectangle {
         x: 6px; y: 8px;
         width: 6px; height: 1.4px;
         background: root.stroke;
     }
     // Retro: pixel-art crate — lid + body + handle slot.
-    if Theme.retro : Rectangle { x: 0px; y: 0px; width: 18px; height: 4px; background: root.stroke; }
-    if Theme.retro : Rectangle { x: 2px; y: 4px; width: 14px; height: 2px; background: root.stroke; }
-    if Theme.retro : Rectangle { x: 2px; y: 14px; width: 14px; height: 2px; background: root.stroke; }
-    if Theme.retro : Rectangle { x: 2px; y: 6px; width: 2px; height: 8px; background: root.stroke; }
-    if Theme.retro : Rectangle { x: 14px; y: 6px; width: 2px; height: 8px; background: root.stroke; }
-    if Theme.retro : Rectangle { x: 6px; y: 8px; width: 6px; height: 2px; background: root.stroke; }
+    if Theme.pixel-icons : Rectangle { x: 0px; y: 0px; width: 18px; height: 4px; background: root.stroke; }
+    if Theme.pixel-icons : Rectangle { x: 2px; y: 4px; width: 14px; height: 2px; background: root.stroke; }
+    if Theme.pixel-icons : Rectangle { x: 2px; y: 14px; width: 14px; height: 2px; background: root.stroke; }
+    if Theme.pixel-icons : Rectangle { x: 2px; y: 6px; width: 2px; height: 8px; background: root.stroke; }
+    if Theme.pixel-icons : Rectangle { x: 14px; y: 6px; width: 2px; height: 8px; background: root.stroke; }
+    if Theme.pixel-icons : Rectangle { x: 6px; y: 8px; width: 6px; height: 2px; background: root.stroke; }
 }

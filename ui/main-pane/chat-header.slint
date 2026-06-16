@@ -48,7 +48,7 @@ export component ChatHeader inherits Rectangle {
                 color-b: root.chat.av-b;
                 picture: root.is-group ? root.group-picture : root.chat.picture;
                 has-picture: root.is-group ? root.group-has-picture : root.chat.has-picture;
-                font-size: (Theme.retro ? 17px : 12px) * Theme.fs-scale;
+                font-size: Theme.fs(12px, 17px);
             }
             Rectangle {
                 x: parent.width / 2 + 10px;

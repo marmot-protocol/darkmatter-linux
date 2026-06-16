@@ -118,11 +118,11 @@ export component HoverActions inherits Rectangle {
     height: bar.preferred-height;
     border-radius: (10px) * Theme.r-scale;
     background: Palette.elevated;
-    border-width: Theme.retro ? Theme.border-w : 1px;
+    border-width: Theme.border-w;
     border-color: Palette.elevated-border;
-    drop-shadow-color: Theme.retro ? Palette.shadow : #00000040;
-    drop-shadow-offset-y: Theme.retro ? 2px : 2px;
-    drop-shadow-blur: Theme.retro ? 0px : 10px;
+    drop-shadow-color: Theme.hard-shadow ? Palette.shadow : #00000040;
+    drop-shadow-offset-y: Theme.hard-shadow ? 2px : 2px;
+    drop-shadow-blur: Theme.hard-shadow ? 0px : 10px;
 
     bar := HorizontalLayout {
         padding: 3px;

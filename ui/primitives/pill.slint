@@ -7,7 +7,7 @@ export component Pill inherits Rectangle {
     in property <color> bg-color: Palette.mint;
     // Zpix sits on a 12px grid, so retro bumps both the type and the chip
     // so the chunky SNES controls don't dwarf the labels.
-    in property <length> font-size: Theme.retro ? 12px : 10px;
+    in property <length> font-size: Theme.fsr(10px, 12px);
     in property <bool> has-lock: false;
     height: Theme.retro ? 24px : 20px;
     background: root.bg-color;

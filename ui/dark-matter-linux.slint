@@ -63,6 +63,7 @@ export component DarkMatterLinux inherits Window {
     in-out property <bool> outgoing-on-right: true;
     in-out property <bool> light-theme: false;
     in-out property <bool> retro-mode: false;
+    in-out property <bool> terminal-mode: false;
     // Set once from Rust (cfg!(target_os = "macos")); drives ⌘-vs-Ctrl hints.
     in property <bool> is-macos: false;
     // Storage settings pane (Settings → Storage). `storage-cache-size` is a
@@ -432,8 +433,11 @@ export component DarkMatterLinux inherits Window {
     callback demote-admin(string);
     callback self-demote-admin();
 
-    changed light-theme => { Theme.light = root.light-theme; }
-    changed retro-mode => { Theme.retro = root.retro-mode; }
+    // Map the boolean theme toggles onto the single Theme.id (0=dark, 1=light,
+    // 2=retro, 3=terminal). Precedence: terminal > retro > light > dark.
+    changed light-theme => { Theme.id = root.terminal-mode ? 3 : (root.retro-mode ? 2 : (root.light-theme ? 1 : 0)); }
+    changed retro-mode => { Theme.id = root.terminal-mode ? 3 : (root.retro-mode ? 2 : (root.light-theme ? 1 : 0)); }
+    changed terminal-mode => { Theme.id = root.terminal-mode ? 3 : (root.retro-mode ? 2 : (root.light-theme ? 1 : 0)); }
     changed accent-color => { Theme.accent = root.accent-color; }
     changed is-macos => { Theme.is-mac = root.is-macos; }
 
@@ -556,7 +560,7 @@ export component DarkMatterLinux inherits Window {
                     property <float> enter: 0;
                     init => { self.enter = 1; }
                     opacity: self.enter;
-                    animate enter { duration: Theme.retro ? 100ms : 180ms; easing: ease-out; }
+                    animate enter { duration: Theme.motion-fast ? 100ms : 180ms; easing: ease-out; }
 
                     // No chats yet → first-run get-started screen (with live relay
                     // setup). Once a chat exists, the normal list + pane shell.
@@ -694,7 +698,7 @@ export component DarkMatterLinux inherits Window {
                     property <float> enter: 0;
                     init => { self.enter = 1; }
                     opacity: self.enter;
-                    animate enter { duration: Theme.retro ? 100ms : 180ms; easing: ease-out; }
+                    animate enter { duration: Theme.motion-fast ? 100ms : 180ms; easing: ease-out; }
                     ContactsPage {
                         width: parent.width;
                         height: parent.height;
@@ -712,7 +716,7 @@ export component DarkMatterLinux inherits Window {
                     property <float> enter: 0;
                     init => { self.enter = 1; }
                     opacity: self.enter;
-                    animate enter { duration: Theme.retro ? 100ms : 180ms; easing: ease-out; }
+                    animate enter { duration: Theme.motion-fast ? 100ms : 180ms; easing: ease-out; }
                     ArchivedPage {
                         width: parent.width;
                         height: parent.height;
@@ -731,7 +735,7 @@ export component DarkMatterLinux inherits Window {
                     property <float> enter: 0;
                     init => { self.enter = 1; }
                     opacity: self.enter;
-                    animate enter { duration: Theme.retro ? 100ms : 180ms; easing: ease-out; }
+                    animate enter { duration: Theme.motion-fast ? 100ms : 180ms; easing: ease-out; }
                     KeysPage {
                         width: parent.width;
                         height: parent.height;
@@ -753,7 +757,7 @@ export component DarkMatterLinux inherits Window {
                     property <float> enter: 0;
                     init => { self.enter = 1; }
                     opacity: self.enter;
-                    animate enter { duration: Theme.retro ? 100ms : 180ms; easing: ease-out; }
+                    animate enter { duration: Theme.motion-fast ? 100ms : 180ms; easing: ease-out; }
                     SettingsPage {
                         width: parent.width;
                         height: parent.height;
@@ -787,6 +791,7 @@ export component DarkMatterLinux inherits Window {
                         date-format-selected(f) => { root.date-format-selected(f); }
                         light-theme <=> root.light-theme;
                         retro-mode <=> root.retro-mode;
+                        terminal-mode <=> root.terminal-mode;
                         accent-color <=> root.accent-color;
                         outgoing-on-right <=> root.outgoing-on-right;
                         theme-mode-selected(mode) => { root.theme-mode-selected(mode); }
@@ -810,7 +815,7 @@ export component DarkMatterLinux inherits Window {
                     property <float> enter: 0;
                     init => { self.enter = 1; }
                     opacity: self.enter;
-                    animate enter { duration: Theme.retro ? 100ms : 180ms; easing: ease-out; }
+                    animate enter { duration: Theme.motion-fast ? 100ms : 180ms; easing: ease-out; }
                     ProfilePage {
                         width: parent.width;
                         height: parent.height;

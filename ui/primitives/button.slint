@@ -18,7 +18,7 @@ export component Button inherits Rectangle {
     in property <length> pad-left: 12px;
     in property <length> pad-right: 14px;
     in property <length> spacing: 8px;
-    in property <length> font-size: Theme.retro ? 16px : 12px;
+    in property <length> font-size: Theme.fsr(12px, 16px);
     in property <int>    font-weight: 700;
     in property <color>  fg: Palette.text-hi;
     in property <color>  bg-color: Palette.panel-2;
@@ -54,28 +54,28 @@ export component Button inherits Rectangle {
         : (root.hovered ? root.hover-bg : root.bg-color);
     opacity: root.enabled ? 1.0 : 0.5;
     animate opacity { duration: 120ms; easing: ease-out; }
-    drop-shadow-color: Theme.retro && root.has-fill ? Palette.shadow
+    drop-shadow-color: Theme.hard-shadow && root.has-fill ? Palette.shadow
         : (root.is-primary && root.has-fill ? Palette.mint-glow : transparent);
     // In retro: hover pushes the shadow further (3px) for a "lifted" SNES-button feel.
-    drop-shadow-offset-x: Theme.retro && root.has-fill
+    drop-shadow-offset-x: Theme.hard-shadow && root.has-fill
         ? (root.hovered ? 3px : 2px)
         : (root.is-primary && root.has-fill && root.hovered ? 0px : 0px);
-    drop-shadow-offset-y: Theme.retro && root.has-fill
+    drop-shadow-offset-y: Theme.hard-shadow && root.has-fill
         ? (root.hovered ? 3px : 2px)
         : (root.is-primary && root.has-fill ? 2px : 0px);
-    drop-shadow-blur: Theme.retro && root.has-fill ? 0px : (root.is-primary && root.has-fill ? 12px : 0px);
+    drop-shadow-blur: Theme.hard-shadow && root.has-fill ? 0px : (root.is-primary && root.has-fill ? 12px : 0px);
     animate background, border-color { duration: 120ms; easing: ease-out; }
     animate drop-shadow-offset-x, drop-shadow-offset-y { duration: 90ms; easing: ease-out; }
 
     // SNES bevel: bright pixel highlight on top edge, dark shade on bottom.
-    if Theme.retro && root.has-fill && !root.hovered : Rectangle {
+    if Theme.bevel && root.has-fill && !root.hovered : Rectangle {
         x: root.border-w; y: root.border-w;
         width: parent.width - root.border-w * 2;
         height: 2px;
         background: Palette.bevel-hi;
         opacity: root.selected ? 0.6 : 0.35;
     }
-    if Theme.retro && root.has-fill && !root.hovered : Rectangle {
+    if Theme.bevel && root.has-fill && !root.hovered : Rectangle {
         x: root.border-w; y: parent.height - root.border-w - 2px;
         width: parent.width - root.border-w * 2;
         height: 2px;
@@ -95,7 +95,8 @@ export component Button inherits Rectangle {
         }
 
         if root.label != "" : Text {
-            text: root.label;
+            // Terminal/TUI themes bracket button labels: [ Send ].
+            text: Theme.bracket-labels ? "[ " + root.label + " ]" : root.label;
             color: root.hovered ? root.hover-fg : root.fg;
             font-size: (root.font-size) * Theme.fs-scale;
             font-weight: root.font-weight;
@@ -175,7 +176,7 @@ export component MicroButton inherits Button {
     pad-left: 10px;
     pad-right: 12px;
     spacing: 6px;
-    font-size: Theme.retro ? 15px : 11px;
+    font-size: Theme.fsr(11px, 15px);
 }
 
 // Icon-only ghost button used in the left nav rail.

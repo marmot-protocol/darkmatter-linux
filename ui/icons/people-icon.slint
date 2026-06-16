@@ -3,25 +3,25 @@ import { Palette, Theme } from "../tokens.slint";
 export component PeopleIcon inherits Rectangle {
     in property <color> stroke: Palette.text-mid;
     width: 20px; height: 16px;
-    if !Theme.retro : Rectangle {
+    if !Theme.pixel-icons : Rectangle {
         x: 1px; y: 1px;
         width: 7px; height: 7px;
         border-radius: 3.5px;
         border-width: 1.4px; border-color: root.stroke;
     }
-    if !Theme.retro : Rectangle {
+    if !Theme.pixel-icons : Rectangle {
         x: 11px; y: 2px;
         width: 6px; height: 6px;
         border-radius: 3px;
         border-width: 1.4px; border-color: root.stroke;
     }
-    if !Theme.retro : Path {
+    if !Theme.pixel-icons : Path {
         x: -1px; y: 8px; width: 13px; height: 8px;
         viewbox-width: 13; viewbox-height: 8;
         commands: "M 0.6 7.4 C 1.5 3.5 4 2 6.5 2 C 9 2 11.5 3.5 12.4 7.4";
         stroke: root.stroke; stroke-width: 1.4px; fill: transparent;
     }
-    if !Theme.retro : Path {
+    if !Theme.pixel-icons : Path {
         x: 10px; y: 8px; width: 11px; height: 7px;
         viewbox-width: 11; viewbox-height: 7;
         commands: "M 0.5 6.5 C 1.5 3 3.5 2 5.5 2 C 7.5 2 9.5 3 10.5 6.5";
@@ -29,11 +29,11 @@ export component PeopleIcon inherits Rectangle {
     }
     // Retro: two pixel-block heads + two pixel-block bodies.
     // Left head (6×4)
-    if Theme.retro : Rectangle { x: 1px; y: 0px; width: 6px; height: 4px; background: root.stroke; }
+    if Theme.pixel-icons : Rectangle { x: 1px; y: 0px; width: 6px; height: 4px; background: root.stroke; }
     // Right head (6×4)
-    if Theme.retro : Rectangle { x: 13px; y: 0px; width: 6px; height: 4px; background: root.stroke; }
+    if Theme.pixel-icons : Rectangle { x: 13px; y: 0px; width: 6px; height: 4px; background: root.stroke; }
     // Left body (8×8)
-    if Theme.retro : Rectangle { x: 0px; y: 6px; width: 8px; height: 8px; background: root.stroke; }
+    if Theme.pixel-icons : Rectangle { x: 0px; y: 6px; width: 8px; height: 8px; background: root.stroke; }
     // Right body (8×8)
-    if Theme.retro : Rectangle { x: 12px; y: 6px; width: 8px; height: 8px; background: root.stroke; }
+    if Theme.pixel-icons : Rectangle { x: 12px; y: 6px; width: 8px; height: 8px; background: root.stroke; }
 }

@@ -23,7 +23,7 @@ export component SettingsNavItem inherits Rectangle {
             text: root.label;
             color: root.dim
                 ? Palette.text-mid
-                : (Theme.retro && root.selected ? Palette.bubble-out-fg : Palette.text-hi);
+                : (Theme.selected-inverts-text && root.selected ? Palette.bubble-out-fg : Palette.text-hi);
             font-size: (12px) * Theme.fs-scale;
             font-weight: root.selected ? 700 : 500;
             vertical-alignment: center;

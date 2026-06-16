@@ -22,9 +22,9 @@ export component MentionPicker inherits Rectangle {
     border-width: 1px;
     border-color: Palette.border-2;
     border-radius: (10px) * Theme.r-scale;
-    drop-shadow-color: Theme.retro ? Palette.shadow : #00000055;
-    drop-shadow-offset-y: Theme.retro ? 2px : 4px;
-    drop-shadow-blur: Theme.retro ? 0px : 16px;
+    drop-shadow-color: Theme.hard-shadow ? Palette.shadow : #00000055;
+    drop-shadow-offset-y: Theme.hard-shadow ? 2px : 4px;
+    drop-shadow-blur: Theme.hard-shadow ? 0px : 16px;
 
     Flickable {
         x: 4px;
@@ -54,7 +54,7 @@ export component MentionPicker inherits Rectangle {
                         color-b: c.av-b;
                         picture: c.picture;
                         has-picture: c.has-picture;
-                        font-size: (Theme.retro ? 13px : 10px) * Theme.fs-scale;
+                        font-size: Theme.fs(10px, 13px);
                         y: (parent.height - self.height) / 2;
                     }
                     VerticalLayout {

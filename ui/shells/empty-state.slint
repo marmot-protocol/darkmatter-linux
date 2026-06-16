@@ -31,11 +31,11 @@ export component EmptyState inherits Rectangle {
                         width: 56px; height: 56px;
                         border-radius: (28px) * Theme.r-scale;
                         background: Palette.panel;
-                        border-width: Theme.retro ? Theme.border-w : 1px;
-                        border-color: Theme.retro ? Palette.border : Palette.border-2;
-                        drop-shadow-color: Theme.retro ? Palette.shadow : transparent;
-                        drop-shadow-offset-x: Theme.retro ? 4px : 0px;
-                        drop-shadow-offset-y: Theme.retro ? 4px : 0px;
+                        border-width: Theme.border-w;
+                        border-color: Palette.card-border;
+                        drop-shadow-color: Theme.hard-shadow ? Palette.shadow : transparent;
+                        drop-shadow-offset-x: Theme.hard-shadow ? 4px : 0px;
+                        drop-shadow-offset-y: Theme.hard-shadow ? 4px : 0px;
                         HorizontalLayout {
                             alignment: center;
                             VerticalLayout {

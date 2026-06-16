@@ -5,16 +5,76 @@
 // rendered as tofu in retro.
 import "../assets/fonts/Zpix.ttf";
 
+// ── Theming engine, Layer 0 ──────────────────────────────────────────────
+// A theme's full color set is one `ThemeColors` value. Themes live as data in
+// `Theme.color-packs` (indexed by `Theme.id`); `Palette` is a pure reader over
+// the active pack + the orthogonal accent index. Defining a theme's colors is
+// therefore one struct literal — no per-token ternaries, no component edits.
+// See ui/CONTRACT.md.
+export struct ThemeColors {
+    bg: color, panel: color, panel-2: color, rail: color, banner: color,
+    border: color, border-2: color, bubble-in: color,
+    text-hi: color, text-mid: color, text-lo: color, text-vlo: color,
+    hover: color, bubble-out-fg: color,
+    bevel-hi: color, bevel-lo: color,
+    danger: color, danger-soft: color, danger-border: color,
+    danger-soft-hover: color, danger-border-hover: color,
+    warning: color, warning-soft: color, warning-border: color,
+    field: color, field-hover: color, field-border: color, field-border-hover: color,
+    divider: color, elevated: color, elevated-border: color,
+    top-glint: color, canvas-top: color, banner-edge: color,
+    // Card/well outline color: the cream border in retro, the dimmer border-2 in
+    // modern themes. (Was `Theme.retro ? Palette.border : Palette.border-2`.)
+    card-border: color,
+    // When true the "selected" surface uses the solid accent (retro's SNES
+    // highlight); otherwise the soft accent-surface wash (modern themes).
+    selected-uses-base: bool,
+    // Accent lookup tables, indexed by Theme.accent (0..4 = mint/ocean/berry/coral/lavender).
+    accent-base: [color], accent-hi: [color], accent-dim: [color],
+    accent-glow: [color], accent-surface: [color],
+}
+
+// Structural / non-color personality of a theme (Layer 0, the part that lets a
+// theme change *how* things are drawn, not just their color). Components read
+// these capability flags instead of branching on theme identity (`Theme.retro`),
+// so a new theme opts into bevels / hard shadows / pixel icons purely as data.
+export struct ThemeStyle {
+    hard-shadow: bool,           // hard pixel drop-shadow vs soft blur
+    focus-glow: bool,            // accent glow ring on focused inputs
+    char-wrap: bool,             // char-wrap (pixel/CJK font) vs word-wrap
+    motion-fast: bool,           // snappier enter/transition durations
+    bubble-bounce: bool,         // message bubbles pop/bounce on enter
+    bevel: bool,                 // SNES-style raised button bevel
+    pixel-icons: bool,           // pixel-art icon glyphs vs vector paths
+    selected-inverts-text: bool, // selected list rows invert text onto a solid fill
+    pixel-select-marker: bool,   // ▶ text marker for selection vs a slim bar
+    pixel-metrics: bool,         // use the larger pixel-font size at every fs() call site
+    outline-surfaces: bool,      // draw a border on surfaces modern themes leave borderless
+    // ── Layer 1: per-family skin selectors ──────────────────────────────────
+    // Each picks which render body a dispatch slot mounts for that component
+    // family. 0 = the standard/modern body. A drastic theme bumps these to
+    // select an alternate skin (e.g. terminal lines, bracketed buttons) WITHOUT
+    // touching main.rs — see ui/CONTRACT.md. Shell is the whole-window skeleton.
+    skin-message: int, skin-button: int, skin-list: int,
+    skin-avatar: int, skin-modal: int, shell: int,
+    bracket-labels: bool,        // wrap button labels in [ ... ] (terminal/TUI look)
+}
+
 export global Theme {
-    // when true, the regular modern UI uses a warm light palette.
-    in-out property <bool> light: false;
-    // when true, the entire UI flips to a SNES-era palette + chunky typography.
-    in-out property <bool> retro: false;
-    // 0=mint, 1=ocean, 2=berry, 3=coral, 4=lavender
+    // Active theme id: 0=dark, 1=light, 2=retro. The single value Rust sets to
+    // pick a theme (mapped from the root light-theme/retro-mode props).
+    in-out property <int> id: 0;
+    // 0=mint, 1=ocean, 2=berry, 3=coral, 4=lavender — orthogonal to the theme id.
     in-out property <int> accent: 0;
     // true on macOS — lets shortcut hints render ⌘ instead of Ctrl. Set from
     // Rust at startup via the root `is-macos` property.
     in-out property <bool> is-mac: false;
+
+    // Back-compat identity flags, derived from id. Components still branching on
+    // these (structural retro-isms) read them until Phase B2/B3 tokenizes those.
+    out property <bool> retro: root.id == 2;
+    out property <bool> light: root.id == 1;
+
     out property <string> font: root.retro ? "Zpix" : "JetBrains Mono";
     // multiplier applied to every border-radius — 0 in retro for pixel-sharp corners.
     out property <float> r-scale: root.retro ? 0.0 : 1.0;
@@ -25,115 +85,216 @@ export global Theme {
     // sizes. Identity scale in both modes; per-call-site `font-size` values
     // are authoritative.
     out property <float> fs-scale: 1.0;
+
+    // The theme registry. Index = Theme.id. Add a theme by appending an entry.
+    // `out` so the settings theme-picker can render a live preview of each theme
+    // (e.g. Theme.color-packs[i].bg) without activating it.
+    out property <[ThemeColors]> color-packs: [
+        // ── 0: Dark (modern charcoal) ──
+        {
+            bg: #060708, panel: #0B0D0F, panel-2: #101316, rail: #060708, banner: #0D1014,
+            border: #1C2128, border-2: #14181D, bubble-in: #141A21,
+            text-hi: #E4E7EC, text-mid: #9CA3AF, text-lo: #6B7280, text-vlo: #4B5563,
+            hover: #0D1114, bubble-out-fg: #0A1410,
+            bevel-hi: #FFFFFF, bevel-lo: #0A0A2A,
+            danger: #FF5A5A, danger-soft: #FF5A5A20, danger-border: #5A2429,
+            danger-soft-hover: #FF5A5A33, danger-border-hover: #7A2E36,
+            warning: #F59E0B, warning-soft: #F59E0B20, warning-border: #5A3F1A,
+            field: #0A0D11, field-hover: #12171C, field-border: #1F242A, field-border-hover: #2C333B,
+            divider: #1A1F25, elevated: #0F1318, elevated-border: #242A31,
+            top-glint: #FFFFFF0A, canvas-top: #0E1216, banner-edge: #0E1418, card-border: #14181D,
+            selected-uses-base: false,
+            accent-base:    [#72F0B0, #4AA8FF, #FF6B9D, #FF8C42, #B8A1E6],
+            accent-hi:      [#8AF7C0, #6BC4FF, #FF8CB5, #FFAB6B, #D4BFF2],
+            accent-dim:     [#3DD68A, #2A7ACC, #CC3E6E, #CC6B2A, #8C75B8],
+            accent-glow:    [#72F0B018, #4AA8FF18, #FF6B9D18, #FF8C4218, #B8A1E618],
+            accent-surface: [#122820, #0F1A2E, #2E0F18, #2E150F, #1A0F2E],
+        },
+        // ── 1: Light (warm paper) ──
+        {
+            bg: #F6F2EA, panel: #FFFFFF, panel-2: #F8FAFC, rail: #ECE6DA, banner: #ECFDF3,
+            border: #D7D0C3, border-2: #E7DFD2, bubble-in: #FFFFFF,
+            text-hi: #1F2937, text-mid: #4B5563, text-lo: #6B7280, text-vlo: #9CA3AF,
+            hover: #F0EADF, bubble-out-fg: #FFFFFF,
+            bevel-hi: #FFFFFF, bevel-lo: #D8CFBF,
+            danger: #C62828, danger-soft: #C628281A, danger-border: #E3B8B8,
+            danger-soft-hover: #C628282E, danger-border-hover: #D49C9C,
+            warning: #B45309, warning-soft: #B453091A, warning-border: #E2C9A4,
+            field: #FFFFFF, field-hover: #F8FAFC, field-border: #D7D0C3, field-border-hover: #C5BCAD,
+            divider: #E7DFD2, elevated: #FFFFFF, elevated-border: #D7D0C3,
+            top-glint: #FFFFFFB8, canvas-top: #FFFDF7, banner-edge: #F6F2EA, card-border: #E7DFD2,
+            selected-uses-base: false,
+            accent-base:    [#16855F, #0D5AA0, #C73E6E, #C45C1A, #7B5FB0],
+            accent-hi:      [#1EA875, #1A70B8, #E05585, #D4712E, #9678C9],
+            accent-dim:     [#0F6B4B, #084578, #9E2E56, #9E4710, #5E4696],
+            accent-glow:    [#16855F22, #0D5AA022, #C73E6E22, #C45C1A22, #7B5FB022],
+            accent-surface: [#DFF5EA, #E0F0FF, #FFE0EC, #FFF0E0, #F0E8FF],
+        },
+        // ── 2: Retro (SNES-era indigo) ──
+        {
+            bg: #0d0d28, panel: #2B2B7F, panel-2: #3838A8, rail: #0E0E36, banner: #3838A8,
+            border: #E8E0C4, border-2: #9090E0, bubble-in: #1F1F6E,
+            text-hi: #F4EFDD, text-mid: #DDDAEE, text-lo: #B5B5E8, text-vlo: #5858A4,
+            hover: #3838A8, bubble-out-fg: #1A1A4E,
+            bevel-hi: #F4EFDD, bevel-lo: #0A0A2A,
+            danger: #FF5A5A, danger-soft: #FF5A5A30, danger-border: #FF5A5A,
+            danger-soft-hover: #FF5A5A48, danger-border-hover: #FF5A5A,
+            warning: #FFD75A, warning-soft: #FFD75A30, warning-border: #FFD75A,
+            field: #0E0E36, field-hover: #2B2B7F, field-border: #E8E0C4, field-border-hover: #E8E0C4,
+            divider: #E8E0C4, elevated: #2B2B7F, elevated-border: #E8E0C4,
+            top-glint: #FFFFFF0A, canvas-top: #0E1216, banner-edge: #0E1418, card-border: #E8E0C4,
+            selected-uses-base: true,
+            accent-base:    [#FFD93D, #6B8CFF, #FF6B9D, #FF8C42, #C9A0DC],
+            accent-hi:      [#FFE873, #8CA5FF, #FF8CB5, #FFAB6B, #DEB8F0],
+            accent-dim:     [#C9A521, #4A6BCC, #CC3E6E, #CC6B2A, #A07AB8],
+            accent-glow:    [#FFD93D40, #6B8CFF40, #FF6B9D40, #FF8C4240, #C9A0DC40],
+            accent-surface: [#FFD93D30, #6B8CFF30, #FF6B9D30, #FF8C4230, #C9A0DC30],
+        },
+        // ── 3: Terminal (green-on-black TUI) ──
+        {
+            bg: #0A0E0A, panel: #0C120C, panel-2: #0F160F, rail: #080C08, banner: #0C120C,
+            border: #1B3A1B, border-2: #142814, bubble-in: #0C120C,
+            text-hi: #33FF66, text-mid: #2BCC52, text-lo: #1F9E3E, text-vlo: #176B2C,
+            hover: #0F1A0F, bubble-out-fg: #0A0E0A,
+            bevel-hi: #33FF66, bevel-lo: #0A0E0A,
+            danger: #FF5555, danger-soft: #FF555520, danger-border: #5A2424,
+            danger-soft-hover: #FF555533, danger-border-hover: #7A2E2E,
+            warning: #FFCC33, warning-soft: #FFCC3320, warning-border: #5A4F1A,
+            field: #0A0E0A, field-hover: #0F160F, field-border: #1B3A1B, field-border-hover: #2B5A2B,
+            divider: #142814, elevated: #0C120C, elevated-border: #1B3A1B,
+            top-glint: #33FF6610, canvas-top: #0A0E0A, banner-edge: #0A0E0A, card-border: #1B3A1B,
+            selected-uses-base: false,
+            accent-base:    [#33FF66, #33CCFF, #FF66AA, #FFAA33, #BB88FF],
+            accent-hi:      [#66FF99, #66DDFF, #FF99CC, #FFCC66, #CCAAFF],
+            accent-dim:     [#22AA44, #2299CC, #CC4488, #CC8822, #8866CC],
+            accent-glow:    [#33FF6618, #33CCFF18, #FF66AA18, #FFAA3318, #BB88FF18],
+            accent-surface: [#0E2614, #0A1E2E, #2E0E1E, #2E200A, #1A0E2E],
+        },
+    ];
+    // The active theme's resolved color set — read by Palette below.
+    out property <ThemeColors> c: root.color-packs[root.id];
+
+    // Structural personality registry. Index = Theme.id, parallel to color-packs.
+    property <[ThemeStyle]> style-packs: [
+        // 0: Dark — modern soft shadows, vector icons, glow on focus.
+        { hard-shadow: false, focus-glow: true, char-wrap: false, motion-fast: false,
+          bubble-bounce: false, bevel: false, pixel-icons: false,
+          selected-inverts-text: false, pixel-select-marker: false, pixel-metrics: false,
+          outline-surfaces: false,
+          skin-message: 0, skin-button: 0, skin-list: 0, skin-avatar: 0, skin-modal: 0, shell: 0,
+          bracket-labels: false },
+        // 1: Light — same structural personality as dark.
+        { hard-shadow: false, focus-glow: true, char-wrap: false, motion-fast: false,
+          bubble-bounce: false, bevel: false, pixel-icons: false,
+          selected-inverts-text: false, pixel-select-marker: false, pixel-metrics: false,
+          outline-surfaces: false,
+          skin-message: 0, skin-button: 0, skin-list: 0, skin-avatar: 0, skin-modal: 0, shell: 0,
+          bracket-labels: false },
+        // 2: Retro — hard pixel shadows, bevels, pixel icons, snappy motion, pixel metrics.
+        { hard-shadow: true, focus-glow: false, char-wrap: true, motion-fast: true,
+          bubble-bounce: true, bevel: true, pixel-icons: true,
+          selected-inverts-text: true, pixel-select-marker: true, pixel-metrics: true,
+          outline-surfaces: true,
+          skin-message: 0, skin-button: 0, skin-list: 0, skin-avatar: 0, skin-modal: 0, shell: 0,
+          bracket-labels: false },
+        // 3: Terminal — flat (no shadows/bevels), monospace, drastic skins: terminal
+        // message lines + IRC chat list + bracketed buttons. 3-pane shell kept.
+        { hard-shadow: false, focus-glow: false, char-wrap: false, motion-fast: true,
+          bubble-bounce: false, bevel: false, pixel-icons: false,
+          selected-inverts-text: false, pixel-select-marker: true, pixel-metrics: false,
+          outline-surfaces: false,
+          skin-message: 1, skin-button: 0, skin-list: 1, skin-avatar: 0, skin-modal: 0, shell: 0,
+          bracket-labels: true },
+    ];
+    out property <ThemeStyle> s: root.style-packs[root.id];
+
+    // Flat capability flags — what components actually read. Never branch on
+    // `Theme.retro`/`Theme.light` for styling; branch on these.
+    out property <bool> hard-shadow:           root.s.hard-shadow;
+    out property <bool> focus-glow:            root.s.focus-glow;
+    out property <bool> char-wrap:             root.s.char-wrap;
+    out property <bool> motion-fast:           root.s.motion-fast;
+    out property <bool> bubble-bounce:         root.s.bubble-bounce;
+    out property <bool> bevel:                 root.s.bevel;
+    out property <bool> pixel-icons:           root.s.pixel-icons;
+    out property <bool> selected-inverts-text: root.s.selected-inverts-text;
+    out property <bool> pixel-select-marker:   root.s.pixel-select-marker;
+    out property <bool> pixel-metrics:         root.s.pixel-metrics;
+    out property <bool> outline-surfaces:      root.s.outline-surfaces;
+    out property <int>  skin-message:          root.s.skin-message;
+    out property <int>  skin-button:           root.s.skin-button;
+    out property <int>  skin-list:             root.s.skin-list;
+    out property <int>  skin-avatar:           root.s.skin-avatar;
+    out property <int>  skin-modal:            root.s.skin-modal;
+    out property <int>  shell:                 root.s.shell;
+    out property <bool> bracket-labels:        root.s.bracket-labels;
+
+    // Font-size helpers. A call site declares both metrics; the active theme's
+    // `pixel-metrics` flag picks one. `fs` applies fs-scale (for the former
+    // `(... ) * Theme.fs-scale` sites); `fsr` is the raw, unscaled variant.
+    // Replaces every `(Theme.retro ? PIXEL : MODERN) [* Theme.fs-scale]` ternary.
+    public pure function fs(modern: length, pixel: length) -> length {
+        (root.pixel-metrics ? pixel : modern) * root.fs-scale
+    }
+    public pure function fsr(modern: length, pixel: length) -> length {
+        root.pixel-metrics ? pixel : modern
+    }
 }
 
 export global Palette {
-    // SNES-era palette: deep indigo canvas, vivid Mario-yellow accent, crisp white text.
-    // Modern palettes: layered charcoal or warm paper surfaces with a mint accent.
-    out property <color> bg:        Theme.retro ? #0d0d28 : (Theme.light ? #F6F2EA : #060708);
-    out property <color> panel:     Theme.retro ? #2B2B7F : (Theme.light ? #FFFFFF : #0B0D0F);
-    out property <color> panel-2:   Theme.retro ? #3838A8 : (Theme.light ? #F8FAFC : #101316);
-    out property <color> rail:      Theme.retro ? #0E0E36 : (Theme.light ? #ECE6DA : #060708);
-    out property <color> banner:    Theme.retro ? #3838A8 : (Theme.light ? #ECFDF3 : #0D1014);
-    // Retro borders: warm cream instead of pure white to cut glare against the indigo bg.
-    out property <color> border:    Theme.retro ? #E8E0C4 : (Theme.light ? #D7D0C3 : #1C2128);
-    out property <color> border-2:  Theme.retro ? #9090E0 : (Theme.light ? #E7DFD2 : #14181D);
-    // Retro bubble: deep SNES-dialog indigo so cream body text reads cleanly.
-    // (The old #4848C8 was too light/saturated to host text comfortably.)
-    out property <color> bubble-in: Theme.retro ? #1F1F6E : (Theme.light ? #FFFFFF : #141A21);
+    out property <color> bg:        Theme.c.bg;
+    out property <color> panel:     Theme.c.panel;
+    out property <color> panel-2:   Theme.c.panel-2;
+    out property <color> rail:      Theme.c.rail;
+    out property <color> banner:    Theme.c.banner;
+    out property <color> border:    Theme.c.border;
+    out property <color> border-2:  Theme.c.border-2;
+    out property <color> bubble-in: Theme.c.bubble-in;
 
-    // Accent color lookup tables — indexed by Theme.accent (0..4).
-    // Each entry is: [mint, ocean, berry, coral, lavender].
-    property <[color]> accent-base: [
-        Theme.retro ? #FFD93D : (Theme.light ? #16855F : #72F0B0),
-        Theme.retro ? #6B8CFF : (Theme.light ? #0D5AA0 : #4AA8FF),
-        Theme.retro ? #FF6B9D : (Theme.light ? #C73E6E : #FF6B9D),
-        Theme.retro ? #FF8C42 : (Theme.light ? #C45C1A : #FF8C42),
-        Theme.retro ? #C9A0DC : (Theme.light ? #7B5FB0 : #B8A1E6),
-    ];
-    property <[color]> accent-hi: [
-        Theme.retro ? #FFE873 : (Theme.light ? #1EA875 : #8AF7C0),
-        Theme.retro ? #8CA5FF : (Theme.light ? #1A70B8 : #6BC4FF),
-        Theme.retro ? #FF8CB5 : (Theme.light ? #E05585 : #FF8CB5),
-        Theme.retro ? #FFAB6B : (Theme.light ? #D4712E : #FFAB6B),
-        Theme.retro ? #DEB8F0 : (Theme.light ? #9678C9 : #D4BFF2),
-    ];
-    property <[color]> accent-dim: [
-        Theme.retro ? #C9A521 : (Theme.light ? #0F6B4B : #3DD68A),
-        Theme.retro ? #4A6BCC : (Theme.light ? #084578 : #2A7ACC),
-        Theme.retro ? #CC3E6E : (Theme.light ? #9E2E56 : #CC3E6E),
-        Theme.retro ? #CC6B2A : (Theme.light ? #9E4710 : #CC6B2A),
-        Theme.retro ? #A07AB8 : (Theme.light ? #5E4696 : #8C75B8),
-    ];
-    property <[color]> accent-glow: [
-        Theme.retro ? #FFD93D40 : (Theme.light ? #16855F22 : #72F0B018),
-        Theme.retro ? #6B8CFF40 : (Theme.light ? #0D5AA022 : #4AA8FF18),
-        Theme.retro ? #FF6B9D40 : (Theme.light ? #C73E6E22 : #FF6B9D18),
-        Theme.retro ? #FF8C4240 : (Theme.light ? #C45C1A22 : #FF8C4218),
-        Theme.retro ? #C9A0DC40 : (Theme.light ? #7B5FB022 : #B8A1E618),
-    ];
-    property <[color]> accent-surface: [
-        Theme.retro ? #FFD93D30 : (Theme.light ? #DFF5EA : #122820),
-        Theme.retro ? #6B8CFF30 : (Theme.light ? #E0F0FF : #0F1A2E),
-        Theme.retro ? #FF6B9D30 : (Theme.light ? #FFE0EC : #2E0F18),
-        Theme.retro ? #FF8C4230 : (Theme.light ? #FFF0E0 : #2E150F),
-        Theme.retro ? #C9A0DC30 : (Theme.light ? #F0E8FF : #1A0F2E),
-    ];
+    // Accent resolution: active pack's table indexed by the orthogonal accent.
+    out property <color> mint:      Theme.c.accent-base[Theme.accent];
+    out property <color> mint-hi:   Theme.c.accent-hi[Theme.accent];
+    out property <color> mint-dim:  Theme.c.accent-dim[Theme.accent];
+    out property <color> mint-glow: Theme.c.accent-glow[Theme.accent];
+    out property <color> mint-surface: Theme.c.accent-surface[Theme.accent];
 
-    out property <color> mint:      accent-base[Theme.accent];
-    out property <color> mint-hi:   accent-hi[Theme.accent];
-    out property <color> mint-dim:  accent-dim[Theme.accent];
-    out property <color> mint-glow: accent-glow[Theme.accent];
-    out property <color> mint-surface: accent-surface[Theme.accent];
-    // Soft warm cream for primary text — easier on the eyes than pure white at
-    // the chunky Press Start 2P sizes used in retro.
-    out property <color> text-hi:   Theme.retro ? #F4EFDD : (Theme.light ? #1F2937 : #E4E7EC);
-    out property <color> text-mid:  Theme.retro ? #DDDAEE : (Theme.light ? #4B5563 : #9CA3AF);
-    // Secondary text — bumped brighter in retro (#9090D8 → #B5B5E8) so chat previews,
-    // npubs, timestamps stay readable against the dark indigo bg.
-    out property <color> text-lo:   Theme.retro ? #B5B5E8 : (Theme.light ? #6B7280 : #6B7280);
-    out property <color> text-vlo:  Theme.retro ? #5858A4 : (Theme.light ? #9CA3AF : #4B5563);
-    out property <color> selected:  Theme.retro ? accent-base[Theme.accent] : accent-surface[Theme.accent];
-    out property <color> hover:     Theme.retro ? #3838A8 : (Theme.light ? #F0EADF : #0D1114);
-    out property <color> bubble-out-fg: Theme.retro ? #1A1A4E : (Theme.light ? #FFFFFF : #0A1410);
-    // SNES menu: hard pixel shadow + button bevel colors.
+    out property <color> text-hi:   Theme.c.text-hi;
+    out property <color> text-mid:  Theme.c.text-mid;
+    out property <color> text-lo:   Theme.c.text-lo;
+    out property <color> text-vlo:  Theme.c.text-vlo;
+    out property <color> selected:  Theme.c.selected-uses-base
+        ? Theme.c.accent-base[Theme.accent] : Theme.c.accent-surface[Theme.accent];
+    out property <color> hover:     Theme.c.hover;
+    out property <color> bubble-out-fg: Theme.c.bubble-out-fg;
+    // Hard pixel shadow color — constant across themes.
     out property <color> shadow:    #000000;
-    // Bevel highlight matches the cream borders so the SNES button edge reads
-    // as warm material rather than fluorescent glare.
-    out property <color> bevel-hi:  Theme.retro ? #F4EFDD : #FFFFFF;
-    out property <color> bevel-lo:  Theme.light ? #D8CFBF : #0A0A2A;
+    out property <color> bevel-hi:  Theme.c.bevel-hi;
+    out property <color> bevel-lo:  Theme.c.bevel-lo;
 
-    // Destructive/error accent. One token per theme: the dark-mode #FF5A5A
-    // washes out on the light paper surfaces, so light gets a deeper red.
-    out property <color> danger:      Theme.retro ? #FF5A5A : (Theme.light ? #C62828 : #FF5A5A);
-    out property <color> danger-soft: Theme.retro ? #FF5A5A30 : (Theme.light ? #C628281A : #FF5A5A20);
+    out property <color> danger:      Theme.c.danger;
+    out property <color> danger-soft: Theme.c.danger-soft;
     // Danger *inside* the outgoing accent bubble: that bubble is a dark
-    // saturated accent even in light theme, so this stays bright everywhere
-    // (the light-theme deep red would vanish on it).
+    // saturated accent even in light theme, so this stays bright everywhere.
     out property <color> danger-on-bubble: #FF5A5A;
-    // Border for danger surfaces (danger-zone cards, error fields). The dark
-    // value is a muted maroon so the edge doesn't shout louder than the text.
-    out property <color> danger-border: Theme.retro ? #FF5A5A : (Theme.light ? #E3B8B8 : #5A2429);
-    out property <color> danger-soft-hover:   Theme.retro ? #FF5A5A48 : (Theme.light ? #C628282E : #FF5A5A33);
-    out property <color> danger-border-hover: Theme.retro ? #FF5A5A : (Theme.light ? #D49C9C : #7A2E36);
+    out property <color> danger-border: Theme.c.danger-border;
+    out property <color> danger-soft-hover:   Theme.c.danger-soft-hover;
+    out property <color> danger-border-hover: Theme.c.danger-border-hover;
 
-    // Warning accent (partial relay connectivity, restart-required banners).
-    // Dark keeps the familiar amber; light needs a deeper amber to survive the
-    // warm paper bg; retro goes full SNES coin-yellow.
-    out property <color> warning:      Theme.retro ? #FFD75A : (Theme.light ? #B45309 : #F59E0B);
-    out property <color> warning-soft: Theme.retro ? #FFD75A30 : (Theme.light ? #B453091A : #F59E0B20);
-    out property <color> warning-border: Theme.retro ? #FFD75A : (Theme.light ? #E2C9A4 : #5A3F1A);
+    out property <color> warning:      Theme.c.warning;
+    out property <color> warning-soft: Theme.c.warning-soft;
+    out property <color> warning-border: Theme.c.warning-border;
 
-    out property <color> field: Theme.retro ? #0E0E36 : (Theme.light ? #FFFFFF : #0A0D11);
-    out property <color> field-hover: Theme.retro ? #2B2B7F : (Theme.light ? #F8FAFC : #12171C);
-    out property <color> field-border: Theme.retro ? #E8E0C4 : (Theme.light ? #D7D0C3 : #1F242A);
-    out property <color> field-border-hover: Theme.retro ? #E8E0C4 : (Theme.light ? #C5BCAD : #2C333B);
-    out property <color> divider: Theme.retro ? #E8E0C4 : (Theme.light ? #E7DFD2 : #1A1F25);
-    out property <color> elevated: Theme.retro ? #2B2B7F : (Theme.light ? #FFFFFF : #0F1318);
-    out property <color> elevated-border: Theme.retro ? #E8E0C4 : (Theme.light ? #D7D0C3 : #242A31);
-    out property <color> top-glint: Theme.light ? #FFFFFFB8 : #FFFFFF0A;
-    out property <color> canvas-top: Theme.light ? #FFFDF7 : #0E1216;
-    out property <color> banner-edge: Theme.light ? #F6F2EA : #0E1418;
+    out property <color> field: Theme.c.field;
+    out property <color> field-hover: Theme.c.field-hover;
+    out property <color> field-border: Theme.c.field-border;
+    out property <color> field-border-hover: Theme.c.field-border-hover;
+    out property <color> divider: Theme.c.divider;
+    out property <color> elevated: Theme.c.elevated;
+    out property <color> elevated-border: Theme.c.elevated-border;
+    out property <color> top-glint: Theme.c.top-glint;
+    out property <color> canvas-top: Theme.c.canvas-top;
+    out property <color> banner-edge: Theme.c.banner-edge;
+    out property <color> card-border: Theme.c.card-border;
 }
 
 // One signed-in account in the account switcher. All accounts stay connected

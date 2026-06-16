@@ -5,7 +5,7 @@ export component Avatar inherits Rectangle {
     in property <color> color-a: #6B66E4;
     in property <color> color-b: #4338CA;
     in property <length> size: 36px;
-    in property <length> font-size: Theme.retro ? 16px : 11px;
+    in property <length> font-size: Theme.fsr(11px, 16px);
     // Optional profile picture. When `has-picture` is true, the Image is
     // rendered over the gradient (so a transparent/loading texture still
     // shows the palette underneath). Rust sets both together.
@@ -17,10 +17,10 @@ export component Avatar inherits Rectangle {
     border-width: Theme.retro ? Theme.border-w : 1.5px;
     border-color: Theme.retro ? Palette.bevel-hi : (Theme.light ? #00000015 : #FFFFFF20);
     clip: true;
-    drop-shadow-color: Theme.retro ? Palette.shadow : #00000060;
-    drop-shadow-offset-x: Theme.retro ? 2px : 0px;
-    drop-shadow-offset-y: Theme.retro ? 2px : 2px;
-    drop-shadow-blur: Theme.retro ? 0px : 6px;
+    drop-shadow-color: Theme.hard-shadow ? Palette.shadow : #00000060;
+    drop-shadow-offset-x: Theme.hard-shadow ? 2px : 0px;
+    drop-shadow-offset-y: Theme.hard-shadow ? 2px : 2px;
+    drop-shadow-blur: Theme.hard-shadow ? 0px : 6px;
     if !root.has-picture : Text {
         text: root.initials;
         color: white;

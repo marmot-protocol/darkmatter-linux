@@ -11,8 +11,8 @@ export component StatusBar inherits Rectangle {
     Rectangle {
         y: 0;
         width: parent.width;
-        height: Theme.retro ? Theme.border-w : 1px;
-        background: Theme.retro ? Palette.border : Palette.border-2;
+        height: Theme.border-w;
+        background: Palette.card-border;
     }
 
     HorizontalLayout {
@@ -32,7 +32,7 @@ export component StatusBar inherits Rectangle {
                 background: root.relaysConnected > 0
                     ? Palette.mint-dim
                     : (root.relaysTotal > 0 ? Palette.warning : Palette.text-vlo);
-                drop-shadow-blur: Theme.retro ? 0px : 4px;
+                drop-shadow-blur: Theme.hard-shadow ? 0px : 4px;
                 drop-shadow-color: root.relaysConnected > 0 ? Palette.mint-glow : transparent;
             }
 
@@ -41,7 +41,7 @@ export component StatusBar inherits Rectangle {
                     ? @tr("ONLINE")
                     : (root.relaysTotal > 0 ? @tr("CONNECTING") : @tr("OFFLINE"));
                 color: Palette.text-hi;
-                font-size: (Theme.retro ? 14px : 10px) * Theme.fs-scale;
+                font-size: Theme.fs(10px, 14px);
                 font-weight: 700;
                 letter-spacing: 1.2px;
                 vertical-alignment: center;
@@ -51,7 +51,7 @@ export component StatusBar inherits Rectangle {
         Text {
             text: root.relaysConnected + "/" + root.relaysTotal + " " + @tr("RELAYS");
             color: Palette.text-mid;
-            font-size: (Theme.retro ? 14px : 10px) * Theme.fs-scale;
+            font-size: Theme.fs(10px, 14px);
             font-weight: 700;
             letter-spacing: 1.2px;
             vertical-alignment: center;
@@ -64,7 +64,7 @@ export component StatusBar inherits Rectangle {
         Text {
             text: "Ctrl+K";
             color: Palette.text-mid;
-            font-size: (Theme.retro ? 14px : 10px) * Theme.fs-scale;
+            font-size: Theme.fs(10px, 14px);
             font-weight: 700;
             letter-spacing: 1.0px;
             vertical-alignment: center;
@@ -73,14 +73,14 @@ export component StatusBar inherits Rectangle {
         Text {
             text: "·";
             color: Palette.text-vlo;
-            font-size: (Theme.retro ? 14px : 10px) * Theme.fs-scale;
+            font-size: Theme.fs(10px, 14px);
             vertical-alignment: center;
         }
 
         Text {
             text: @tr("COMMAND");
             color: Palette.text-mid;
-            font-size: (Theme.retro ? 14px : 10px) * Theme.fs-scale;
+            font-size: Theme.fs(10px, 14px);
             font-weight: 700;
             letter-spacing: 1.4px;
             vertical-alignment: center;

@@ -7,10 +7,12 @@ import { GroupCard } from "../shells/group-card.slint";
 import { PrefRow } from "pref-row.slint";
 import { Toggle } from "toggle.slint";
 import { AccentPicker } from "accent-picker.slint";
+import { ThemePicker } from "theme-picker.slint";
 
 export component AppearancePane inherits DetailPage {
     in-out property <bool> light-theme: false;
     in-out property <bool> retro-mode: false;
+    in-out property <bool> terminal-mode: false;
     in-out property <int> accent-color: 0;
     in-out property <bool> outgoing-on-right: true;
     callback theme-mode-selected(string);
@@ -36,14 +38,10 @@ export component AppearancePane inherits DetailPage {
         GroupCard {
             PrefRow {
                 label: @tr("Theme");
-                value: root.retro-mode ? @tr("Retro") : (root.light-theme ? @tr("Light") : @tr("Dark"));
-            }
-            PrefRow {
-                label: @tr("Light theme");
-                sublabel: @tr("Use a warm paper palette across the app.");
-                Toggle {
-                    on <=> root.light-theme;
-                    toggled => { root.theme-mode-selected(root.light-theme ? "light" : "dark"); }
+                sublabel: @tr("Pick the whole app's look.");
+                ThemePicker {
+                    selected-id: root.terminal-mode ? 3 : (root.retro-mode ? 2 : (root.light-theme ? 1 : 0));
+                    theme-mode-selected(mode) => { root.theme-mode-selected(mode); }
                 }
             }
             PrefRow {
@@ -53,23 +51,6 @@ export component AppearancePane inherits DetailPage {
                 AccentPicker {
                     selected <=> root.accent-color;
                     accent-selected(idx) => { root.accent-selected(idx); }
-                }
-            }
-        }
-    }
-
-    Section {
-        label: @tr("FUN");
-        GroupCard {
-            PrefRow {
-                label: @tr("Retro mode");
-                sublabel: @tr("Turn the whole app into SNES style.");
-                show-divider: false;
-                Toggle {
-                    on <=> root.retro-mode;
-                    toggled => {
-                        root.theme-mode-selected(root.retro-mode ? "retro" : (root.light-theme ? "light" : "dark"));
-                    }
                 }
             }
         }

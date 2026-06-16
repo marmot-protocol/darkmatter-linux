@@ -31,7 +31,7 @@ component FieldRow inherits Rectangle {
             background: Palette.bg;
             border-width: 1px;
             border-color: input.has-focus ? Palette.mint-dim : Palette.border-2;
-            drop-shadow-blur: input.has-focus && !Theme.retro ? 10px : 0px;
+            drop-shadow-blur: input.has-focus && Theme.focus-glow ? 10px : 0px;
             drop-shadow-color: Palette.mint-glow;
             animate border-color { duration: 140ms; easing: ease-out; }
             border-radius: (6px) * Theme.r-scale;
@@ -82,7 +82,7 @@ component PictureField inherits Rectangle {
                 background: Palette.bg;
                 border-width: 1px;
                 border-color: input.has-focus ? Palette.mint-dim : Palette.border-2;
-                drop-shadow-blur: input.has-focus && !Theme.retro ? 10px : 0px;
+                drop-shadow-blur: input.has-focus && Theme.focus-glow ? 10px : 0px;
                 drop-shadow-color: Palette.mint-glow;
                 animate border-color { duration: 140ms; easing: ease-out; }
                 border-radius: (6px) * Theme.r-scale;
@@ -122,7 +122,7 @@ component MetaChip inherits Rectangle {
     height: 22px;
     background: Theme.retro ? Palette.panel-2 : Palette.mint-surface;
     border-radius: (11px) * Theme.r-scale;
-    border-width: Theme.retro ? Theme.border-w : 1px;
+    border-width: Theme.border-w;
     border-color: Theme.retro ? Palette.border : transparent;
     HorizontalLayout {
         padding-left: 9px; padding-right: 10px;
@@ -322,10 +322,10 @@ export component ProfilePage inherits Rectangle {
                 background: Palette.panel;
                 border-radius: (12px) * Theme.r-scale;
                 border-width: Theme.border-w;
-                border-color: Theme.retro ? Palette.border : Palette.border-2;
-                drop-shadow-color: Theme.retro ? Palette.shadow : transparent;
-                drop-shadow-offset-x: Theme.retro ? 3px : 0px;
-                drop-shadow-offset-y: Theme.retro ? 3px : 0px;
+                border-color: Palette.card-border;
+                drop-shadow-color: Theme.hard-shadow ? Palette.shadow : transparent;
+                drop-shadow-offset-x: Theme.hard-shadow ? 3px : 0px;
+                drop-shadow-offset-y: Theme.hard-shadow ? 3px : 0px;
                 clip: true;
 
                 // Banner wash.
@@ -341,7 +341,7 @@ export component ProfilePage inherits Rectangle {
                         y: parent.height - 1px;
                         width: parent.width;
                         height: 1px;
-                        background: Theme.retro ? Palette.border : Palette.border-2;
+                        background: Palette.card-border;
                     }
                 }
 
@@ -456,8 +456,8 @@ export component ProfilePage inherits Rectangle {
                                 height: 168px;
                                 background: white;
                                 border-radius: (8px) * Theme.r-scale;
-                                border-width: Theme.retro ? Theme.border-w : 1px;
-                                border-color: Theme.retro ? Palette.border : Palette.border-2;
+                                border-width: Theme.border-w;
+                                border-color: Palette.card-border;
                                 Image {
                                     width: 152px;
                                     height: 152px;

@@ -10,13 +10,13 @@ export component ContactListItem inherits Rectangle {
     height: 64px;
     background: root.selected ? Palette.selected : (touch.has-hover ? Palette.hover : transparent);
     border-radius: (8px) * Theme.r-scale;
-    border-width: Theme.retro && root.selected ? Theme.border-w : (root.selected && !Theme.retro ? 1px : 0px);
-    border-color: root.selected && !Theme.retro ? Palette.mint-glow : Palette.border;
+    border-width: Theme.selected-inverts-text && root.selected ? Theme.border-w : (root.selected && !Theme.selected-inverts-text ? 1px : 0px);
+    border-color: root.selected && !Theme.selected-inverts-text ? Palette.mint-glow : Palette.border;
     animate background, border-color { duration: 140ms; easing: ease-out; }
 
     // Mint accent bar — only in normal mode; in retro the yellow bar would vanish
     // against the yellow selected tile.
-    if !Theme.retro : Rectangle {
+    if !Theme.pixel-select-marker : Rectangle {
         x: 0;
         width: 3px;
         height: root.selected ? 40px : 0px;
@@ -30,7 +30,7 @@ export component ContactListItem inherits Rectangle {
         animate opacity { duration: 160ms; easing: ease-out; }
     }
     // Retro selection chevron — slides in from outside.
-    if Theme.retro : Text {
+    if Theme.pixel-select-marker : Text {
         x: root.selected ? 2px : -14px;
         y: (parent.height - self.height) / 2;
         text: "▶";
@@ -56,7 +56,7 @@ export component ContactListItem inherits Rectangle {
                 color-b: root.data.av-b;
                 picture: root.data.picture;
                 has-picture: root.data.has-picture;
-                font-size: (Theme.retro ? 16px : 11px) * Theme.fs-scale;
+                font-size: Theme.fs(11px, 16px);
             }
             if root.data.online : Rectangle {
                 x: parent.width - 10px;
@@ -81,7 +81,7 @@ export component ContactListItem inherits Rectangle {
                 Text {
                     text: root.data.name;
                     // Cream on yellow is invisible in retro — switch to dark indigo when selected.
-                    color: Theme.retro && root.selected ? Palette.bubble-out-fg : Palette.text-hi;
+                    color: Theme.selected-inverts-text && root.selected ? Palette.bubble-out-fg : Palette.text-hi;
                     font-size: (13px) * Theme.fs-scale;
                     font-weight: 700;
                     font-family: Theme.font;
@@ -89,14 +89,14 @@ export component ContactListItem inherits Rectangle {
                 }
                 if root.data.verified : CheckMark {
                     // Yellow check on yellow tile is invisible — go indigo when selected in retro.
-                    stroke: Theme.retro && root.selected ? Palette.bubble-out-fg : Palette.mint;
+                    stroke: Theme.selected-inverts-text && root.selected ? Palette.bubble-out-fg : Palette.mint;
                     double: false;
                     y: 4px;
                 }
             }
             Text {
                 text: root.data.npub-short;
-                color: Theme.retro && root.selected ? Palette.bubble-out-fg : Palette.text-lo;
+                color: Theme.selected-inverts-text && root.selected ? Palette.bubble-out-fg : Palette.text-lo;
                 font-size: (10px) * Theme.fs-scale;
                 font-family: Theme.font;
                 overflow: elide;

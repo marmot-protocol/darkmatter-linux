@@ -91,12 +91,12 @@ export component MessageContextMenu inherits Rectangle {
         animate y { duration: 120ms; easing: ease-out; }
         background: Palette.elevated;
         border-radius: (10px) * Theme.r-scale;
-        border-width: Theme.retro ? Theme.border-w : 1px;
+        border-width: Theme.border-w;
         border-color: Palette.elevated-border;
-        drop-shadow-color: Theme.retro ? Palette.shadow : #00000050;
-        drop-shadow-offset-x: Theme.retro ? 2px : 0px;
+        drop-shadow-color: Theme.hard-shadow ? Palette.shadow : #00000050;
+        drop-shadow-offset-x: Theme.hard-shadow ? 2px : 0px;
         drop-shadow-offset-y: 2px;
-        drop-shadow-blur: Theme.retro ? 0px : 14px;
+        drop-shadow-blur: Theme.hard-shadow ? 0px : 14px;
 
         // Swallow any click inside the panel that no item claims. Wrapping
         // the content (rather than being a sibling) guarantees the nested

@@ -18,7 +18,7 @@ export component EditHistoryModal inherits Modal {
         vertical-stretch: 1;
         for v in root.versions : Rectangle {
             background: Palette.panel;
-            border-width: Theme.retro ? Theme.border-w : 1px;
+            border-width: Theme.border-w;
             border-color: Palette.border-2;
             border-radius: (8px) * Theme.r-scale;
             height: item-layout.preferred-height + 16px;

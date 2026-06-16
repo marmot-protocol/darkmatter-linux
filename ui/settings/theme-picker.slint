@@ -1,0 +1,152 @@
+// Theme dropdown with live previews (Settings → Appearance).
+//
+// Replaces the old per-theme toggles. Lists every registered theme; each row
+// shows a mini preview built from that theme's actual ThemeColors data
+// (Theme.color-packs[id]) so the swatch always matches the real palette. Picking
+// a row emits theme-mode-selected(mode) — the same callback the toggles used, so
+// no Rust changes. Add a theme → just append a name+mode pair below.
+import { Palette, Theme } from "../tokens.slint";
+
+// Mini app-preview chip for one theme id: canvas + side panel + accent dot + text bar.
+component ThemeSwatch inherits Rectangle {
+    in property <int> pack-id: 0;
+    width: 46px;
+    height: 30px;
+    border-radius: 5px * Theme.r-scale;
+    clip: true;
+    background: Theme.color-packs[root.pack-id].bg;
+    border-width: 1px;
+    border-color: Theme.color-packs[root.pack-id].border;
+    // Side panel strip.
+    Rectangle {
+        x: 0; y: 0; width: 15px; height: parent.height;
+        background: Theme.color-packs[root.pack-id].panel;
+    }
+    // Accent dot.
+    Rectangle {
+        x: 22px; y: 7px; width: 8px; height: 8px;
+        border-radius: 4px * Theme.r-scale;
+        background: Theme.color-packs[root.pack-id].accent-base[Theme.accent];
+    }
+    // Text bar.
+    Rectangle {
+        x: 22px; y: 19px; width: 17px; height: 4px;
+        border-radius: 2px * Theme.r-scale;
+        background: Theme.color-packs[root.pack-id].text-hi;
+    }
+}
+
+export component ThemePicker inherits Rectangle {
+    // Active theme id (0=dark, 1=light, 2=retro, 3=terminal), computed by the caller.
+    in property <int> selected-id: 0;
+    callback theme-mode-selected(string);
+
+    property <[string]> names: [@tr("Dark"), @tr("Light"), @tr("Retro"), @tr("Terminal")];
+    property <[string]> modes: ["dark", "light", "retro", "terminal"];
+
+    width: 184px;
+    height: 38px;
+
+    // ── Trigger ──
+    trigger := Rectangle {
+        background: trig-touch.has-hover ? Palette.field-hover : Palette.field;
+        border-width: Theme.border-w;
+        border-color: trig-touch.has-hover ? Palette.field-border-hover : Palette.field-border;
+        border-radius: 8px * Theme.r-scale;
+        animate background, border-color { duration: 120ms; }
+        HorizontalLayout {
+            padding-left: 8px; padding-right: 10px;
+            spacing: 9px;
+            alignment: start;
+            ThemeSwatch {
+                pack-id: root.selected-id;
+                y: (parent.height - self.height) / 2;
+            }
+            Text {
+                text: root.names[root.selected-id];
+                color: Palette.text-hi;
+                font-family: Theme.font;
+                font-size: 12px * Theme.fs-scale;
+                font-weight: 700;
+                vertical-alignment: center;
+                horizontal-stretch: 1;
+            }
+            Text {
+                text: "▾";
+                color: Palette.text-lo;
+                font-family: Theme.font;
+                font-size: 12px * Theme.fs-scale;
+                vertical-alignment: center;
+            }
+        }
+        trig-touch := TouchArea {
+            mouse-cursor: pointer;
+            clicked => { popup.show(); }
+        }
+    }
+
+    // ── Dropdown ──
+    popup := PopupWindow {
+        x: root.width - self.width;
+        y: root.height + 5px;
+        width: 230px;
+        close-policy: close-on-click-outside;
+
+        Rectangle {
+            background: Palette.elevated;
+            border-width: Theme.border-w;
+            border-color: Palette.elevated-border;
+            border-radius: 10px * Theme.r-scale;
+            drop-shadow-color: Theme.hard-shadow ? Palette.shadow : #00000066;
+            drop-shadow-offset-x: Theme.hard-shadow ? 4px : 0px;
+            drop-shadow-offset-y: Theme.hard-shadow ? 4px : 10px;
+            drop-shadow-blur: Theme.hard-shadow ? 0px : 24px;
+
+            VerticalLayout {
+                padding: 5px;
+                spacing: 2px;
+                for name[i] in root.names : Rectangle {
+                    height: 44px;
+                    border-radius: 7px * Theme.r-scale;
+                    background: i == root.selected-id
+                        ? Palette.selected
+                        : (row-touch.has-hover ? Palette.hover : transparent);
+                    animate background { duration: 80ms; }
+                    HorizontalLayout {
+                        padding-left: 8px; padding-right: 10px;
+                        spacing: 10px;
+                        alignment: start;
+                        ThemeSwatch {
+                            pack-id: i;
+                            y: (parent.height - self.height) / 2;
+                        }
+                        Text {
+                            text: name;
+                            color: Palette.text-hi;
+                            font-family: Theme.font;
+                            font-size: 12px * Theme.fs-scale;
+                            font-weight: i == root.selected-id ? 700 : 500;
+                            vertical-alignment: center;
+                            horizontal-stretch: 1;
+                        }
+                        if i == root.selected-id : Text {
+                            text: "✓";
+                            color: Palette.mint;
+                            font-family: Theme.font;
+                            font-size: 13px * Theme.fs-scale;
+                            font-weight: 700;
+                            vertical-alignment: center;
+                        }
+                    }
+                    row-touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            root.theme-mode-selected(root.modes[i]);
+                            popup.close();
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

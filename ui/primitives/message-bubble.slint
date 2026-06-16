@@ -271,11 +271,11 @@ export component MessageBubble inherits Rectangle {
 
     property <float> enter: 0;
     init => { self.enter = 1; }
-    animate enter { duration: Theme.retro ? 120ms : 220ms; easing: ease-out; }
+    animate enter { duration: Theme.motion-fast ? 120ms : 220ms; easing: ease-out; }
     // Retro send pop: bubble starts slightly smaller/higher, snaps to full size.
-    property <float> pop-scale: Theme.retro ? (0.90 + root.enter * 0.10) : 1.0;
-    property <length> pop-y: Theme.retro ? (1.0 - root.enter) * -6px : 0px;
-    animate pop-scale, pop-y { duration: Theme.retro ? 120ms : 0ms; easing: ease-out; }
+    property <float> pop-scale: Theme.bubble-bounce ? (0.90 + root.enter * 0.10) : 1.0;
+    property <length> pop-y: Theme.bubble-bounce ? (1.0 - root.enter) * -6px : 0px;
+    animate pop-scale, pop-y { duration: Theme.bubble-bounce ? 120ms : 0ms; easing: ease-out; }
 
     property <length> r-lg: (16px) * Theme.r-scale;
     property <length> r-sm: (5px) * Theme.r-scale;
@@ -296,16 +296,16 @@ export component MessageBubble inherits Rectangle {
     border-top-right-radius: root.outgoing ? (root.first-in-group ? root.r-lg : root.r-sm) : root.r-lg;
     border-bottom-left-radius: root.outgoing ? root.r-lg : root.r-sm;
     border-bottom-right-radius: root.outgoing ? root.r-sm : root.r-lg;
-    border-width: root.jumbo-emoji ? 0px : (root.failed ? 1.5px : (Theme.retro ? Theme.border-w : 1px));
+    border-width: root.jumbo-emoji ? 0px : (root.failed ? 1.5px : Theme.border-w);
     border-color: root.failed ? Palette.danger-on-bubble : (root.outgoing ? transparent : Palette.border-2);
     drop-shadow-color: root.jumbo-emoji
         ? transparent
-        : (Theme.retro
+        : (Theme.hard-shadow
             ? Palette.shadow
             : (root.outgoing ? Palette.mint-glow : (Theme.light ? #00000018 : #00000050)));
-    drop-shadow-offset-x: Theme.retro ? 2px : 0px;
-    drop-shadow-offset-y: Theme.retro ? 2px : (root.outgoing ? 3px : 2px);
-    drop-shadow-blur: root.jumbo-emoji ? 0px : (Theme.retro ? 0px : (root.outgoing ? 14px : 8px));
+    drop-shadow-offset-x: Theme.hard-shadow ? 2px : 0px;
+    drop-shadow-offset-y: Theme.hard-shadow ? 2px : (root.outgoing ? 3px : 2px);
+    drop-shadow-blur: root.jumbo-emoji ? 0px : (Theme.hard-shadow ? 0px : (root.outgoing ? 14px : 8px));
     y: root.pop-y;
     width: (root.jumbo-emoji ? layout.preferred-width : max(root.min-w, layout.preferred-width)) * root.pop-scale;
     height: layout.preferred-height * root.pop-scale;
@@ -395,7 +395,7 @@ export component MessageBubble inherits Rectangle {
                 border-radius: (6px) * Theme.r-scale;
                 background: root.outgoing ? #00000022 : (Theme.light ? #E2E8F0 : #ffffff10);
                 clip: true;
-                border-width: Theme.retro ? Theme.border-w : 0px;
+                border-width: Theme.outline-surfaces ? Theme.border-w : 0px;
                 border-color: Palette.border-2;
                 if cell.has-image : Image {
                     width: parent.width;
@@ -431,7 +431,7 @@ export component MessageBubble inherits Rectangle {
             border-radius: (8px) * Theme.r-scale;
             background: root.outgoing ? #00000033 : (Theme.light ? #1E293B : #00000044);
             clip: true;
-            border-width: Theme.retro ? Theme.border-w : 0px;
+            border-width: Theme.outline-surfaces ? Theme.border-w : 0px;
             border-color: Palette.border-2;
             if root.att-has-image : Image {
                 width: parent.width;
@@ -445,7 +445,7 @@ export component MessageBubble inherits Rectangle {
                 height: 56px;
                 border-radius: (28px) * Theme.r-scale;
                 background: #00000099;
-                border-width: Theme.retro ? Theme.border-w : 1px;
+                border-width: Theme.border-w;
                 border-color: #FFFFFFCC;
                 Text {
                     // Nudge the glyph optically-center inside the circle.
@@ -495,7 +495,7 @@ export component MessageBubble inherits Rectangle {
             height: aud-row.preferred-height;
             border-radius: (8px) * Theme.r-scale;
             background: root.outgoing ? #00000022 : (Theme.light ? #E2E8F0 : #ffffff10);
-            border-width: Theme.retro ? Theme.border-w : 0px;
+            border-width: Theme.outline-surfaces ? Theme.border-w : 0px;
             border-color: Palette.border-2;
 
             aud-row := HorizontalLayout {
@@ -615,7 +615,7 @@ export component MessageBubble inherits Rectangle {
             border-radius: (8px) * Theme.r-scale;
             background: root.outgoing ? #00000022 : (Theme.light ? #E2E8F0 : #ffffff10);
             clip: true;
-            border-width: Theme.retro ? Theme.border-w : 0px;
+            border-width: Theme.outline-surfaces ? Theme.border-w : 0px;
             border-color: Palette.border-2;
             if root.att-has-image : Image {
                 width: parent.width;
@@ -655,7 +655,7 @@ export component MessageBubble inherits Rectangle {
         if root.has-attachment && !root.att-is-image && !root.att-is-video && !root.att-is-audio : Rectangle {
             background: root.outgoing ? #00000022 : (Theme.light ? #F1F5F9 : #ffffff0e);
             border-radius: (6px) * Theme.r-scale;
-            border-width: Theme.retro ? Theme.border-w : 0px;
+            border-width: Theme.outline-surfaces ? Theme.border-w : 0px;
             border-color: Palette.border-2;
             height: chip-l.preferred-height;
             chip-l := HorizontalLayout {
@@ -779,7 +779,7 @@ export component MessageBubble inherits Rectangle {
             font-size: root.body-fs;
             font-family: Theme.font;
             vertical-alignment: top;
-            wrap: Theme.retro ? char-wrap : word-wrap;
+            wrap: Theme.char-wrap ? char-wrap : word-wrap;
             width: min(self.preferred-width, root.text-budget);
         }
 
@@ -884,12 +884,12 @@ export component MessageBubble inherits Rectangle {
         height: 20px;
         border-radius: (10px) * Theme.r-scale;
         background: Palette.elevated;
-        border-width: Theme.retro ? Theme.border-w : 1px;
+        border-width: Theme.border-w;
         border-color: Palette.elevated-border;
-        drop-shadow-color: Theme.retro ? Palette.shadow : #00000038;
-        drop-shadow-blur: Theme.retro ? 0px : 5px;
-        drop-shadow-offset-x: Theme.retro ? 2px : 0px;
-        drop-shadow-offset-y: Theme.retro ? 2px : 1px;
+        drop-shadow-color: Theme.hard-shadow ? Palette.shadow : #00000038;
+        drop-shadow-blur: Theme.hard-shadow ? 0px : 5px;
+        drop-shadow-offset-x: Theme.hard-shadow ? 2px : 0px;
+        drop-shadow-offset-y: Theme.hard-shadow ? 2px : 1px;
         Image {
             width: 13px;
             height: 13px;

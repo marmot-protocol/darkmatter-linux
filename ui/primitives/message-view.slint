@@ -1,0 +1,240 @@
+// Message-row skin slot (theming engine, Layer 1).
+//
+// Takes one ChatMessage (the view-model contract struct) plus the small bit of
+// row context that isn't on the message itself, and dispatches to the render
+// body selected by `Theme.skin-message`. Skin 0 is the standard incoming/
+// outgoing bubble rows. A drastic theme (e.g. terminal) adds skin 1+ here and
+// selects it via its ThemeStyle pack — without any change to messages.slint or
+// the Rust glue. See ui/CONTRACT.md.
+import { Palette, Theme, ChatMessage } from "../tokens.slint";
+import { IncomingRow } from "incoming-row.slint";
+import { OutgoingRow } from "outgoing-row.slint";
+
+export component MessageView inherits VerticalLayout {
+    spacing: 0;
+
+    // The whole message (skins read whatever fields they render).
+    in property <ChatMessage> msg;
+    // Row context not carried on the message.
+    in property <length> row-w: 9999px;
+    in property <bool> outgoing-on-right: true;
+    in property <image> my-picture;
+    in property <bool> my-has-picture: false;
+
+    // Union of the row callbacks, forwarded up to messages.slint unchanged.
+    callback react(string, string);
+    callback unreact(string);
+    callback request-picker(string, length, length);
+    callback request-reply(string, string, string);
+    callback request-edit(string, string);
+    callback request-context-menu(string, string, string, bool, length, length);
+    callback show-history(string);
+    callback retry(string);
+    callback attachment-clicked(string);
+    callback audio-play-clicked(string);
+    callback audio-seek-clicked(string, float);
+    callback album-cell-clicked(string);
+    callback play-effect(int, int, int, length, length, length, length);
+
+    // ── Skin 0: standard bubble rows ──
+    if Theme.skin-message == 0 && !root.msg.outgoing : IncomingRow {
+        row-w: root.row-w;
+        text: root.msg.text;
+        lines: root.msg.lines;
+        stamp: root.msg.stamp;
+        show-avatar: root.msg.show-avatar;
+        bubble-max: root.msg.bubble-max;
+        av-initials: root.msg.av-initials;
+        av-a: root.msg.av-a;
+        av-b: root.msg.av-b;
+        av-picture: root.msg.picture;
+        av-has-picture: root.msg.has-picture;
+        sender-name: root.msg.sender-name;
+        show-sender-name: root.msg.show-sender-name;
+        sender-id: root.msg.sender-id;
+        message-id: root.msg.message-id;
+        reactions: root.msg.reactions;
+        first-in-group: root.msg.first-in-group;
+        last-in-group: root.msg.last-in-group;
+        jumbo-emoji: root.msg.jumbo-emoji;
+        effect-id: root.msg.effect-id;
+        effect-clip-x: root.msg.effect-clip-x;
+        effect-clip-y: root.msg.effect-clip-y;
+        effect-autoplay: root.msg.effect-autoplay;
+        reply-to-id: root.msg.reply-to-id;
+        reply-to-text: root.msg.reply-to-text;
+        reply-to-author: root.msg.reply-to-author;
+        has-attachment: root.msg.has-attachment;
+        att-name: root.msg.att-name;
+        att-mime: root.msg.att-mime;
+        att-size-label: root.msg.att-size-label;
+        att-is-image: root.msg.att-is-image;
+        att-is-video: root.msg.att-is-video;
+        att-is-audio: root.msg.att-is-audio;
+        att-audio-playing: root.msg.att-audio-playing;
+        att-audio-progress: root.msg.att-audio-progress;
+        att-duration: root.msg.att-duration;
+        att-image: root.msg.att-image;
+        att-has-image: root.msg.att-has-image;
+        att-loading: root.msg.att-loading;
+        att-failed: root.msg.att-failed;
+        album: root.msg.album;
+        album-w: root.msg.album-w;
+        album-h: root.msg.album-h;
+        edited: root.msg.edited;
+        edit-count: root.msg.edit-count;
+        react(id, emoji) => { root.react(id, emoji); }
+        unreact(id) => { root.unreact(id); }
+        request-picker(id, ax, ay) => { root.request-picker(id, ax, ay); }
+        request-reply(id, preview, author) => { root.request-reply(id, preview, author); }
+        request-context-menu(id, t, author, ce, ax, ay) => { root.request-context-menu(id, t, author, ce, ax, ay); }
+        show-history(id) => { root.show-history(id); }
+        attachment-clicked(id) => { root.attachment-clicked(id); }
+        audio-play-clicked(id) => { root.audio-play-clicked(id); }
+        audio-seek-clicked(id, fraction) => { root.audio-seek-clicked(id, fraction); }
+        album-cell-clicked(key) => { root.album-cell-clicked(key); }
+        play-effect(eid, cx, cy, ax, ay, w, h) => { root.play-effect(eid, cx, cy, ax, ay, w, h); }
+    }
+
+    if Theme.skin-message == 0 && root.msg.outgoing : OutgoingRow {
+        align-right: root.outgoing-on-right;
+        row-w: root.row-w;
+        text: root.msg.text;
+        lines: root.msg.lines;
+        stamp: root.msg.stamp;
+        show-avatar: root.msg.show-avatar;
+        av-initials: root.msg.av-initials;
+        av-a: root.msg.av-a;
+        av-b: root.msg.av-b;
+        av-picture: root.my-picture;
+        av-has-picture: root.my-has-picture;
+        bubble-max: root.msg.bubble-max;
+        sender-id: root.msg.sender-id;
+        message-id: root.msg.message-id;
+        reactions: root.msg.reactions;
+        first-in-group: root.msg.first-in-group;
+        last-in-group: root.msg.last-in-group;
+        jumbo-emoji: root.msg.jumbo-emoji;
+        effect-id: root.msg.effect-id;
+        effect-clip-x: root.msg.effect-clip-x;
+        effect-clip-y: root.msg.effect-clip-y;
+        effect-autoplay: root.msg.effect-autoplay;
+        pending: root.msg.pending;
+        failed: root.msg.failed;
+        reply-to-id: root.msg.reply-to-id;
+        reply-to-text: root.msg.reply-to-text;
+        reply-to-author: root.msg.reply-to-author;
+        has-attachment: root.msg.has-attachment;
+        att-name: root.msg.att-name;
+        att-mime: root.msg.att-mime;
+        att-size-label: root.msg.att-size-label;
+        att-is-image: root.msg.att-is-image;
+        att-is-video: root.msg.att-is-video;
+        att-is-audio: root.msg.att-is-audio;
+        att-audio-playing: root.msg.att-audio-playing;
+        att-audio-progress: root.msg.att-audio-progress;
+        att-duration: root.msg.att-duration;
+        att-image: root.msg.att-image;
+        att-has-image: root.msg.att-has-image;
+        att-loading: root.msg.att-loading;
+        att-failed: root.msg.att-failed;
+        album: root.msg.album;
+        album-w: root.msg.album-w;
+        album-h: root.msg.album-h;
+        edited: root.msg.edited;
+        edit-count: root.msg.edit-count;
+        can-edit: root.msg.can-edit;
+        album-cell-clicked(key) => { root.album-cell-clicked(key); }
+        react(id, emoji) => { root.react(id, emoji); }
+        unreact(id) => { root.unreact(id); }
+        request-picker(id, ax, ay) => { root.request-picker(id, ax, ay); }
+        request-reply(id, preview, author) => { root.request-reply(id, preview, author); }
+        request-edit(id, current) => { root.request-edit(id, current); }
+        request-context-menu(id, t, author, ce, ax, ay) => { root.request-context-menu(id, t, author, ce, ax, ay); }
+        show-history(id) => { root.show-history(id); }
+        retry => { root.retry(root.msg.message-id); }
+        attachment-clicked(id) => { root.attachment-clicked(id); }
+        audio-play-clicked(id) => { root.audio-play-clicked(id); }
+        audio-seek-clicked(id, fraction) => { root.audio-seek-clicked(id, fraction); }
+        play-effect(eid, cx, cy, ax, ay, w, h) => { root.play-effect(eid, cx, cy, ax, ay, w, h); }
+    }
+
+    // ── Skin 1: terminal line — `<sender> message text` (no bubbles/avatars) ──
+    if Theme.skin-message == 1 : line := Rectangle {
+        // Attachment state. Albums carry their cells in `album`; single
+        // attachments use the `att-*` fields. A line with media routes its tap to
+        // the same viewer/slideshow the bubble uses (attachment-clicked /
+        // album-cell-clicked) so images stay openable in terminal mode.
+        property <bool> is-album: root.msg.album.length > 0;
+        property <bool> has-media: self.is-album || root.msg.has-attachment;
+        property <string> media-label:
+            self.is-album ? ("[" + root.msg.album.length + " images — click to view]")
+            : (root.msg.att-is-image ? ("[image: " + root.msg.att-name + " — click to view]")
+            : (root.msg.att-is-video ? ("[video: " + root.msg.att-name + " — click to play]")
+            : (root.msg.att-is-audio ? ("[audio: " + root.msg.att-name + "]")
+            : ("[file: " + root.msg.att-name + "]"))));
+
+        background: term-touch.has-hover ? Palette.hover : transparent;
+        HorizontalLayout {
+            padding-left: 12px;
+            padding-right: 12px;
+            padding-top: 1px;
+            padding-bottom: 1px;
+            spacing: 6px;
+            alignment: start;
+            Text {
+                text: "<" + (root.msg.outgoing
+                    ? "you"
+                    : (root.msg.sender-name == "" ? root.msg.av-initials : root.msg.sender-name)) + ">";
+                color: root.msg.outgoing ? Palette.mint-dim : Palette.mint;
+                font-family: Theme.font;
+                font-size: 13px * Theme.fs-scale;
+                font-weight: 700;
+                vertical-alignment: top;
+            }
+            VerticalLayout {
+                horizontal-stretch: 1;
+                alignment: start;
+                spacing: 1px;
+                if root.msg.text != "" : Text {
+                    text: root.msg.text;
+                    color: root.msg.failed ? Palette.danger : Palette.text-hi;
+                    font-family: Theme.font;
+                    font-size: 13px * Theme.fs-scale;
+                    wrap: word-wrap;
+                }
+                // Accent-colored, clickable attachment label (the whole line is
+                // the click target — see term-touch below).
+                if line.has-media : Text {
+                    text: line.media-label;
+                    color: Palette.mint;
+                    font-family: Theme.font;
+                    font-size: 12px * Theme.fs-scale;
+                    font-weight: 700;
+                    wrap: word-wrap;
+                }
+            }
+            if root.msg.stamp != "" : Text {
+                text: root.msg.stamp;
+                color: Palette.text-vlo;
+                font-family: Theme.font;
+                font-size: 11px * Theme.fs-scale;
+                vertical-alignment: top;
+            }
+        }
+        // One TouchArea for the whole line; the action is chosen in the handler
+        // (album → attachment → reply) to avoid overlapping/if-mounted TouchAreas.
+        term-touch := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                if (line.is-album) {
+                    root.album-cell-clicked(root.msg.album[0].key);
+                } else if (root.msg.has-attachment) {
+                    root.attachment-clicked(root.msg.message-id);
+                } else {
+                    root.request-reply(root.msg.message-id, root.msg.text, root.msg.outgoing ? "you" : root.msg.sender-name);
+                }
+            }
+        }
+    }
+}

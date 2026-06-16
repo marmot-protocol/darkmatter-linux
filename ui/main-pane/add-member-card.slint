@@ -26,7 +26,7 @@ export component AddMemberCard inherits Section {
                 background: Palette.field;
                 border-width: Theme.border-w;
                 border-color: add-input.has-focus ? Palette.mint-dim : Palette.field-border;
-                drop-shadow-blur: add-input.has-focus && !Theme.retro ? 10px : 0px;
+                drop-shadow-blur: add-input.has-focus && Theme.focus-glow ? 10px : 0px;
                 drop-shadow-color: Palette.mint-glow;
                 animate border-color { duration: 140ms; easing: ease-out; }
                 HorizontalLayout {
@@ -34,7 +34,7 @@ export component AddMemberCard inherits Section {
                     add-input := LineInput {
                         placeholder: "npub1…";
                         text <=> root.add-draft;
-                        font-size: (Theme.retro ? 14px : 12px);
+                        font-size: Theme.fsr(12px, 14px);
                         fg: Palette.text-hi;
                         placeholder-color: Palette.text-vlo;
                         submit => {
@@ -54,7 +54,7 @@ export component AddMemberCard inherits Section {
                     button-height: 28px;
                     pad-left: 10px;
                     pad-right: 10px;
-                    font-size: Theme.retro ? 14px : 11px;
+                    font-size: Theme.fsr(11px, 14px);
                     bg-color: Palette.mint-surface;
                     fg: Palette.mint;
                     outline: Palette.mint;

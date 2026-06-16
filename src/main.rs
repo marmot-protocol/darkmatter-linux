@@ -340,6 +340,7 @@ fn normalize_theme_mode(mode: &str) -> &'static str {
     match mode {
         "light" => "light",
         "retro" => "retro",
+        "terminal" => "terminal",
         _ => "dark",
     }
 }
@@ -368,6 +369,7 @@ fn apply_theme_mode(ui: &DarkMatterLinux, mode: &str) {
     let mode = normalize_theme_mode(mode);
     ui.set_light_theme(mode == "light");
     ui.set_retro_mode(mode == "retro");
+    ui.set_terminal_mode(mode == "terminal");
 }
 
 fn locale_display(code: &str) -> &'static str {

@@ -1,6 +1,6 @@
 // chat list panel — a SidePanel populated with chat list items.
 import { ChatMeta } from "tokens.slint";
-import { ChatListItem } from "primitives/chat-list-item.slint";
+import { ChatListEntry } from "primitives/chat-list-entry.slint";
 import { SidePanel } from "shells/side-panel.slint";
 
 export component ChatListPanel inherits SidePanel {
@@ -29,19 +29,9 @@ export component ChatListPanel inherits SidePanel {
         ? "· " + @tr("SYNCING…")
         : "· " + @tr("SYNCED") + " " + root.sync-secs + "S " + @tr("AGO");
 
-    for chat[idx] in root.chats : ChatListItem {
+    for chat[idx] in root.chats : ChatListEntry {
+        chat: chat;
         selected: idx == root.active-chat;
-        name: chat.name;
-        preview: chat.preview;
-        stamp: chat.stamp;
-        badge: chat.badge;
-        read: chat.read;
-        sending: chat.sending;
-        av-initials: chat.av-initials;
-        av-a: chat.av-a;
-        av-b: chat.av-b;
-        picture: chat.picture;
-        has-picture: chat.has-picture;
         clicked => { root.chat-clicked(idx); }
     }
 }

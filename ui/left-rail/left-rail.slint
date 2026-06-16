@@ -65,7 +65,7 @@ component NavItem inherits Rectangle {
         Text {
             text: root.label;
             color: root.selected
-                ? (Theme.retro ? Palette.bubble-out-fg : Palette.mint)
+                ? (Theme.selected-inverts-text ? Palette.bubble-out-fg : Palette.mint)
                 : Palette.text-mid;
             font-size: (11px) * Theme.fs-scale;
             font-weight: 600;
@@ -137,7 +137,7 @@ component ProfileTile inherits Rectangle {
             color-b: root.color-b;
             picture: root.picture;
             has-picture: root.has-picture;
-            font-size: (Theme.retro ? 18px : 11px) * Theme.fs-scale;
+            font-size: Theme.fs(11px, 18px);
         }
     }
 
@@ -179,7 +179,7 @@ export component LeftRail inherits Rectangle {
 
     in property <bool> has-active-chat: false;
 
-    property <color> selected-glyph: Theme.retro ? Palette.bubble-out-fg : Palette.mint;
+    property <color> selected-glyph: Theme.selected-inverts-text ? Palette.bubble-out-fg : Palette.mint;
 
     property <length> collapsed-width: 56px;
     property <length> expanded-width: 160px;

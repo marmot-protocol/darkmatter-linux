@@ -1,7 +1,6 @@
 // messages area — driven by a model fed from Rust.
 import { Palette, Theme, ChatMessage } from "tokens.slint";
-import { IncomingRow } from "primitives/incoming-row.slint";
-import { OutgoingRow } from "primitives/outgoing-row.slint";
+import { MessageView } from "primitives/message-view.slint";
 import { CypherScroll } from "primitives/cypher-scroll.slint";
 import { MessageEffectLayer } from "primitives/message-effect-layer.slint";
 import { ChevronDownIcon } from "icons/chevron-down-icon.slint";
@@ -142,7 +141,7 @@ export component MessagesArea inherits Rectangle {
                     height: 26px;
                     border-radius: 13px * Theme.r-scale;
                     background: pill-touch.has-hover ? Palette.hover : Palette.panel-2;
-                    border-width: Theme.retro ? 2px : 1px;
+                    border-width: Theme.border-w;
                     border-color: pill-touch.has-hover ? Palette.border-2 : Palette.border;
                     animate background, border-color { duration: 100ms; }
                     pill-label := Text {
@@ -169,114 +168,14 @@ export component MessagesArea inherits Rectangle {
                 spacing: 0;
                 if msg.gap-before > 0px : Rectangle { height: msg.gap-before; }
 
-                if !msg.outgoing : IncomingRow {
+                // One skin slot per message. Theme.skin-message picks the render
+                // body (skin 0 = standard incoming/outgoing bubble rows).
+                MessageView {
+                    msg: msg;
                     row-w: root.content-w;
-                    text: msg.text;
-                    lines: msg.lines;
-                    stamp: msg.stamp;
-                    show-avatar: msg.show-avatar;
-                    bubble-max: msg.bubble-max;
-                    av-initials: msg.av-initials;
-                    av-a: msg.av-a;
-                    av-b: msg.av-b;
-                    av-picture: msg.picture;
-                    av-has-picture: msg.has-picture;
-                    sender-name: msg.sender-name;
-                    show-sender-name: msg.show-sender-name;
-                    sender-id: msg.sender-id;
-                    message-id: msg.message-id;
-                    reactions: msg.reactions;
-                    first-in-group: msg.first-in-group;
-                    last-in-group: msg.last-in-group;
-                    jumbo-emoji: msg.jumbo-emoji;
-                    effect-id: msg.effect-id;
-                    effect-clip-x: msg.effect-clip-x;
-                    effect-clip-y: msg.effect-clip-y;
-                    effect-autoplay: msg.effect-autoplay;
-                    reply-to-id: msg.reply-to-id;
-                    reply-to-text: msg.reply-to-text;
-                    reply-to-author: msg.reply-to-author;
-                    has-attachment: msg.has-attachment;
-                    att-name: msg.att-name;
-                    att-mime: msg.att-mime;
-                    att-size-label: msg.att-size-label;
-                    att-is-image: msg.att-is-image;
-                    att-is-video: msg.att-is-video;
-                    att-is-audio: msg.att-is-audio;
-                    att-audio-playing: msg.att-audio-playing;
-                    att-audio-progress: msg.att-audio-progress;
-                    att-duration: msg.att-duration;
-                    att-image: msg.att-image;
-                    att-has-image: msg.att-has-image;
-                    att-loading: msg.att-loading;
-                    att-failed: msg.att-failed;
-                    album: msg.album;
-                    album-w: msg.album-w;
-                    album-h: msg.album-h;
-                    edited: msg.edited;
-                    edit-count: msg.edit-count;
-                    react(id, emoji) => { root.react(id, emoji); }
-                    unreact(id) => { root.unreact(id); }
-                    request-picker(id, ax, ay) => { root.request-picker(id, ax, ay); }
-                    request-reply(id, preview, author) => { root.request-reply(id, preview, author); }
-                    request-context-menu(id, text, author, can-edit, ax, ay) => { root.request-context-menu(id, text, author, can-edit, ax, ay); }
-                    show-history(id) => { root.show-history(id); }
-                    attachment-clicked(id) => { root.attachment-clicked(id); }
-                    audio-play-clicked(id) => { root.audio-play-clicked(id); }
-                    audio-seek-clicked(id, fraction) => { root.audio-seek-clicked(id, fraction); }
-                    album-cell-clicked(key) => { root.album-cell-clicked(key); }
-                    play-effect(eid, cx, cy, ax, ay, w, h) => { root.stage-effect(eid, cx, cy, ax, ay, w, h); }
-                }
-
-                if msg.outgoing : OutgoingRow {
-                    align-right: root.outgoing-on-right;
-                    row-w: root.content-w;
-                    text: msg.text;
-                    lines: msg.lines;
-                    stamp: msg.stamp;
-                    show-avatar: msg.show-avatar;
-                    av-initials: msg.av-initials;
-                    av-a: msg.av-a;
-                    av-b: msg.av-b;
-                    av-picture: root.my-picture;
-                    av-has-picture: root.my-has-picture;
-                    bubble-max: msg.bubble-max;
-                    sender-id: msg.sender-id;
-                    message-id: msg.message-id;
-                    reactions: msg.reactions;
-                    first-in-group: msg.first-in-group;
-                    last-in-group: msg.last-in-group;
-                    jumbo-emoji: msg.jumbo-emoji;
-                    effect-id: msg.effect-id;
-                    effect-clip-x: msg.effect-clip-x;
-                    effect-clip-y: msg.effect-clip-y;
-                    effect-autoplay: msg.effect-autoplay;
-                    pending: msg.pending;
-                    failed: msg.failed;
-                    reply-to-id: msg.reply-to-id;
-                    reply-to-text: msg.reply-to-text;
-                    reply-to-author: msg.reply-to-author;
-                    has-attachment: msg.has-attachment;
-                    att-name: msg.att-name;
-                    att-mime: msg.att-mime;
-                    att-size-label: msg.att-size-label;
-                    att-is-image: msg.att-is-image;
-                    att-is-video: msg.att-is-video;
-                    att-is-audio: msg.att-is-audio;
-                    att-audio-playing: msg.att-audio-playing;
-                    att-audio-progress: msg.att-audio-progress;
-                    att-duration: msg.att-duration;
-                    att-image: msg.att-image;
-                    att-has-image: msg.att-has-image;
-                    att-loading: msg.att-loading;
-                    att-failed: msg.att-failed;
-                    album: msg.album;
-                    album-w: msg.album-w;
-                    album-h: msg.album-h;
-                    edited: msg.edited;
-                    edit-count: msg.edit-count;
-                    can-edit: msg.can-edit;
-                    album-cell-clicked(key) => { root.album-cell-clicked(key); }
+                    outgoing-on-right: root.outgoing-on-right;
+                    my-picture: root.my-picture;
+                    my-has-picture: root.my-has-picture;
                     react(id, emoji) => { root.react(id, emoji); }
                     unreact(id) => { root.unreact(id); }
                     request-picker(id, ax, ay) => { root.request-picker(id, ax, ay); }
@@ -284,10 +183,11 @@ export component MessagesArea inherits Rectangle {
                     request-edit(id, current) => { root.request-edit(id, current); }
                     request-context-menu(id, text, author, can-edit, ax, ay) => { root.request-context-menu(id, text, author, can-edit, ax, ay); }
                     show-history(id) => { root.show-history(id); }
-                    retry => { root.retry(msg.message-id); }
+                    retry(id) => { root.retry(id); }
                     attachment-clicked(id) => { root.attachment-clicked(id); }
                     audio-play-clicked(id) => { root.audio-play-clicked(id); }
                     audio-seek-clicked(id, fraction) => { root.audio-seek-clicked(id, fraction); }
+                    album-cell-clicked(key) => { root.album-cell-clicked(key); }
                     play-effect(eid, cx, cy, ax, ay, w, h) => { root.stage-effect(eid, cx, cy, ax, ay, w, h); }
                 }
             }
@@ -330,12 +230,12 @@ export component MessagesArea inherits Rectangle {
         height: 38px;
         border-radius: (19px) * Theme.r-scale;
         background: jump-touch.has-hover ? Palette.field-hover : Palette.elevated;
-        border-width: Theme.retro ? Theme.border-w : 1px;
+        border-width: Theme.border-w;
         border-color: Palette.elevated-border;
-        drop-shadow-blur: Theme.retro ? 0px : 16px;
-        drop-shadow-color: Theme.retro ? Palette.shadow : (Theme.light ? #1F293744 : #000000A0);
-        drop-shadow-offset-x: Theme.retro ? 3px : 0px;
-        drop-shadow-offset-y: Theme.retro ? 3px : 6px;
+        drop-shadow-blur: Theme.hard-shadow ? 0px : 16px;
+        drop-shadow-color: Theme.hard-shadow ? Palette.shadow : (Theme.light ? #1F293744 : #000000A0);
+        drop-shadow-offset-x: Theme.hard-shadow ? 3px : 0px;
+        drop-shadow-offset-y: Theme.hard-shadow ? 3px : 6px;
         opacity: root.at-bottom ? 0 : 1;
         animate opacity { duration: 160ms; easing: ease-out; }
         animate background { duration: 100ms; }

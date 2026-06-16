@@ -11,9 +11,9 @@ export component Toggle inherits Rectangle {
     background: root.on ? Palette.mint : Palette.field;
     border-width: Theme.retro ? Theme.border-w : (root.on ? 0px : 1px);
     border-color: Palette.border;
-    drop-shadow-color: Theme.retro ? Palette.shadow : transparent;
-    drop-shadow-offset-x: Theme.retro ? 2px : 0px;
-    drop-shadow-offset-y: Theme.retro ? 2px : 0px;
+    drop-shadow-color: Theme.hard-shadow ? Palette.shadow : transparent;
+    drop-shadow-offset-x: Theme.hard-shadow ? 2px : 0px;
+    drop-shadow-offset-y: Theme.hard-shadow ? 2px : 0px;
     drop-shadow-blur: 0px;
     animate background { duration: 120ms; }
 

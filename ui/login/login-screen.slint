@@ -44,7 +44,7 @@ component VaultField inherits VerticalLayout {
         border-color: root.error
             ? Palette.danger-border
             : (vf-input.has-focus ? Palette.mint-dim : Palette.field-border);
-        drop-shadow-blur: vf-input.has-focus && !root.error && !Theme.retro ? 10px : 0px;
+        drop-shadow-blur: vf-input.has-focus && !root.error && Theme.focus-glow ? 10px : 0px;
         drop-shadow-color: Palette.mint-glow;
         animate border-color { duration: 140ms; easing: ease-out; }
         HorizontalLayout {
@@ -54,7 +54,7 @@ component VaultField inherits VerticalLayout {
                 text <=> root.text;
                 password: root.password;
                 // LineInput multiplies by fs-scale internally.
-                font-size: Theme.retro ? 14px : 13px;
+                font-size: Theme.fsr(13px, 14px);
                 fg: Palette.text-hi;
                 placeholder-color: Palette.text-vlo;
                 submit => { root.submit(); }
@@ -141,12 +141,12 @@ export component LoginScreen inherits Rectangle {
         y: (parent.height - self.height) / 2;
         border-radius: (12px) * Theme.r-scale;
         background: Palette.elevated;
-        border-width: Theme.retro ? Theme.border-w : 1px;
+        border-width: Theme.border-w;
         border-color: Palette.elevated-border;
-        drop-shadow-blur: Theme.retro ? 0px : 40px;
-        drop-shadow-color: Theme.retro ? Palette.shadow : #000000C0;
-        drop-shadow-offset-x: Theme.retro ? 6px : 0px;
-        drop-shadow-offset-y: Theme.retro ? 6px : 10px;
+        drop-shadow-blur: Theme.hard-shadow ? 0px : 40px;
+        drop-shadow-color: Theme.hard-shadow ? Palette.shadow : #000000C0;
+        drop-shadow-offset-x: Theme.hard-shadow ? 6px : 0px;
+        drop-shadow-offset-y: Theme.hard-shadow ? 6px : 10px;
         animate height { duration: 200ms; easing: ease-in-out; }
 
         // Top bevel highlight (matches the Modal card convention).
@@ -199,7 +199,7 @@ export component LoginScreen inherits Rectangle {
                     label: @tr("I have an nsec");
                     button-height: 44px;
                     radius: 8px;
-                    font-size: (Theme.retro ? 16px : 13px) * Theme.fs-scale;
+                    font-size: Theme.fs(13px, 16px);
                     bg-color: Palette.mint;
                     outline: Palette.mint;
                     hover-bg: Palette.mint-hi;
@@ -219,7 +219,7 @@ export component LoginScreen inherits Rectangle {
                     label: @tr("Generate a new key");
                     button-height: 44px;
                     radius: 8px;
-                    font-size: (Theme.retro ? 16px : 13px) * Theme.fs-scale;
+                    font-size: Theme.fs(13px, 16px);
                     bg-color: Palette.field;
                     outline: Palette.field-border;
                     hover-bg: Palette.field-hover;
@@ -345,7 +345,7 @@ export component LoginScreen inherits Rectangle {
                             Text {
                                 text: root.generated-display-name;
                                 color: Palette.text-hi;
-                                font-size: (Theme.retro ? 18px : 16px) * Theme.fs-scale;
+                                font-size: Theme.fs(16px, 18px);
                                 font-weight: 700;
                                 opacity: root.name-reveal;
                             }
@@ -409,7 +409,7 @@ export component LoginScreen inherits Rectangle {
                             Text {
                                 text: root.generated-npub;
                                 color: Palette.text-hi;
-                                font-size: (Theme.retro ? 12px : 12px) * Theme.fs-scale;
+                                font-size: Theme.fs(12px, 12px);
                                 vertical-alignment: center;
                                 overflow: elide;
                             }
@@ -439,7 +439,7 @@ export component LoginScreen inherits Rectangle {
                             Text {
                                 text: root.generated-nsec;
                                 color: Palette.text-hi;
-                                font-size: (Theme.retro ? 12px : 12px) * Theme.fs-scale;
+                                font-size: Theme.fs(12px, 12px);
                                 vertical-alignment: center;
                                 overflow: elide;
                             }
@@ -453,7 +453,7 @@ export component LoginScreen inherits Rectangle {
                             radius: 5px;
                             pad-left: 10px;
                             pad-right: 12px;
-                            font-size: (Theme.retro ? 12px : 11px) * Theme.fs-scale;
+                            font-size: Theme.fs(11px, 12px);
                             RefreshIcon { stroke: Palette.text-mid; }
                             clicked => { root.generate-requested(); }
                         }
@@ -464,7 +464,7 @@ export component LoginScreen inherits Rectangle {
                             radius: 5px;
                             pad-left: 10px;
                             pad-right: 12px;
-                            font-size: (Theme.retro ? 12px : 11px) * Theme.fs-scale;
+                            font-size: Theme.fs(11px, 12px);
                             CopyIcon { stroke: Palette.text-mid; }
                             clicked => { root.copy-nsec(root.generated-nsec); }
                         }

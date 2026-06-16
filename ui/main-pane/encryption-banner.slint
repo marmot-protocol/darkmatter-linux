@@ -22,7 +22,7 @@ export component EncryptionBanner inherits Rectangle {
             self.shimmer = 1.0;
         }
     }
-    animate reveal { duration: Theme.retro ? 200ms : 420ms; easing: ease-out; }
+    animate reveal { duration: Theme.motion-fast ? 200ms : 420ms; easing: ease-out; }
     animate shimmer { duration: 480ms; easing: ease-in-out; }
 
     // Left accent stripe — draws in on first show; shimmer via opacity pulse.
@@ -69,7 +69,7 @@ export component EncryptionBanner inherits Rectangle {
                     font-weight: 600;
                     vertical-alignment: center;
                 }
-                if Theme.retro : Rectangle {
+                if Theme.pixel-icons : Rectangle {
                     height: 18px;
                     border-width: Theme.border-w;
                     border-color: Palette.bevel-hi;
@@ -85,7 +85,7 @@ export component EncryptionBanner inherits Rectangle {
                         }
                     }
                 }
-                if !Theme.retro : Text {
+                if !Theme.pixel-icons : Text {
                     text: "MLS";
                     color: Palette.mint;
                     font-size: (13px) * Theme.fs-scale;

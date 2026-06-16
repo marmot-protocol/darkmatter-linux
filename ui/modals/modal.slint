@@ -57,7 +57,7 @@ export component Modal inherits Rectangle {
     // Entrance progress 0 → 1. Defaults to 0; init flips to 1, which animates.
     // Retro snaps in with a punchy short ease; normal glides in slower.
     property <float> open: 0;
-    property <duration> ease-dur: Theme.retro ? 140ms : 220ms;
+    property <duration> ease-dur: Theme.motion-fast ? 140ms : 220ms;
     init => {
         self.open = 1;
         if (root.grab-focus) { esc-scope.focus(); }
@@ -67,7 +67,7 @@ export component Modal inherits Rectangle {
     animate opacity { duration: root.ease-dur; easing: ease-out; }
 
     // Slide-up offset: card starts below its final position, animates to 0.
-    property <length> y-offset: (1 - root.open) * (Theme.retro ? 32px : 18px);
+    property <length> y-offset: (1 - root.open) * (Theme.motion-fast ? 32px : 18px);
     animate y-offset { duration: root.ease-dur; easing: ease-out; }
 
     background: Theme.light && !Theme.retro ? #1F293740 : #00000073;
@@ -100,15 +100,15 @@ export component Modal inherits Rectangle {
                     : (Theme.light
                         ? @linear-gradient(180deg, #FFFFFF 0%, #FDFAF4 100%)
                         : @linear-gradient(180deg, #151B23 0%, #0F1318 45%, #0C0F13 100%)));
-            border-width: root.bare ? 0px : (Theme.retro ? Theme.border-w : 1px);
+            border-width: root.bare ? 0px : Theme.border-w;
             border-color: Palette.elevated-border;
             // With no backdrop layers, the shadow alone sells the elevation —
             // wide, soft, and offset down.
-            drop-shadow-blur: root.bare ? 0px : (Theme.retro ? 0px : 56px);
+            drop-shadow-blur: root.bare ? 0px : (Theme.hard-shadow ? 0px : 56px);
             drop-shadow-color: root.bare ? transparent
-                : (Theme.retro ? Palette.shadow : (Theme.light ? #1F293755 : #000000D0));
-            drop-shadow-offset-x: Theme.retro ? 6px : 0px;
-            drop-shadow-offset-y: Theme.retro ? 6px : 14px;
+                : (Theme.hard-shadow ? Palette.shadow : (Theme.light ? #1F293755 : #000000D0));
+            drop-shadow-offset-x: Theme.hard-shadow ? 6px : 0px;
+            drop-shadow-offset-y: Theme.hard-shadow ? 6px : 14px;
 
             // Swallows clicks on the card so they don't reach the backdrop.
             // It wraps the content (rather than being a sibling) so nested
@@ -196,7 +196,7 @@ export component Modal inherits Rectangle {
                     }
 
                     if root.has-footer : Rectangle {
-                        height: Theme.retro ? Theme.border-w : 1px;
+                        height: Theme.border-w;
                         background: Theme.retro ? Palette.border : Palette.divider;
                     }
                     if root.has-footer : Rectangle {
@@ -275,7 +275,7 @@ export component Modal inherits Rectangle {
         // underneath (white-alpha disappears over light photos).
         background: bare-close.has-hover ? #00000066 : #00000040;
         animate background { duration: 100ms; }
-        border-width: Theme.retro ? Theme.border-w : 0px;
+        border-width: Theme.outline-surfaces ? Theme.border-w : 0px;
         border-color: Palette.border-2;
         Text {
             text: "✕";
@@ -324,10 +324,10 @@ export component ModalField inherits VerticalLayout {
         height: root.field-height;
         border-radius: (8px) * Theme.r-scale;
         background: Palette.field;
-        border-width: Theme.retro ? Theme.border-w : 1px;
+        border-width: Theme.border-w;
         border-color: inner.has-focus ? Palette.mint : Palette.field-border;
-        drop-shadow-blur: inner.has-focus && !Theme.retro ? 10px : 0px;
-        drop-shadow-color: inner.has-focus && !Theme.retro ? Palette.mint-glow : transparent;
+        drop-shadow-blur: inner.has-focus && Theme.focus-glow ? 10px : 0px;
+        drop-shadow-color: inner.has-focus && Theme.focus-glow ? Palette.mint-glow : transparent;
         animate border-color { duration: 120ms; easing: ease-out; }
 
         HorizontalLayout {
@@ -343,7 +343,7 @@ export component ModalField inherits VerticalLayout {
                 // placeholder promises ("one per line"), not fire submit.
                 enter-submits: !root.multiline;
                 password: root.password;
-                font-size: (Theme.retro ? 14px : 12px);
+                font-size: Theme.fsr(12px, 14px);
                 fg: Palette.text-hi;
                 placeholder-color: Palette.text-vlo;
                 submit => { root.submitted(); }

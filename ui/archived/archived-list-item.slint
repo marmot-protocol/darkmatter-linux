@@ -9,11 +9,11 @@ export component ArchivedListItem inherits Rectangle {
     height: 64px;
     background: root.selected ? Palette.selected : (touch.has-hover ? Palette.hover : transparent);
     border-radius: (8px) * Theme.r-scale;
-    border-width: Theme.retro && root.selected ? Theme.border-w : (root.selected && !Theme.retro ? 1px : 0px);
-    border-color: root.selected && !Theme.retro ? Palette.mint-glow : Palette.border;
+    border-width: Theme.selected-inverts-text && root.selected ? Theme.border-w : (root.selected && !Theme.selected-inverts-text ? 1px : 0px);
+    border-color: root.selected && !Theme.selected-inverts-text ? Palette.mint-glow : Palette.border;
     animate background, border-color { duration: 140ms; easing: ease-out; }
 
-    if !Theme.retro : Rectangle {
+    if !Theme.pixel-select-marker : Rectangle {
         x: 0;
         width: 3px;
         height: root.selected ? 40px : 0px;
@@ -26,7 +26,7 @@ export component ArchivedListItem inherits Rectangle {
         animate height { duration: 220ms; easing: ease-in-out; }
         animate opacity { duration: 160ms; easing: ease-out; }
     }
-    if Theme.retro : Text {
+    if Theme.pixel-select-marker : Text {
         x: root.selected ? 2px : -14px;
         y: (parent.height - self.height) / 2;
         text: "▶";
@@ -50,7 +50,7 @@ export component ArchivedListItem inherits Rectangle {
             color-b: root.data.av-b;
             picture: root.data.picture;
             has-picture: root.data.has-picture;
-            font-size: (Theme.retro ? 16px : 11px) * Theme.fs-scale;
+            font-size: Theme.fs(11px, 16px);
         }
         VerticalLayout {
             horizontal-stretch: 1;
@@ -59,7 +59,7 @@ export component ArchivedListItem inherits Rectangle {
                 spacing: 6px;
                 Text {
                     text: root.data.name;
-                    color: Theme.retro && root.selected ? Palette.bubble-out-fg : Palette.text-hi;
+                    color: Theme.selected-inverts-text && root.selected ? Palette.bubble-out-fg : Palette.text-hi;
                     font-size: (13px) * Theme.fs-scale;
                     font-weight: 700;
                     font-family: Theme.font;
@@ -68,7 +68,7 @@ export component ArchivedListItem inherits Rectangle {
                 }
                 Text {
                     text: root.data.last-date;
-                    color: Theme.retro && root.selected ? Palette.bubble-out-fg : Palette.text-lo;
+                    color: Theme.selected-inverts-text && root.selected ? Palette.bubble-out-fg : Palette.text-lo;
                     font-size: (10px) * Theme.fs-scale;
                     font-family: Theme.font;
                     vertical-alignment: center;
@@ -76,8 +76,8 @@ export component ArchivedListItem inherits Rectangle {
             }
             Text {
                 text: root.data.last-msg;
-                color: Theme.retro && root.selected ? Palette.bubble-out-fg : Palette.text-lo;
-                font-size: (Theme.retro ? 16px : 11px) * Theme.fs-scale;
+                color: Theme.selected-inverts-text && root.selected ? Palette.bubble-out-fg : Palette.text-lo;
+                font-size: Theme.fs(11px, 16px);
                 font-family: Theme.font;
                 overflow: elide;
             }

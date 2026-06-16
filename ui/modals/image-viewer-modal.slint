@@ -91,7 +91,7 @@ export component ImageViewerModal inherits Modal {
             border-radius: (24px) * Theme.r-scale;
             background: prev-touch.has-hover ? #000000B0 : #00000055;
             animate background { duration: 100ms; }
-            border-width: Theme.retro ? Theme.border-w : 0px;
+            border-width: Theme.outline-surfaces ? Theme.border-w : 0px;
             border-color: Palette.border-2;
             Text {
                 text: "‹";
@@ -116,7 +116,7 @@ export component ImageViewerModal inherits Modal {
             border-radius: (24px) * Theme.r-scale;
             background: next-touch.has-hover ? #000000B0 : #00000055;
             animate background { duration: 100ms; }
-            border-width: Theme.retro ? Theme.border-w : 0px;
+            border-width: Theme.outline-surfaces ? Theme.border-w : 0px;
             border-color: Palette.border-2;
             Text {
                 text: "›";
@@ -140,7 +140,7 @@ export component ImageViewerModal inherits Modal {
             height: 30px;
             border-radius: (15px) * Theme.r-scale;
             background: #000000AA;
-            border-width: Theme.retro ? Theme.border-w : 0px;
+            border-width: Theme.outline-surfaces ? Theme.border-w : 0px;
             border-color: Palette.border-2;
             counter-text := Text {
                 text: root.index + " / " + root.count;

@@ -84,7 +84,7 @@ export component SidePanel inherits Rectangle {
             background: Palette.panel;
             border-width: 1px;
             border-color: search-input.has-focus ? Palette.mint-dim : Palette.border-2;
-            drop-shadow-blur: search-input.has-focus && !Theme.retro ? 10px : 0px;
+            drop-shadow-blur: search-input.has-focus && Theme.focus-glow ? 10px : 0px;
             drop-shadow-color: Palette.mint-glow;
             animate border-color { duration: 140ms; easing: ease-out; }
 
@@ -99,7 +99,7 @@ export component SidePanel inherits Rectangle {
                 }
                 search-input := LineInput {
                     placeholder: root.search-placeholder;
-                    font-size: (Theme.retro ? 16px : 12px) * Theme.fs-scale;
+                    font-size: Theme.fs(12px, 16px);
                     fg: Palette.text-hi;
                     placeholder-color: Palette.text-vlo;
                     horizontal-stretch: 1;

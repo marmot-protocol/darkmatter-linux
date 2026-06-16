@@ -63,13 +63,13 @@ component StepCard inherits Rectangle {
 
     background: Palette.panel;
     border-radius: (12px) * Theme.r-scale;
-    border-width: Theme.retro ? Theme.border-w : 1px;
+    border-width: Theme.border-w;
     border-color: root.done
         ? Palette.mint
-        : (Theme.retro ? Palette.border : Palette.border-2);
-    drop-shadow-color: Theme.retro ? Palette.shadow : transparent;
-    drop-shadow-offset-x: Theme.retro ? 4px : 0px;
-    drop-shadow-offset-y: Theme.retro ? 4px : 0px;
+        : (Palette.card-border);
+    drop-shadow-color: Theme.hard-shadow ? Palette.shadow : transparent;
+    drop-shadow-offset-x: Theme.hard-shadow ? 4px : 0px;
+    drop-shadow-offset-y: Theme.hard-shadow ? 4px : 0px;
     drop-shadow-blur: 0px;
 
     HorizontalLayout {
@@ -228,7 +228,7 @@ export component GetStartedScreen inherits Rectangle {
                                 border-color: relay-input.has-focus ? Palette.mint : Palette.border-2;
                                 border-radius: (7px) * Theme.r-scale;
                                 background: Palette.field;
-                                drop-shadow-blur: relay-input.has-focus && !Theme.retro ? 10px : 0px;
+                                drop-shadow-blur: relay-input.has-focus && Theme.focus-glow ? 10px : 0px;
                                 drop-shadow-color: Palette.mint-glow;
                                 animate border-color { duration: 140ms; easing: ease-out; }
                                 relay-input := LineInput {
@@ -282,7 +282,7 @@ export component GetStartedScreen inherits Rectangle {
                                     label: url;
                                     button-height: 32px;
                                     radius: 8px;
-                                    font-size: (Theme.retro ? 12px : 11px) * Theme.fs-scale;
+                                    font-size: Theme.fs(11px, 12px);
                                     bg-color: Palette.panel-2;
                                     outline: Palette.border-2;
                                     hover-bg: Palette.mint-surface;

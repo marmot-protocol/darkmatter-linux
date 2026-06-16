@@ -6,7 +6,7 @@ import { Palette, Theme } from "../tokens.slint";
 export component LineInput inherits Rectangle {
     in property <string> placeholder;
     in-out property <string> text;
-    in property <length> font-size: Theme.retro ? 16px : 13px;
+    in property <length> font-size: Theme.fsr(13px, 16px);
     in property <int> font-weight: 400;
     in property <color> fg: Palette.text-hi;
     in property <color> placeholder-color: Palette.text-vlo;

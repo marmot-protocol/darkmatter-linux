@@ -282,7 +282,7 @@ export component Composer inherits Rectangle {
             border-color: root.recording
                 ? Palette.danger
                 : (composer-input.has-focus ? Palette.mint-dim : Palette.border-2);
-            drop-shadow-blur: !root.recording && composer-input.has-focus && !Theme.retro ? 12px : 0px;
+            drop-shadow-blur: !root.recording && composer-input.has-focus && Theme.focus-glow ? 12px : 0px;
             drop-shadow-color: root.recording ? Palette.danger-soft : Palette.mint-glow;
             animate border-color { duration: 160ms; easing: ease-out; }
             animate drop-shadow-blur { duration: 160ms; easing: ease-out; }
@@ -310,7 +310,7 @@ export component Composer inherits Rectangle {
                 }
                 composer-input := LineInput {
                     placeholder: @tr("Send a message…");
-                    font-size: (Theme.retro ? 16px : 13px) * Theme.fs-scale;
+                    font-size: Theme.fs(13px, 16px);
                     fg: Palette.text-hi;
                     placeholder-color: Palette.text-lo;
                     single-line: false;
@@ -422,7 +422,7 @@ export component Composer inherits Rectangle {
                     Text {
                         text: @tr("{}s", root.recording-secs);
                         color: Palette.text-hi;
-                        font-size: (Theme.retro ? 16px : 13px) * Theme.fs-scale;
+                        font-size: Theme.fs(13px, 16px);
                         font-family: Theme.font;
                         vertical-alignment: center;
                         horizontal-stretch: 1;
@@ -515,9 +515,9 @@ export component Composer inherits Rectangle {
         background: Palette.elevated;
         border-width: Theme.border-w;
         border-color: Palette.elevated-border;
-        drop-shadow-color: Theme.retro ? Palette.shadow : #00000033;
-        drop-shadow-blur: Theme.retro ? 0px : 4px;
-        drop-shadow-offset-y: Theme.retro ? 2px : 1px;
+        drop-shadow-color: Theme.hard-shadow ? Palette.shadow : #00000033;
+        drop-shadow-blur: Theme.hard-shadow ? 0px : 4px;
+        drop-shadow-offset-y: Theme.hard-shadow ? 2px : 1px;
         hint-row := HorizontalLayout {
             padding-left: 8px;
             padding-right: 8px;

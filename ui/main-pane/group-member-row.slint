@@ -30,7 +30,7 @@ export component GroupMemberRow inherits Rectangle {
                 color-b: root.data.av-b;
                 picture: root.data.picture;
                 has-picture: root.data.has-picture;
-                font-size: (Theme.retro ? 16px : 11px) * Theme.fs-scale;
+                font-size: Theme.fs(11px, 16px);
             }
         }
 
@@ -54,13 +54,13 @@ export component GroupMemberRow inherits Rectangle {
                     label: @tr("YOU");
                     bg-color: Palette.mint;
                     fg: Palette.bubble-out-fg;
-                    font-size: Theme.retro ? 12px : 10px;
+                    font-size: Theme.fsr(10px, 12px);
                 }
                 if root.data.is-admin : Pill {
                     label: @tr("ADMIN");
                     bg-color: Palette.mint-surface;
                     fg: Palette.mint;
-                    font-size: Theme.retro ? 12px : 10px;
+                    font-size: Theme.fsr(10px, 12px);
                 }
             }
             Text {
@@ -85,7 +85,7 @@ export component GroupMemberRow inherits Rectangle {
             badge := Text {
                 text: @tr("Make admin");
                 color: promote-ta.has-hover ? Palette.mint : Palette.text-mid;
-                font-size: (Theme.retro ? 11px : 10px) * Theme.fs-scale;
+                font-size: Theme.fs(10px, 11px);
                 horizontal-alignment: center;
                 vertical-alignment: center;
             }
@@ -104,7 +104,7 @@ export component GroupMemberRow inherits Rectangle {
             demote-badge := Text {
                 text: @tr("Remove admin");
                 color: demote-ta.has-hover ? Palette.danger : Palette.text-mid;
-                font-size: (Theme.retro ? 11px : 10px) * Theme.fs-scale;
+                font-size: Theme.fs(10px, 11px);
                 horizontal-alignment: center;
                 vertical-alignment: center;
             }
@@ -123,7 +123,7 @@ export component GroupMemberRow inherits Rectangle {
             self-demote-badge := Text {
                 text: @tr("Step down");
                 color: self-demote-ta.has-hover ? Palette.danger : Palette.text-mid;
-                font-size: (Theme.retro ? 11px : 10px) * Theme.fs-scale;
+                font-size: Theme.fs(10px, 11px);
                 horizontal-alignment: center;
                 vertical-alignment: center;
             }

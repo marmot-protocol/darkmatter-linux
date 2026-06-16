@@ -16,10 +16,10 @@ export component Tooltip inherits Rectangle {
     border-width: Theme.border-w;
     border-color: Palette.elevated-border;
     opacity: root.is-visible ? 1.0 : 0.0;
-    drop-shadow-color: Theme.retro ? Palette.shadow : #00000040;
-    drop-shadow-offset-x: Theme.retro ? 2px : 0px;
-    drop-shadow-offset-y: Theme.retro ? 2px : 1px;
-    drop-shadow-blur: Theme.retro ? 0px : 4px;
+    drop-shadow-color: Theme.hard-shadow ? Palette.shadow : #00000040;
+    drop-shadow-offset-x: Theme.hard-shadow ? 2px : 0px;
+    drop-shadow-offset-y: Theme.hard-shadow ? 2px : 1px;
+    drop-shadow-blur: Theme.hard-shadow ? 0px : 4px;
     animate opacity { duration: 120ms; easing: ease-out; }
 
     HorizontalLayout {

@@ -120,7 +120,7 @@ export component ProfileModal inherits Modal {
                     color-b: root.av-b;
                     picture: root.av-picture;
                     has-picture: root.av-has-picture;
-                    font-size: (Theme.retro ? 26px : 26px) * Theme.fs-scale;
+                    font-size: Theme.fs(26px, 26px);
                 }
             }
         }
@@ -181,7 +181,7 @@ export component ProfileModal inherits Modal {
                     width: chip-row.preferred-width + 28px;
                     border-radius: (15px) * Theme.r-scale;
                     background: chip-touch.has-hover ? Palette.field-hover : Palette.field;
-                    border-width: Theme.retro ? Theme.border-w : 1px;
+                    border-width: Theme.border-w;
                     border-color: root.copied ? Palette.mint : Palette.field-border;
                     animate background, border-color { duration: 120ms; }
                     chip-row := HorizontalLayout {

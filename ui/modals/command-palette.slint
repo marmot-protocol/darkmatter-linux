@@ -79,7 +79,7 @@ export component CommandPalette inherits Modal {
                     LineInput {
                         placeholder: @tr("Type a command…");
                         text <=> root.query;
-                        font-size: Theme.retro ? 16px : 14px;
+                        font-size: Theme.fsr(14px, 16px);
                         fg: Palette.text-hi;
                         placeholder-color: Palette.text-vlo;
                     }
@@ -114,7 +114,7 @@ export component CommandPalette inherits Modal {
 
             // ── Divider ─────────────────────────────────────────────────
             Rectangle {
-                height: Theme.retro ? Theme.border-w : 1px;
+                height: Theme.border-w;
                 background: Theme.retro ? Palette.border : Palette.divider;
             }
 
@@ -155,7 +155,7 @@ export component CommandPalette inherits Modal {
                                 animate background { duration: 90ms; easing: ease-out; }
 
                                 // Mint accent bar on selected row (normal mode).
-                                if !Theme.retro : Rectangle {
+                                if !Theme.pixel-select-marker : Rectangle {
                                     x: 8px;
                                     width: 2px;
                                     y: (parent.height - self.height) / 2;
@@ -165,7 +165,7 @@ export component CommandPalette inherits Modal {
                                     animate height { duration: 160ms; easing: ease-in-out; }
                                 }
                                 // Retro selection chevron.
-                                if Theme.retro && i == root.selected : Text {
+                                if Theme.pixel-select-marker && i == root.selected : Text {
                                     x: 6px;
                                     y: (parent.height - self.height) / 2;
                                     text: "▶";
@@ -181,10 +181,10 @@ export component CommandPalette inherits Modal {
                                     alignment: stretch;
                                     Text {
                                         text: action.label;
-                                        color: Theme.retro && i == root.selected
+                                        color: Theme.pixel-select-marker && i == root.selected
                                             ? Palette.bubble-out-fg
                                             : Palette.text-hi;
-                                        font-size: (Theme.retro ? 13px : 12px) * Theme.fs-scale;
+                                        font-size: Theme.fs(12px, 13px);
                                         font-weight: i == root.selected ? 700 : 500;
                                         font-family: Theme.font;
                                         vertical-alignment: center;
@@ -196,7 +196,7 @@ export component CommandPalette inherits Modal {
                                         border-radius: (4px) * Theme.r-scale;
                                         border-width: Theme.border-w;
                                         border-color: Palette.border-2;
-                                        background: i == root.selected && !Theme.retro
+                                        background: i == root.selected && !Theme.pixel-select-marker
                                             ? Palette.panel
                                             : Palette.panel-2;
                                         y: (parent.height - self.height) / 2;
@@ -244,7 +244,7 @@ export component CommandPalette inherits Modal {
 
             // ── Footer hint strip ───────────────────────────────────────
             Rectangle {
-                height: Theme.retro ? Theme.border-w : 1px;
+                height: Theme.border-w;
                 background: Theme.retro ? Palette.border : Palette.divider;
             }
             Rectangle {

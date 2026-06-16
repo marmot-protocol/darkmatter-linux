@@ -60,13 +60,13 @@ export component GeneralPane inherits DetailPage {
                 MicroButton {
                     label: @tr("24-hour");
                     selected: root.time-format == "24h";
-                    fg: root.time-format == "24h" && Theme.retro ? Palette.bubble-out-fg : Palette.text-hi;
+                    fg: root.time-format == "24h" && Theme.selected-inverts-text ? Palette.bubble-out-fg : Palette.text-hi;
                     clicked => { root.time-format-selected("24h"); }
                 }
                 MicroButton {
                     label: @tr("12-hour");
                     selected: root.time-format == "12h";
-                    fg: root.time-format == "12h" && Theme.retro ? Palette.bubble-out-fg : Palette.text-hi;
+                    fg: root.time-format == "12h" && Theme.selected-inverts-text ? Palette.bubble-out-fg : Palette.text-hi;
                     clicked => { root.time-format-selected("12h"); }
                 }
             }
@@ -77,19 +77,19 @@ export component GeneralPane inherits DetailPage {
                 MicroButton {
                     label: "Jun 12";
                     selected: root.date-format == "mdy";
-                    fg: root.date-format == "mdy" && Theme.retro ? Palette.bubble-out-fg : Palette.text-hi;
+                    fg: root.date-format == "mdy" && Theme.selected-inverts-text ? Palette.bubble-out-fg : Palette.text-hi;
                     clicked => { root.date-format-selected("mdy"); }
                 }
                 MicroButton {
                     label: "12 Jun";
                     selected: root.date-format == "dmy";
-                    fg: root.date-format == "dmy" && Theme.retro ? Palette.bubble-out-fg : Palette.text-hi;
+                    fg: root.date-format == "dmy" && Theme.selected-inverts-text ? Palette.bubble-out-fg : Palette.text-hi;
                     clicked => { root.date-format-selected("dmy"); }
                 }
                 MicroButton {
                     label: "2026-06-12";
                     selected: root.date-format == "iso";
-                    fg: root.date-format == "iso" && Theme.retro ? Palette.bubble-out-fg : Palette.text-hi;
+                    fg: root.date-format == "iso" && Theme.selected-inverts-text ? Palette.bubble-out-fg : Palette.text-hi;
                     clicked => { root.date-format-selected("iso"); }
                 }
             }

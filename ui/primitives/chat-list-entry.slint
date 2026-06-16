@@ -1,0 +1,84 @@
+// Chat-list-row skin slot (theming engine, Layer 1).
+//
+// Dispatches each chat row to the body selected by `Theme.skin-list`:
+//   0 = the standard avatar + preview card (ChatListItem)
+//   1 = a compact IRC-style `#name` text line (ChatListItemIrc)
+// Both consume the same ChatMeta contract struct and emit `clicked`. Adding a
+// list skin never touches chat-list.slint or the Rust glue. See ui/CONTRACT.md.
+import { Palette, Theme, ChatMeta } from "../tokens.slint";
+import { ChatListItem } from "chat-list-item.slint";
+
+// IRC-style one-line channel row: `# name        (badge)`.
+component ChatListItemIrc inherits Rectangle {
+    in property <ChatMeta> chat;
+    in property <bool> selected: false;
+    callback clicked;
+
+    height: 26px;
+    background: root.selected
+        ? Palette.selected
+        : (touch.has-hover ? Palette.hover : transparent);
+
+    HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 10px;
+        spacing: 6px;
+        alignment: start;
+        Text {
+            text: "#";
+            color: Palette.mint-dim;
+            font-family: Theme.font;
+            font-size: 13px * Theme.fs-scale;
+            font-weight: 700;
+            vertical-alignment: center;
+        }
+        Text {
+            text: root.chat.name;
+            color: root.selected ? Palette.text-hi : (root.chat.read ? Palette.text-mid : Palette.text-hi);
+            font-family: Theme.font;
+            font-size: 13px * Theme.fs-scale;
+            font-weight: root.chat.read ? 400 : 700;
+            vertical-alignment: center;
+            overflow: elide;
+            horizontal-stretch: 1;
+        }
+        if root.chat.badge != "" : Text {
+            text: "(" + root.chat.badge + ")";
+            color: Palette.mint;
+            font-family: Theme.font;
+            font-size: 12px * Theme.fs-scale;
+            font-weight: 700;
+            vertical-alignment: center;
+        }
+    }
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
+export component ChatListEntry inherits VerticalLayout {
+    in property <ChatMeta> chat;
+    in property <bool> selected: false;
+    callback clicked;
+
+    if Theme.skin-list == 0 : ChatListItem {
+        selected: root.selected;
+        name: root.chat.name;
+        preview: root.chat.preview;
+        stamp: root.chat.stamp;
+        badge: root.chat.badge;
+        read: root.chat.read;
+        sending: root.chat.sending;
+        av-initials: root.chat.av-initials;
+        av-a: root.chat.av-a;
+        av-b: root.chat.av-b;
+        picture: root.chat.picture;
+        has-picture: root.chat.has-picture;
+        clicked => { root.clicked(); }
+    }
+    if Theme.skin-list == 1 : ChatListItemIrc {
+        chat: root.chat;
+        selected: root.selected;
+        clicked => { root.clicked(); }
+    }
+}

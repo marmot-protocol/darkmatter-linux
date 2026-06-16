@@ -24,12 +24,12 @@ export component ChatListItem inherits Rectangle {
         ? Palette.selected
         : (touch.has-hover ? Palette.hover : transparent);
     border-radius: (8px) * Theme.r-scale;
-    border-width: Theme.retro && root.selected ? Theme.border-w : (root.selected && !Theme.retro ? 1px : 0px);
-    border-color: root.selected && !Theme.retro ? Palette.mint-glow : Palette.border;
+    border-width: Theme.selected-inverts-text && root.selected ? Theme.border-w : (root.selected && !Theme.selected-inverts-text ? 1px : 0px);
+    border-color: root.selected && !Theme.selected-inverts-text ? Palette.mint-glow : Palette.border;
     animate background, border-color { duration: 140ms; easing: ease-out; }
 
     // Animated mint selection bar — grows from center when selected.
-    if !Theme.retro : Rectangle {
+    if !Theme.pixel-select-marker : Rectangle {
         x: 0px;
         width: 3px;
         height: root.selected ? 40px : 0px;
@@ -43,7 +43,7 @@ export component ChatListItem inherits Rectangle {
         animate opacity { duration: 160ms; easing: ease-out; }
     }
     // SNES selection chevron — slides in from outside the edge.
-    if Theme.retro : Text {
+    if Theme.pixel-select-marker : Text {
         x: root.selected ? 2px : -14px;
         y: (parent.height - self.height) / 2;
         text: "▶";
@@ -67,7 +67,7 @@ export component ChatListItem inherits Rectangle {
             color-b: root.av-b;
             picture: root.picture;
             has-picture: root.has-picture;
-            font-size: (Theme.retro ? 16px : 11px) * Theme.fs-scale;
+            font-size: Theme.fs(11px, 16px);
         }
         VerticalLayout {
             horizontal-stretch: 1;
@@ -76,7 +76,7 @@ export component ChatListItem inherits Rectangle {
                 spacing: 6px;
                 Text {
                     text: root.name;
-                    color: Theme.retro && root.selected ? Palette.bubble-out-fg : Palette.text-hi;
+                    color: Theme.selected-inverts-text && root.selected ? Palette.bubble-out-fg : Palette.text-hi;
                     font-size: (13px) * Theme.fs-scale;
                     font-weight: 700;
                     font-family: Theme.font;
@@ -85,7 +85,7 @@ export component ChatListItem inherits Rectangle {
                 }
                 Text {
                     text: root.stamp;
-                    color: Theme.retro && root.selected ? Palette.bubble-out-fg : Palette.text-lo;
+                    color: Theme.selected-inverts-text && root.selected ? Palette.bubble-out-fg : Palette.text-lo;
                     font-size: (10px) * Theme.fs-scale;
                     font-family: Theme.font;
                     vertical-alignment: center;
@@ -96,8 +96,8 @@ export component ChatListItem inherits Rectangle {
                 spacing: 6px;
                 Text {
                     text: root.preview;
-                    color: Theme.retro && root.selected ? Palette.bubble-out-fg : Palette.text-lo;
-                    font-size: (Theme.retro ? 16px : 11px) * Theme.fs-scale;
+                    color: Theme.selected-inverts-text && root.selected ? Palette.bubble-out-fg : Palette.text-lo;
+                    font-size: Theme.fs(11px, 16px);
                     font-family: Theme.font;
                     horizontal-stretch: 1;
                     overflow: elide;

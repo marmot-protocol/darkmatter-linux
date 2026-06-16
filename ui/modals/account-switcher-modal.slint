@@ -25,7 +25,7 @@ export component AccountSwitcherModal inherits Modal {
             background: acc.active
                 ? Palette.selected
                 : (row-touch.has-hover ? Palette.hover : transparent);
-            border-width: acc.active ? (Theme.retro ? Theme.border-w : 1px) : 0px;
+            border-width: acc.active ? Theme.border-w : 0px;
             border-color: Palette.mint;
             animate background { duration: 100ms; easing: ease-out; }
 

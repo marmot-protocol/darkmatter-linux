@@ -1,7 +1,7 @@
 # Reusable build workflow: compiles darkmatter-linux for every supported
-# platform (Linux x86_64/arm64, macOS x86_64/arm64). Called by ci.yml (debug,
-# no artifacts) and release.yml (release, uploads artifacts).
-# (FreeBSD x86_64 build temporarily disabled.)
+# platform (Linux x86_64/arm64, macOS arm64). Called by ci.yml (debug, no
+# artifacts) and release.yml (release, uploads artifacts).
+# (FreeBSD x86_64 and Intel-macOS x86_64 builds temporarily disabled.)
 #
 # The marmot crates are a public https git dependency
 # (https://github.com/marmot-protocol/darkmatter.git), so cargo fetches them
@@ -30,7 +30,6 @@ jobs:
         include:
           - { os: ubuntu-24.04,     triple: x86_64-unknown-linux-gnu }
           - { os: ubuntu-24.04-arm, triple: aarch64-unknown-linux-gnu }
-          - { os: macos-13,         triple: x86_64-apple-darwin }
           - { os: macos-14,         triple: aarch64-apple-darwin }
     steps:
       - uses: actions/checkout@v4
@@ -50,9 +49,32 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
+      # cache-on-failure keeps the opt-level-3 dependency build warm even when a
+      # build fails, so the next push doesn't recompile the dep tree from cold.
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.triple }}
+          cache-on-failure: true
+
+      # rust-cache (above) cleans workspace-member artifacts before saving, so
+      # the ~345k-line generated dm-ui Slint crate (~25s to compile) recompiles
+      # every run. This content-addressed cache restores it directly. Keyed on
+      # everything that changes its output — UI/lang/dm-ui sources, locked dep
+      # ABIs, toolchain, plus the triple and profile (release vs debug artifacts
+      # differ). Defined AFTER rust-cache so its restore overlays target/ and its
+      # save runs before rust-cache cleans the workspace crates.
+      - name: Record toolchain version
+        shell: bash
+        run: echo "RUSTC_VER=$(rustc -V | tr ' .()' '----')" >> "$GITHUB_ENV"
+      - name: Cache compiled dm-ui (Slint UI) crate
+        uses: actions/cache@v4
+        with:
+          path: |
+            target/${{ inputs.release && 'release' || 'debug' }}/build/dm-ui-*
+            target/${{ inputs.release && 'release' || 'debug' }}/deps/libdm_ui-*
+            target/${{ inputs.release && 'release' || 'debug' }}/deps/dm_ui-*
+            target/${{ inputs.release && 'release' || 'debug' }}/.fingerprint/dm-ui-*
+          key: dmui-${{ matrix.triple }}-${{ inputs.release && 'rel' || 'dev' }}-${{ env.RUSTC_VER }}-${{ hashFiles('ui/**', 'lang/**', 'dm-ui/**', 'Cargo.lock') }}
 
       - name: Build
         run: cargo build --locked ${{ inputs.release && '--release' || '' }}

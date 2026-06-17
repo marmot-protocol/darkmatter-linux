@@ -1,6 +1,7 @@
 # Reusable build workflow: compiles darkmatter-linux for every supported
-# platform (Linux x86_64/arm64, macOS x86_64/arm64, FreeBSD x86_64). Called by
-# ci.yml (debug, no artifacts) and release.yml (release, uploads artifacts).
+# platform (Linux x86_64/arm64, macOS x86_64/arm64). Called by ci.yml (debug,
+# no artifacts) and release.yml (release, uploads artifacts).
+# (FreeBSD x86_64 build temporarily disabled.)
 #
 # The marmot crates are a public https git dependency
 # (https://github.com/marmot-protocol/darkmatter.git), so cargo fetches them
@@ -71,40 +72,4 @@ jobs:
         with:
           name: darkmatter-linux-${{ matrix.triple }}
           path: darkmatter-linux-${{ matrix.triple }}.tar.gz
-          if-no-files-found: error
-
-  # GitHub has no FreeBSD runner, so we boot a FreeBSD VM inside an x86_64 Linux
-  # runner (vmactions). The marmot crates are a public https dependency, so the
-  # VM's git just fetches them anonymously — no key forwarding needed.
-  freebsd:
-    name: build (x86_64-unknown-freebsd)
-    runs-on: ubuntu-24.04
-    env:
-      RELEASE: ${{ inputs.release && '1' || '' }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build in FreeBSD VM
-        uses: vmactions/freebsd-vm@v1
-        with:
-          release: "14.2"
-          usesh: true
-          envs: "RELEASE"
-          prepare: |
-            pkg install -y rust mpv pkgconf dbus alsa-lib fontconfig git
-          run: |
-            set -eu
-            cargo build --locked ${RELEASE:+--release}
-            if [ -n "$RELEASE" ]; then
-              dist="darkmatter-linux-x86_64-unknown-freebsd"
-              mkdir -p "$dist"
-              cp target/release/darkmatter-linux "$dist/"
-              tar -czf "$dist.tar.gz" "$dist"
-            fi
-
-      - uses: actions/upload-artifact@v4
-        if: inputs.release
-        with:
-          name: darkmatter-linux-x86_64-unknown-freebsd
-          path: darkmatter-linux-x86_64-unknown-freebsd.tar.gz
           if-no-files-found: error

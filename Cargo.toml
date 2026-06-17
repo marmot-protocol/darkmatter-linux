@@ -6,6 +6,7 @@ name = "darkmatter-linux"
 version = "0.1.0"
 edition = "2024"
 default-run = "darkmatter-linux"
+license = "AGPL-3.0-or-later"
 
 [dependencies]
 slint = "1.8"

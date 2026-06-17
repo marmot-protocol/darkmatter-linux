@@ -2,11 +2,9 @@
 # platform (Linux x86_64/arm64, macOS x86_64/arm64, FreeBSD x86_64). Called by
 # ci.yml (debug, no artifacts) and release.yml (release, uploads artifacts).
 #
-# The marmot crates are a PRIVATE ssh git dependency
-# (ssh://git@github.com/marmot-protocol/darkmatter.git). Builds need an SSH key
-# with read access to that repo, provided via the DARKMATTER_DEPLOY_KEY secret.
-# `.cargo/config.toml` sets net.git-fetch-with-cli, so cargo fetches through the
-# git CLI + ssh-agent we set up here.
+# The marmot crates are a public https git dependency
+# (https://github.com/marmot-protocol/darkmatter.git), so cargo fetches them
+# anonymously — no secrets or ssh-agent setup required.
 name: build
 
 on:
@@ -16,10 +14,6 @@ on:
         description: "Build with --release and upload packaged artifacts"
         type: boolean
         default: false
-    secrets:
-      DARKMATTER_DEPLOY_KEY:
-        description: "SSH private key with read access to marmot-protocol/darkmatter"
-        required: true
 
 jobs:
   # Native runners: one per OS/arch. arm64 Linux uses GitHub's native arm
@@ -59,12 +53,6 @@ jobs:
         with:
           key: ${{ matrix.triple }}
 
-      # Loads the private deploy key into ssh-agent and registers github.com in
-      # known_hosts so the git CLI can fetch the marmot crates non-interactively.
-      - uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.DARKMATTER_DEPLOY_KEY }}
-
       - name: Build
         run: cargo build --locked ${{ inputs.release && '--release' || '' }}
 
@@ -86,13 +74,12 @@ jobs:
           if-no-files-found: error
 
   # GitHub has no FreeBSD runner, so we boot a FreeBSD VM inside an x86_64 Linux
-  # runner (vmactions). The deploy key is forwarded into the VM via `envs` and
-  # written to ~/.ssh there; GIT_SSH_COMMAND points the git CLI at it.
+  # runner (vmactions). The marmot crates are a public https dependency, so the
+  # VM's git just fetches them anonymously — no key forwarding needed.
   freebsd:
     name: build (x86_64-unknown-freebsd)
     runs-on: ubuntu-24.04
     env:
-      DEPLOY_KEY: ${{ secrets.DARKMATTER_DEPLOY_KEY }}
       RELEASE: ${{ inputs.release && '1' || '' }}
     steps:
       - uses: actions/checkout@v4
@@ -102,16 +89,11 @@ jobs:
         with:
           release: "14.2"
           usesh: true
-          envs: "DEPLOY_KEY RELEASE"
+          envs: "RELEASE"
           prepare: |
             pkg install -y rust mpv pkgconf dbus alsa-lib fontconfig git
           run: |
             set -eu
-            mkdir -p ~/.ssh
-            printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/id_deploy
-            chmod 600 ~/.ssh/id_deploy
-            ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
-            export GIT_SSH_COMMAND="ssh -i $HOME/.ssh/id_deploy -o IdentitiesOnly=yes"
             cargo build --locked ${RELEASE:+--release}
             if [ -n "$RELEASE" ]; then
               dist="darkmatter-linux-x86_64-unknown-freebsd"

@@ -13,7 +13,6 @@ jobs:
     uses: ./.github/workflows/_build.yml
     with:
       release: true
-    secrets: inherit
 
   publish:
     name: publish GitHub Release

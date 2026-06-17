@@ -34,10 +34,6 @@ jobs:
         with:
           key: lint
 
-      - uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.DARKMATTER_DEPLOY_KEY }}
-
       - name: Check formatting
         run: cargo fmt --all -- --check
 
@@ -49,4 +45,3 @@ jobs:
     uses: ./.github/workflows/_build.yml
     with:
       release: false
-    secrets: inherit

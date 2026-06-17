@@ -20,6 +20,7 @@ mod media_cache;
 mod mpv;
 mod notify;
 mod observability;
+mod offline_queue;
 mod settings;
 mod vault;
 
@@ -164,6 +165,96 @@ fn next_temp_id() -> String {
     static N: AtomicU64 = AtomicU64::new(0);
     let v = N.fetch_add(1, Ordering::Relaxed);
     format!("pending:{v}")
+}
+
+// ─── Durable offline send queue ────────────────────────────────────────────
+//
+// The optimistic overlay above lives only in RAM. These process-wide handles
+// add the missing durability + auto-flush-on-reconnect: see `offline_queue.rs`
+// for the encrypted on-disk store. The *disk* queue is the source of truth for
+// any (re)dispatch — the overlay is just what's rendered.
+
+use std::collections::HashSet;
+use std::sync::OnceLock;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering as AtomicOrdering};
+
+/// temp_ids whose send is currently in flight (dispatched, not yet resolved).
+/// The reconnect flush skips these so a send can't be dispatched twice
+/// concurrently. Entries are inserted at dispatch and removed when the op
+/// resolves (ack or error), on whichever thread resolves it.
+fn offline_inflight() -> &'static Mutex<HashSet<String>> {
+    static S: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
+    S.get_or_init(|| Mutex::new(HashSet::new()))
+}
+
+fn offline_inflight_insert(temp_id: &str) {
+    if let Ok(mut s) = offline_inflight().lock() {
+        s.insert(temp_id.to_string());
+    }
+}
+
+fn offline_inflight_remove(temp_id: &str) {
+    if let Ok(mut s) = offline_inflight().lock() {
+        s.remove(temp_id);
+    }
+}
+
+fn offline_inflight_contains(temp_id: &str) -> bool {
+    offline_inflight()
+        .lock()
+        .map(|s| s.contains(temp_id))
+        .unwrap_or(false)
+}
+
+/// Set by the background connectivity watcher when there's queued work to (re)try
+/// — on first boot-ready and on every offline→online relay transition. The UI
+/// timer consumes it and calls `flush_now`.
+fn offline_flush_requested() -> &'static AtomicBool {
+    static B: AtomicBool = AtomicBool::new(false);
+    &B
+}
+
+/// Last-known connected relay count, published by the watcher thread so the
+/// UI-thread flush can decide whether to dispatch (online) or only render the
+/// queued bubbles (offline) without itself blocking on `relay_health`.
+fn offline_last_connected() -> &'static AtomicUsize {
+    static N: AtomicUsize = AtomicUsize::new(0);
+    &N
+}
+
+/// Seal `send` into the durable queue using the session vault, if it's unlocked.
+/// A no-op (best-effort) when the vault handle isn't present.
+fn offline_persist(
+    vault_cell: &Arc<Mutex<Option<Arc<Mutex<Vault>>>>>,
+    send: &offline_queue::QueuedSend,
+) {
+    if let Some(vault) = vault_cell.lock().ok().and_then(|g| g.clone()) {
+        offline_queue::put(&vault, send);
+    }
+}
+
+/// Boot-only duplicate guard for the narrow kill-after-publish-before-ack
+/// window: a queued send whose relay publish actually succeeded but whose
+/// durable entry we never got to delete before the process exited. On the next
+/// boot we'd otherwise re-send it. Returns true when an outgoing kind-9 from
+/// `my_id` whose body matches one of `bodies` already exists near the enqueue
+/// time (±10 min). Text-only — attachment bodies have no stable comparison key.
+fn looks_already_sent(
+    backend: &Backend,
+    group_hex: &str,
+    my_id: &str,
+    bodies: &[String],
+    enqueued_at: u64,
+) -> bool {
+    let Ok(msgs) = backend.messages(group_hex, Some(msg_window_for(group_hex))) else {
+        return false;
+    };
+    msgs.iter().any(|m| {
+        m.kind == 9
+            && m.sender.eq_ignore_ascii_case(my_id)
+            && bodies.iter().any(|b| &m.plaintext == b)
+            && m.recorded_at.abs_diff(enqueued_at) <= 600
+    })
 }
 
 // ─── Voice-message state ───────────────────────────────────────────────────
@@ -1172,6 +1263,8 @@ fn main() -> Result<(), slint::PlatformError> {
             if let Err(e) = vault::delete() {
                 eprintln!("[login] vault reset failed: {e}");
             }
+            // Queued sends were sealed under the old vault key — unreadable now.
+            offline_queue::clear();
             ui.set_password_input(s(""));
             ui.set_password_confirm(s(""));
             ui.set_login_error(s(""));
@@ -3249,6 +3342,9 @@ fn main() -> Result<(), slint::PlatformError> {
                 let Some(backend) = guard.as_ref() else {
                     return;
                 };
+                // Mark in flight so the reconnect flush won't dispatch it again
+                // concurrently. Cleared when this send resolves (ack or error).
+                offline_inflight_insert(&temp_id);
                 let weak_cb = weak.clone();
                 let group_ids_cb = group_ids.clone();
                 let pending_state_cb = pending_state.clone();
@@ -3265,8 +3361,15 @@ fn main() -> Result<(), slint::PlatformError> {
                     let backend_cell = backend_cell_cb.clone();
                     let group_hex = group_hex_cb.clone();
                     let temp_id = temp_id_cb.clone();
-                    let all: Vec<AppMessageRecord> = if result.is_ok() {
-                        backend_cell
+                    // This send has resolved — drop the in-flight guard.
+                    offline_inflight_remove(&temp_id);
+                    // On a failure, decide here (on the worker thread, where a
+                    // blocking `relay_health` poll is fine) whether we're offline.
+                    // An offline failure keeps the bubble *pending* and the durable
+                    // entry queued for the reconnect flush; an online failure is a
+                    // real error and flips the bubble red.
+                    let (all, online): (Vec<AppMessageRecord>, bool) = if result.is_ok() {
+                        let all = backend_cell
                             .lock()
                             .unwrap()
                             .as_ref()
@@ -3274,9 +3377,16 @@ fn main() -> Result<(), slint::PlatformError> {
                                 b.messages(&group_hex, Some(msg_window_for(&group_hex)))
                                     .unwrap_or_default()
                             })
-                            .unwrap_or_default()
+                            .unwrap_or_default();
+                        (all, true)
                     } else {
-                        Vec::new()
+                        let online = backend_cell
+                            .lock()
+                            .unwrap()
+                            .as_ref()
+                            .map(|b| b.relay_health().0 > 0)
+                            .unwrap_or(false);
+                        (Vec::new(), online)
                     };
                     let _ = slint::invoke_from_event_loop(move || {
                         let Some(ui) = weak.upgrade() else { return };
@@ -3296,6 +3406,8 @@ fn main() -> Result<(), slint::PlatformError> {
                                     .lock()
                                     .unwrap()
                                     .drop_send(&group_hex, &temp_id);
+                                // Confirmed — drop the durable queue entry.
+                                offline_queue::remove(&temp_id);
 
                                 let guard = backend_cell.lock().unwrap();
                                 let Some(backend) = guard.as_ref() else {
@@ -3349,9 +3461,17 @@ fn main() -> Result<(), slint::PlatformError> {
                             }
                             Err(e) => {
                                 eprintln!("[send] {e:#}");
+                                if !online {
+                                    // Offline: leave the bubble pending ("sending…")
+                                    // and the durable entry queued. The reconnect
+                                    // flush re-dispatches it automatically.
+                                    eprintln!("[send] offline — left queued for flush");
+                                    return;
+                                }
                                 ui.set_backend_error(format!("send: {e:#}").into());
-                                // Mark failed in place — the bubble flips to red
-                                // without disturbing its neighbours.
+                                // Online failure: a real error. Mark failed in place
+                                // — the bubble flips to red without disturbing its
+                                // neighbours.
                                 let mut overlay = pending_state.lock().unwrap();
                                 overlay.mark_send_failed(&group_hex, &temp_id);
                                 let failed_send = overlay.find_send(&group_hex, &temp_id);
@@ -3473,6 +3593,7 @@ fn main() -> Result<(), slint::PlatformError> {
         let staged_files = staged_files.clone();
         let dispatch_send = dispatch_send.clone();
         let edit_op = edit_op.clone();
+        let vault_cell = vault_cell.clone();
         move |text| {
             let Some(ui) = weak.upgrade() else { return };
             // A send closes the mention picker; the draft is about to clear.
@@ -3547,6 +3668,24 @@ fn main() -> Result<(), slint::PlatformError> {
                 }
                 let my_id = backend.account().account_id_hex.clone();
                 let my_label = my_avatar_label(backend, &my_id);
+                // Durably queue this send so it survives a restart and auto-flushes
+                // on reconnect. The disk entry carries the *clean* text +
+                // effect id; the wire body's effect marker is reconstructed at
+                // (re)dispatch time.
+                offline_persist(
+                    &vault_cell,
+                    &offline_queue::QueuedSend {
+                        temp_id: temp_id.clone(),
+                        account_id_hex: my_id.clone(),
+                        group_hex: group_hex.clone(),
+                        kind: offline_queue::QueuedKind::Text {
+                            text: text.clone(),
+                            reply_to: reply_to.clone(),
+                            effect: effect_id,
+                        },
+                        enqueued_at: offline_queue::now_secs(),
+                    },
+                );
                 let pending_row = pending_chat_message(&send, &my_id, &my_label);
                 with_inner_messages(&chats_messages, idx, |vm| {
                     push_message_grouped(vm, pending_row)
@@ -3592,12 +3731,14 @@ fn main() -> Result<(), slint::PlatformError> {
                             backend_cell.clone(),
                             group_ids.clone(),
                             pending_state.clone(),
+                            vault_cell.clone(),
                             group_hex.clone(),
                             f.file_name,
                             f.media_type,
                             f.bytes,
                             f.is_image,
                             f.preview,
+                            None,
                         );
                     } else {
                         spawn_album_send(
@@ -3605,8 +3746,10 @@ fn main() -> Result<(), slint::PlatformError> {
                             backend_cell.clone(),
                             group_ids.clone(),
                             pending_state.clone(),
+                            vault_cell.clone(),
                             group_hex.clone(),
                             chunk.to_vec(),
+                            None,
                         );
                     }
                 }
@@ -3616,12 +3759,14 @@ fn main() -> Result<(), slint::PlatformError> {
                         backend_cell.clone(),
                         group_ids.clone(),
                         pending_state.clone(),
+                        vault_cell.clone(),
                         group_hex.clone(),
                         f.file_name,
                         f.media_type,
                         f.bytes,
                         f.is_image,
                         f.preview,
+                        None,
                     );
                 }
             }
@@ -3640,6 +3785,7 @@ fn main() -> Result<(), slint::PlatformError> {
         let chats_messages = chats_messages.clone();
         let pending_state = pending_state.clone();
         let dispatch_send = dispatch_send.clone();
+        let vault_cell = vault_cell.clone();
         move |message_id| {
             let Some(ui) = weak.upgrade() else { return };
             let temp_id = message_id.to_string();
@@ -3677,8 +3823,68 @@ fn main() -> Result<(), slint::PlatformError> {
                 });
             }
             drop(guard);
-            let parent_id = send.reply_to.as_ref().map(|(id, _, _)| id.clone());
-            dispatch_send(group_hex, send.text, temp_id, parent_id);
+            // Re-dispatch. Plain text/reply goes through the normal send path; a
+            // media send can't (its bytes aren't in the overlay), so recover them
+            // from the durable queue and replay the upload under the same temp id.
+            if send.media.is_empty() {
+                offline_inflight_insert(&temp_id);
+                let parent_id = send.reply_to.as_ref().map(|(id, _, _)| id.clone());
+                dispatch_send(group_hex, send.text, temp_id, parent_id);
+            } else {
+                let entry = vault_cell
+                    .lock()
+                    .ok()
+                    .and_then(|g| g.clone())
+                    .and_then(|v| offline_queue::load_one(&v, &temp_id));
+                match entry.map(|e| e.kind) {
+                    Some(offline_queue::QueuedKind::Attachment(m)) => {
+                        offline_inflight_insert(&temp_id);
+                        spawn_attachment_send(
+                            weak.clone(),
+                            backend_cell.clone(),
+                            group_ids.clone(),
+                            pending_state.clone(),
+                            vault_cell.clone(),
+                            group_hex,
+                            m.file_name,
+                            m.media_type,
+                            m.bytes,
+                            m.is_image,
+                            None,
+                            Some(temp_id),
+                        );
+                    }
+                    Some(offline_queue::QueuedKind::Album(ms)) => {
+                        offline_inflight_insert(&temp_id);
+                        let files: Vec<StagedFile> = ms
+                            .into_iter()
+                            .map(|m| StagedFile {
+                                file_name: m.file_name,
+                                media_type: m.media_type,
+                                bytes: m.bytes,
+                                is_image: m.is_image,
+                                preview: None,
+                                thumb: None,
+                            })
+                            .collect();
+                        spawn_album_send(
+                            weak.clone(),
+                            backend_cell.clone(),
+                            group_ids.clone(),
+                            pending_state.clone(),
+                            vault_cell.clone(),
+                            group_hex,
+                            files,
+                            Some(temp_id),
+                        );
+                    }
+                    _ => {
+                        // No durable bytes to retry with (e.g. an entry from before
+                        // this feature). Leave the bubble as-is.
+                        eprintln!("[retry] no durable media for {temp_id}");
+                    }
+                }
+            }
         }
     });
 
@@ -3771,18 +3977,25 @@ fn main() -> Result<(), slint::PlatformError> {
     // Thread-safety: `ModelRc` is `!Send`, so we never carry it across the
     // tokio boundary — every closure that hops back to the UI re-fetches
     // the model via `ui.get_chats_messages()`.
+    // `replay_temp_id` is `None` for a fresh send (allocate an id, render the
+    // pending bubble, persist a durable queue entry) and `Some(id)` when the
+    // reconnect flush re-dispatches an already-queued attachment using bytes read
+    // back from disk — in which case the overlay entry/bubble may already
+    // exist and the durable entry is already on disk.
     #[allow(clippy::too_many_arguments)]
     fn spawn_attachment_send(
         weak: slint::Weak<DarkMatterLinux>,
         backend_cell: Arc<Mutex<Option<Arc<Backend>>>>,
         group_ids: Arc<Mutex<Vec<String>>>,
         pending_state: Arc<Mutex<PendingState>>,
+        vault_cell: Arc<Mutex<Option<Arc<Mutex<Vault>>>>>,
         group_hex: String,
         file_name: String,
         media_type: String,
         bytes: Vec<u8>,
         is_image: bool,
         local_preview: Option<PicturePixels>,
+        replay_temp_id: Option<String>,
     ) {
         let size_bytes = bytes.len() as u64;
         let weak2 = weak;
@@ -3792,6 +4005,7 @@ fn main() -> Result<(), slint::PlatformError> {
         let group_hex2 = group_hex;
         let file_name_u = file_name.clone();
         let media_type_u = media_type.clone();
+        let bytes_for_queue = bytes.clone();
         let _ = slint::invoke_from_event_loop(move || {
             let Some(ui) = weak2.upgrade() else { return };
             let chats_messages = ui.get_chats_messages();
@@ -3805,7 +4019,8 @@ fn main() -> Result<(), slint::PlatformError> {
                 return;
             };
 
-            let temp_id = next_temp_id();
+            let is_replay = replay_temp_id.is_some();
+            let temp_id = replay_temp_id.unwrap_or_else(next_temp_id);
             let send = PendingSend {
                 temp_id: temp_id.clone(),
                 text: String::new(),
@@ -3822,17 +4037,47 @@ fn main() -> Result<(), slint::PlatformError> {
                     local_preview: local_preview.clone(),
                 }],
             };
-            {
-                let mut overlay = pending_state2.lock().unwrap();
-                overlay.add_send(&group_hex2, send.clone());
+            // Render the pending bubble + insert the overlay entry only if it isn't
+            // already present (a replay of an in-session offline failure keeps its
+            // existing bubble; a boot replay has none yet).
+            let already_present = pending_state2
+                .lock()
+                .unwrap()
+                .find_send(&group_hex2, &temp_id)
+                .is_some();
+            if !already_present {
+                {
+                    let mut overlay = pending_state2.lock().unwrap();
+                    overlay.add_send(&group_hex2, send.clone());
+                }
+                let my_id = backend.account().account_id_hex.clone();
+                let my_label = my_avatar_label(backend, &my_id);
+                let pending_row = pending_chat_message(&send, &my_id, &my_label);
+                with_inner_messages(&chats_messages, idx, |vm| {
+                    push_message_grouped(vm, pending_row)
+                });
+                ui.set_messages_scroll_tick(ui.get_messages_scroll_tick() + 1);
             }
-            let my_id = backend.account().account_id_hex.clone();
-            let my_label = my_avatar_label(backend, &my_id);
-            let pending_row = pending_chat_message(&send, &my_id, &my_label);
-            with_inner_messages(&chats_messages, idx, |vm| {
-                push_message_grouped(vm, pending_row)
-            });
-            ui.set_messages_scroll_tick(ui.get_messages_scroll_tick() + 1);
+            // Durably queue this attachment on first send so it survives a restart.
+            if !is_replay {
+                let my_id = backend.account().account_id_hex.clone();
+                offline_persist(
+                    &vault_cell,
+                    &offline_queue::QueuedSend {
+                        temp_id: temp_id.clone(),
+                        account_id_hex: my_id,
+                        group_hex: group_hex2.clone(),
+                        kind: offline_queue::QueuedKind::Attachment(offline_queue::QueuedMedia {
+                            file_name: file_name_u.clone(),
+                            media_type: media_type_u.clone(),
+                            bytes: bytes_for_queue,
+                            is_image,
+                        }),
+                        enqueued_at: offline_queue::now_secs(),
+                    },
+                );
+            }
+            offline_inflight_insert(&temp_id);
 
             let weak3 = weak2.clone();
             let backend_cell3 = backend_cell2.clone();
@@ -3855,10 +4100,14 @@ fn main() -> Result<(), slint::PlatformError> {
                     let group_hex = group_hex3.clone();
                     let temp_id = temp_id3.clone();
                     let local_preview = local_preview_done.clone();
+                    // This upload has resolved — drop the in-flight guard.
+                    offline_inflight_remove(&temp_id);
                     // Tokio worker — read the refreshed window HERE
-                    // so the invoke closure never touches sqlite.
-                    let all: Vec<AppMessageRecord> = if result.is_ok() {
-                        backend_cell
+                    // so the invoke closure never touches sqlite. On failure also
+                    // poll connectivity so an offline failure stays queued + pending
+                    // rather than flipping the bubble red.
+                    let (all, online): (Vec<AppMessageRecord>, bool) = if result.is_ok() {
+                        let all = backend_cell
                             .lock()
                             .unwrap()
                             .as_ref()
@@ -3866,9 +4115,16 @@ fn main() -> Result<(), slint::PlatformError> {
                                 b.messages(&group_hex, Some(msg_window_for(&group_hex)))
                                     .unwrap_or_default()
                             })
-                            .unwrap_or_default()
+                            .unwrap_or_default();
+                        (all, true)
                     } else {
-                        Vec::new()
+                        let online = backend_cell
+                            .lock()
+                            .unwrap()
+                            .as_ref()
+                            .map(|b| b.relay_health().0 > 0)
+                            .unwrap_or(false);
+                        (Vec::new(), online)
                     };
                     let _ = slint::invoke_from_event_loop(move || {
                         let Some(ui) = weak.upgrade() else { return };
@@ -3885,6 +4141,7 @@ fn main() -> Result<(), slint::PlatformError> {
                                     .lock()
                                     .unwrap()
                                     .drop_send(&group_hex, &temp_id);
+                                offline_queue::remove(&temp_id);
                                 let guard = backend_cell.lock().unwrap();
                                 let Some(backend) = guard.as_ref() else {
                                     return;
@@ -3937,6 +4194,12 @@ fn main() -> Result<(), slint::PlatformError> {
                             }
                             Err(e) => {
                                 eprintln!("[attach] upload: {e:#}");
+                                if !online {
+                                    // Offline: keep the bubble pending + the entry
+                                    // queued for the reconnect flush.
+                                    eprintln!("[attach] offline — left queued for flush");
+                                    return;
+                                }
                                 let mut overlay = pending_state.lock().unwrap();
                                 overlay.mark_send_failed(&group_hex, &temp_id);
                                 let failed = overlay.find_send(&group_hex, &temp_id);
@@ -3971,14 +4234,18 @@ fn main() -> Result<(), slint::PlatformError> {
     // attachment cache (per image, under `real_id#index`) so the confirmed grid
     // shows the same pixels without a re-download, then swap the row. Mirrors
     // `spawn_attachment_send`'s reconcile, generalized to N images.
+    // `replay_temp_id`: see `spawn_attachment_send` — `Some(id)` re-dispatches an
+    // already-queued album from disk on reconnect.
     #[allow(clippy::too_many_arguments)]
     fn spawn_album_send(
         weak: slint::Weak<DarkMatterLinux>,
         backend_cell: Arc<Mutex<Option<Arc<Backend>>>>,
         group_ids: Arc<Mutex<Vec<String>>>,
         pending_state: Arc<Mutex<PendingState>>,
+        vault_cell: Arc<Mutex<Option<Arc<Mutex<Vault>>>>>,
         group_hex: String,
         files: Vec<StagedFile>,
+        replay_temp_id: Option<String>,
     ) {
         let _ = slint::invoke_from_event_loop(move || {
             let Some(ui) = weak.upgrade() else { return };
@@ -3996,7 +4263,8 @@ fn main() -> Result<(), slint::PlatformError> {
                 return;
             };
 
-            let temp_id = next_temp_id();
+            let is_replay = replay_temp_id.is_some();
+            let temp_id = replay_temp_id.unwrap_or_else(next_temp_id);
             let media: Vec<PendingMedia> = files
                 .iter()
                 .map(|f| PendingMedia {
@@ -4017,17 +4285,48 @@ fn main() -> Result<(), slint::PlatformError> {
                 media,
                 effect: 0,
             };
-            pending_state
+            let already_present = pending_state
                 .lock()
                 .unwrap()
-                .add_send(&group_hex, send.clone());
-            let my_id = backend.account().account_id_hex.clone();
-            let my_label = my_avatar_label(backend, &my_id);
-            let pending_row = pending_chat_message(&send, &my_id, &my_label);
-            with_inner_messages(&chats_messages, idx, |vm| {
-                push_message_grouped(vm, pending_row)
-            });
-            ui.set_messages_scroll_tick(ui.get_messages_scroll_tick() + 1);
+                .find_send(&group_hex, &temp_id)
+                .is_some();
+            if !already_present {
+                pending_state
+                    .lock()
+                    .unwrap()
+                    .add_send(&group_hex, send.clone());
+                let my_id = backend.account().account_id_hex.clone();
+                let my_label = my_avatar_label(backend, &my_id);
+                let pending_row = pending_chat_message(&send, &my_id, &my_label);
+                with_inner_messages(&chats_messages, idx, |vm| {
+                    push_message_grouped(vm, pending_row)
+                });
+                ui.set_messages_scroll_tick(ui.get_messages_scroll_tick() + 1);
+            }
+            // Durably queue the album on first send (one entry, all images' bytes).
+            if !is_replay {
+                let my_id = backend.account().account_id_hex.clone();
+                let queued_media: Vec<offline_queue::QueuedMedia> = files
+                    .iter()
+                    .map(|f| offline_queue::QueuedMedia {
+                        file_name: f.file_name.clone(),
+                        media_type: f.media_type.clone(),
+                        bytes: f.bytes.clone(),
+                        is_image: true,
+                    })
+                    .collect();
+                offline_persist(
+                    &vault_cell,
+                    &offline_queue::QueuedSend {
+                        temp_id: temp_id.clone(),
+                        account_id_hex: my_id,
+                        group_hex: group_hex.clone(),
+                        kind: offline_queue::QueuedKind::Album(queued_media),
+                        enqueued_at: offline_queue::now_secs(),
+                    },
+                );
+            }
+            offline_inflight_insert(&temp_id);
 
             // Previews (kept in image order) seed the cache under the real id on
             // ack; `items` carry the dim "WxH" so receivers lay out the grid.
@@ -4054,8 +4353,9 @@ fn main() -> Result<(), slint::PlatformError> {
                 let pending_state = pending_state3.clone();
                 let group_hex = group_hex3.clone();
                 let temp_id = temp_id3.clone();
-                let all: Vec<AppMessageRecord> = if result.is_ok() {
-                    backend_cell
+                offline_inflight_remove(&temp_id);
+                let (all, online): (Vec<AppMessageRecord>, bool) = if result.is_ok() {
+                    let all = backend_cell
                         .lock()
                         .unwrap()
                         .as_ref()
@@ -4063,9 +4363,16 @@ fn main() -> Result<(), slint::PlatformError> {
                             b.messages(&group_hex, Some(msg_window_for(&group_hex)))
                                 .unwrap_or_default()
                         })
-                        .unwrap_or_default()
+                        .unwrap_or_default();
+                    (all, true)
                 } else {
-                    Vec::new()
+                    let online = backend_cell
+                        .lock()
+                        .unwrap()
+                        .as_ref()
+                        .map(|b| b.relay_health().0 > 0)
+                        .unwrap_or(false);
+                    (Vec::new(), online)
                 };
                 let _ = slint::invoke_from_event_loop(move || {
                     let Some(ui) = weak.upgrade() else { return };
@@ -4084,6 +4391,7 @@ fn main() -> Result<(), slint::PlatformError> {
                                 .lock()
                                 .unwrap()
                                 .drop_send(&group_hex, &temp_id);
+                            offline_queue::remove(&temp_id);
                             let guard = backend_cell.lock().unwrap();
                             let Some(backend) = guard.as_ref() else {
                                 return;
@@ -4137,6 +4445,10 @@ fn main() -> Result<(), slint::PlatformError> {
                         }
                         Err(e) => {
                             eprintln!("[album] upload: {e:#}");
+                            if !online {
+                                eprintln!("[album] offline — left queued for flush");
+                                return;
+                            }
                             let mut overlay = pending_state.lock().unwrap();
                             overlay.mark_send_failed(&group_hex, &temp_id);
                             let failed = overlay.find_send(&group_hex, &temp_id);
@@ -4854,6 +5166,7 @@ fn main() -> Result<(), slint::PlatformError> {
         let backend_cell = backend_cell.clone();
         let group_ids = group_ids.clone();
         let pending_state = pending_state.clone();
+        let vault_cell = vault_cell.clone();
         move || {
             let recorder = with_active_recorder(|r| r.take());
             let Some(recorder) = recorder else { return };
@@ -4889,11 +5202,13 @@ fn main() -> Result<(), slint::PlatformError> {
                 backend_cell.clone(),
                 group_ids.clone(),
                 pending_state.clone(),
+                vault_cell.clone(),
                 group_hex,
                 "voice-message.wav".to_string(),
                 "audio/wav".to_string(),
                 bytes,
                 false,
+                None,
                 None,
             );
         }
@@ -5684,6 +5999,253 @@ fn main() -> Result<(), slint::PlatformError> {
                 if day.get() != today {
                     day.set(today);
                     refresh();
+                }
+            },
+        );
+    }
+
+    // ─── Durable offline send queue: flush + reconnect watcher ─────────────
+    //
+    // `flush_offline_queue` reconciles the encrypted on-disk queue with the UI:
+    // it renders a pending bubble for every queued send that isn't on screen yet
+    // (so messages composed offline are visible across restarts), and — when a
+    // relay is reachable — (re)dispatches each one through the normal send path.
+    // The disk entry is the source of truth for the bytes; the overlay is just
+    // what's drawn. Removal happens in the ack branch of each dispatch path.
+    let flush_offline_queue: Rc<dyn Fn()> = {
+        let weak = ui.as_weak();
+        let backend_cell = backend_cell.clone();
+        let group_ids = group_ids.clone();
+        let pending_state = pending_state.clone();
+        let vault_cell = vault_cell.clone();
+        let dispatch_send = dispatch_send.clone();
+        Rc::new(move || {
+            let Some(ui) = weak.upgrade() else { return };
+            let Some(vault) = vault_cell.lock().ok().and_then(|g| g.clone()) else {
+                return;
+            };
+            let Some(backend) = backend_cell.lock().unwrap().clone() else {
+                return;
+            };
+            let my_id = backend.account().account_id_hex.clone();
+            let my_label = my_avatar_label(&backend, &my_id);
+            let online = offline_last_connected().load(AtomicOrdering::Relaxed) > 0;
+            let chats_messages = ui.get_chats_messages();
+
+            for entry in offline_queue::load_all(&vault) {
+                // Only the active account's queue; other accounts' entries wait
+                // until that account is the displayed one.
+                if !entry.account_id_hex.eq_ignore_ascii_case(&my_id) {
+                    continue;
+                }
+                // Already going out (or being retried) — don't double-dispatch.
+                if offline_inflight_contains(&entry.temp_id) {
+                    continue;
+                }
+                let group_hex = entry.group_hex.clone();
+                let temp_id = entry.temp_id.clone();
+                let existing = pending_state.lock().unwrap().find_send(&group_hex, &temp_id);
+                let in_overlay = existing.is_some();
+                // A red (online hard-failure) bubble is manual-retry-only within a
+                // session — don't auto-flush it. (After a restart it isn't in the
+                // overlay yet, so it's retried fresh once, then re-reddens if it
+                // genuinely still fails.)
+                if existing.map(|s| s.failed).unwrap_or(false) {
+                    continue;
+                }
+
+                // Boot-dedup: a recovered text whose publish actually landed
+                // before the previous exit. Only meaningful for entries not yet
+                // shown this session (in-session offline failures are guaranteed
+                // rolled back by marmot, so never duplicates).
+                if !in_overlay
+                    && let offline_queue::QueuedKind::Text { text, effect, .. } = &entry.kind
+                {
+                    let bodies = vec![text.clone(), append_effect_marker(text, *effect)];
+                    if looks_already_sent(&backend, &group_hex, &my_id, &bodies, entry.enqueued_at) {
+                        offline_queue::remove(&temp_id);
+                        continue;
+                    }
+                }
+
+                // Reconstruct the overlay mirror so we can render the bubble.
+                let pending = match &entry.kind {
+                    offline_queue::QueuedKind::Text {
+                        text,
+                        reply_to,
+                        effect,
+                    } => PendingSend {
+                        temp_id: temp_id.clone(),
+                        text: text.clone(),
+                        failed: false,
+                        reply_to: reply_to.clone(),
+                        media: Vec::new(),
+                        effect: *effect,
+                    },
+                    offline_queue::QueuedKind::Attachment(m) => PendingSend {
+                        temp_id: temp_id.clone(),
+                        text: String::new(),
+                        failed: false,
+                        reply_to: None,
+                        media: vec![PendingMedia {
+                            file_name: m.file_name.clone(),
+                            media_type: m.media_type.clone(),
+                            size_bytes: m.bytes.len() as u64,
+                            is_image: m.is_image,
+                            is_video: mime_is_video(&m.media_type),
+                            is_audio: mime_is_audio(&m.media_type),
+                            local_preview: None,
+                        }],
+                        effect: 0,
+                    },
+                    offline_queue::QueuedKind::Album(ms) => PendingSend {
+                        temp_id: temp_id.clone(),
+                        text: String::new(),
+                        failed: false,
+                        reply_to: None,
+                        media: ms
+                            .iter()
+                            .map(|m| PendingMedia {
+                                file_name: m.file_name.clone(),
+                                media_type: m.media_type.clone(),
+                                size_bytes: m.bytes.len() as u64,
+                                is_image: m.is_image,
+                                is_video: false,
+                                is_audio: false,
+                                local_preview: None,
+                            })
+                            .collect(),
+                        effect: 0,
+                    },
+                };
+
+                // Render the pending bubble if it isn't already on screen.
+                if !in_overlay {
+                    pending_state
+                        .lock()
+                        .unwrap()
+                        .add_send(&group_hex, pending.clone());
+                    if let Some(idx) =
+                        group_ids.lock().unwrap().iter().position(|g| g == &group_hex)
+                    {
+                        let row = pending_chat_message(&pending, &my_id, &my_label);
+                        with_inner_messages(&chats_messages, idx, |vm| {
+                            if find_message_row(vm, &temp_id).is_none() {
+                                push_message_grouped(vm, row);
+                            }
+                        });
+                    }
+                }
+
+                // Offline: leave it rendered + queued; the watcher re-runs this on
+                // reconnect.
+                if !online {
+                    continue;
+                }
+
+                // Guard against a second timer tick re-dispatching this entry: the
+                // media spawns only set the in-flight flag inside their deferred
+                // event-loop closure, so set it synchronously here too.
+                offline_inflight_insert(&temp_id);
+
+                // Online: (re)dispatch from the durable bytes. The overlay bubble
+                // already exists, so the media replays skip their own render.
+                match entry.kind {
+                    offline_queue::QueuedKind::Text {
+                        text,
+                        reply_to,
+                        effect,
+                    } => {
+                        let parent_id = reply_to.as_ref().map(|(id, _, _)| id.clone());
+                        dispatch_send(
+                            group_hex,
+                            append_effect_marker(&text, effect),
+                            temp_id,
+                            parent_id,
+                        );
+                    }
+                    offline_queue::QueuedKind::Attachment(m) => {
+                        spawn_attachment_send(
+                            weak.clone(),
+                            backend_cell.clone(),
+                            group_ids.clone(),
+                            pending_state.clone(),
+                            vault_cell.clone(),
+                            group_hex,
+                            m.file_name,
+                            m.media_type,
+                            m.bytes,
+                            m.is_image,
+                            None,
+                            Some(temp_id),
+                        );
+                    }
+                    offline_queue::QueuedKind::Album(ms) => {
+                        let files: Vec<StagedFile> = ms
+                            .into_iter()
+                            .map(|m| StagedFile {
+                                file_name: m.file_name,
+                                media_type: m.media_type,
+                                bytes: m.bytes,
+                                is_image: m.is_image,
+                                preview: None,
+                                thumb: None,
+                            })
+                            .collect();
+                        spawn_album_send(
+                            weak.clone(),
+                            backend_cell.clone(),
+                            group_ids.clone(),
+                            pending_state.clone(),
+                            vault_cell.clone(),
+                            group_hex,
+                            files,
+                            Some(temp_id),
+                        );
+                    }
+                }
+            }
+        })
+    };
+
+    // Background connectivity watcher: polls relay health (a blocking call, so it
+    // can't run on the UI thread) and asks the UI to flush on the first
+    // backend-ready tick and on every offline→online transition.
+    {
+        let backend_cell = backend_cell.clone();
+        std::thread::spawn(move || {
+            let mut prev_connected = 0usize;
+            let mut announced_ready = false;
+            loop {
+                if let Some(backend) = backend_cell.lock().unwrap().clone() {
+                    let connected = backend.relay_health().0;
+                    offline_last_connected().store(connected, AtomicOrdering::Relaxed);
+                    if !announced_ready {
+                        // First time the backend is up: render (and, if online,
+                        // flush) whatever was queued before this launch.
+                        announced_ready = true;
+                        offline_flush_requested().store(true, AtomicOrdering::Relaxed);
+                    } else if prev_connected == 0 && connected > 0 {
+                        offline_flush_requested().store(true, AtomicOrdering::Relaxed);
+                    }
+                    prev_connected = connected;
+                }
+                std::thread::sleep(std::time::Duration::from_secs(5));
+            }
+        });
+    }
+
+    // UI-thread consumer: drains the flush request flag the watcher sets. Held in
+    // a binding so the timer lives until `run()` returns.
+    let _offline_flush_timer = slint::Timer::default();
+    {
+        let flush = flush_offline_queue.clone();
+        _offline_flush_timer.start(
+            slint::TimerMode::Repeated,
+            std::time::Duration::from_secs(3),
+            move || {
+                if offline_flush_requested().swap(false, AtomicOrdering::Relaxed) {
+                    flush();
                 }
             },
         );

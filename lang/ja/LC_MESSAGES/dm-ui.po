@@ -2,7 +2,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-06-18 02:20+0000\n"
+"POT-Creation-Date: 2026-06-18 02:51+0000\n"
 "PO-Revision-Date: 2026-05-27 13:20+0000\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -1958,10 +1958,9 @@ msgid "Dark"
 msgstr "ダーク"
 
 #: ui/settings/theme-picker.slint:44
-#, fuzzy
 msgctxt "ThemePicker"
 msgid "Light"
-msgstr "Lightning"
+msgstr "ライト"
 
 #: ui/settings/theme-picker.slint:44
 #, fuzzy
@@ -2021,14 +2020,14 @@ msgctxt "ErrorCopy"
 msgid ""
 "That doesn't look like a valid npub or public key. Double-check it and try "
 "again."
-msgstr ""
+msgstr "有効な npub または公開鍵ではないようです。確認してもう一度お試しください。"
 
 #: ui/tokens.slint:445
 msgctxt "ErrorCopy"
 msgid ""
 "Can't reach your relays right now. Check your network and relay settings, "
 "then try again."
-msgstr ""
+msgstr "現在リレーに接続できません。ネットワークとリレーの設定を確認して、もう一度お試しください。"
 
 #. Tier 2 — operation-specific fallbacks.
 #: ui/tokens.slint:447
@@ -2036,159 +2035,158 @@ msgctxt "ErrorCopy"
 msgid ""
 "Couldn't finish syncing. We'll keep retrying — check your relay settings if "
 "this keeps happening."
-msgstr ""
+msgstr "同期を完了できませんでした。再試行を続けます。頻発する場合はリレーの設定を確認してください。"
 
 #: ui/tokens.slint:448
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't start up. Check your network and relay settings, then try again."
-msgstr ""
+msgstr "起動できませんでした。ネットワークとリレーの設定を確認して、もう一度お試しください。"
 
 #: ui/tokens.slint:449
 msgctxt "ErrorCopy"
 msgid "Couldn't switch accounts. Please try again in a moment."
-msgstr ""
+msgstr "アカウントを切り替えられませんでした。しばらくしてからもう一度お試しください。"
 
 #: ui/tokens.slint:450
 msgctxt "ErrorCopy"
 msgid "Couldn't accept the invitation. Please try again in a moment."
-msgstr ""
+msgstr "招待を承認できませんでした。しばらくしてからもう一度お試しください。"
 
 #: ui/tokens.slint:451
 msgctxt "ErrorCopy"
 msgid "Couldn't decline the invitation. Please try again in a moment."
-msgstr ""
+msgstr "招待を辞退できませんでした。しばらくしてからもう一度お試しください。"
 
 #: ui/tokens.slint:452
 msgctxt "ErrorCopy"
 msgid "Couldn't archive this chat. Please try again."
-msgstr ""
+msgstr "このチャットをアーカイブできませんでした。もう一度お試しください。"
 
 #: ui/tokens.slint:453
 msgctxt "ErrorCopy"
 msgid "Couldn't restore this chat. Please try again."
-msgstr ""
+msgstr "このチャットを復元できませんでした。もう一度お試しください。"
 
 #: ui/tokens.slint:454
 msgctxt "ErrorCopy"
 msgid "Couldn't send your message. Check your connection and try again."
-msgstr ""
+msgstr "メッセージを送信できませんでした。接続を確認して、もう一度お試しください。"
 
 #: ui/tokens.slint:455
 msgctxt "ErrorCopy"
 msgid "Couldn't save your edit. Check your connection and try again."
-msgstr ""
+msgstr "編集を保存できませんでした。接続を確認して、もう一度お試しください。"
 
 #: ui/tokens.slint:456
 msgctxt "ErrorCopy"
 msgid "Couldn't add your reaction. Please try again."
-msgstr ""
+msgstr "リアクションを追加できませんでした。もう一度お試しください。"
 
 #: ui/tokens.slint:457
 msgctxt "ErrorCopy"
 msgid "Couldn't remove your reaction. Please try again."
-msgstr ""
+msgstr "リアクションを削除できませんでした。もう一度お試しください。"
 
 #: ui/tokens.slint:458
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't publish your key package. Check your relay settings and try again."
-msgstr ""
+msgstr "キーパッケージを公開できませんでした。リレーの設定を確認して、もう一度お試しください。"
 
 #: ui/tokens.slint:459
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't rotate your key package. Check your relay settings and try again."
-msgstr ""
+msgstr "キーパッケージをローテーションできませんでした。リレーの設定を確認して、もう一度お試しください。"
 
 #: ui/tokens.slint:460
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't refresh your key packages. Check your relay settings and try again."
-msgstr ""
+msgstr "キーパッケージを更新できませんでした。リレーの設定を確認して、もう一度お試しください。"
 
 #: ui/tokens.slint:461
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't republish to your relays. Check your relay settings and try again."
-msgstr ""
+msgstr "リレーへの再公開ができませんでした。リレーの設定を確認して、もう一度お試しください。"
 
 #: ui/tokens.slint:462
 msgctxt "ErrorCopy"
 msgid "Couldn't add that account. Please check the key and try again."
-msgstr ""
+msgstr "そのアカウントを追加できませんでした。鍵を確認して、もう一度お試しください。"
 
 #: ui/tokens.slint:463
 msgctxt "ErrorCopy"
 msgid "Couldn't create the chat. Please try again."
-msgstr ""
+msgstr "チャットを作成できませんでした。もう一度お試しください。"
 
 #: ui/tokens.slint:464
 msgctxt "ErrorCopy"
 msgid "Couldn't add that contact. Please try again."
-msgstr ""
+msgstr "その連絡先を追加できませんでした。もう一度お試しください。"
 
 #: ui/tokens.slint:465
 msgctxt "ErrorCopy"
 msgid "Couldn't add that member. Please try again."
-msgstr ""
+msgstr "そのメンバーを追加できませんでした。もう一度お試しください。"
 
 #: ui/tokens.slint:466
 msgctxt "ErrorCopy"
 msgid "Couldn't update the group settings. Please try again."
-msgstr ""
+msgstr "グループ設定を更新できませんでした。もう一度お試しください。"
 
 #: ui/tokens.slint:467
 msgctxt "ErrorCopy"
 msgid "Couldn't update the group image. Please try again."
-msgstr ""
+msgstr "グループ画像を更新できませんでした。もう一度お試しください。"
 
 #: ui/tokens.slint:468
 msgctxt "ErrorCopy"
 msgid "Couldn't save your profile. Check your connection and try again."
-msgstr ""
+msgstr "プロフィールを保存できませんでした。接続を確認して、もう一度お試しください。"
 
 #: ui/tokens.slint:469
 msgctxt "ErrorCopy"
 msgid "Couldn't upload your picture. Please try again."
-msgstr ""
+msgstr "画像をアップロードできませんでした。もう一度お試しください。"
 
 #: ui/tokens.slint:470
 msgctxt "ErrorCopy"
 msgid "Something went wrong. Please try again."
-msgstr ""
+msgstr "問題が発生しました。もう一度お試しください。"
 
 #. Network-pane status copy (also Rust-set).
 #: ui/tokens.slint:472
 msgctxt "ErrorCopy"
 msgid "Not connected yet. Please wait a moment and try again."
-msgstr ""
+msgstr "まだ接続されていません。少し待ってからもう一度お試しください。"
 
 #: ui/tokens.slint:473
 msgctxt "ErrorCopy"
 msgid "That relay is already in your list."
-msgstr ""
+msgstr "そのリレーは既にリストにあります。"
 
 #: ui/tokens.slint:474
 msgctxt "ErrorCopy"
 msgid "Couldn't save your relay list. Please try again."
-msgstr ""
+msgstr "リレーのリストを保存できませんでした。もう一度お試しください。"
 
 #: ui/tokens.slint:475
 msgctxt "ErrorCopy"
 msgid "Relay added."
-msgstr ""
+msgstr "リレーを追加しました。"
 
 #: ui/tokens.slint:476
 msgctxt "ErrorCopy"
 msgid "Relay removed."
-msgstr ""
+msgstr "リレーを削除しました。"
 
 #: ui/tokens.slint:477
-#, fuzzy
 msgctxt "ErrorCopy"
 msgid "Republishing…"
-msgstr "公開中…"
+msgstr "再公開中…"
 
 #~ msgctxt "AppearancePane"
 #~ msgid "FUN"

@@ -2,7 +2,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-06-18 02:20+0000\n"
+"POT-Creation-Date: 2026-06-18 02:51+0000\n"
 "PO-Revision-Date: 2026-05-27 13:20+0000\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -1961,10 +1961,9 @@ msgid "Dark"
 msgstr "Dunkel"
 
 #: ui/settings/theme-picker.slint:44
-#, fuzzy
 msgctxt "ThemePicker"
 msgid "Light"
-msgstr "Lightning"
+msgstr "Hell"
 
 #: ui/settings/theme-picker.slint:44
 #, fuzzy
@@ -2024,14 +2023,14 @@ msgctxt "ErrorCopy"
 msgid ""
 "That doesn't look like a valid npub or public key. Double-check it and try "
 "again."
-msgstr ""
+msgstr "Das sieht nicht nach einem gültigen npub oder öffentlichen Schlüssel aus. Bitte überprüfen und erneut versuchen."
 
 #: ui/tokens.slint:445
 msgctxt "ErrorCopy"
 msgid ""
 "Can't reach your relays right now. Check your network and relay settings, "
 "then try again."
-msgstr ""
+msgstr "Deine Relays sind gerade nicht erreichbar. Überprüfe dein Netzwerk und deine Relay-Einstellungen und versuche es erneut."
 
 #. Tier 2 — operation-specific fallbacks.
 #: ui/tokens.slint:447
@@ -2039,159 +2038,158 @@ msgctxt "ErrorCopy"
 msgid ""
 "Couldn't finish syncing. We'll keep retrying — check your relay settings if "
 "this keeps happening."
-msgstr ""
+msgstr "Synchronisierung nicht abgeschlossen. Wir versuchen es weiter — überprüfe deine Relay-Einstellungen, falls das öfter vorkommt."
 
 #: ui/tokens.slint:448
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't start up. Check your network and relay settings, then try again."
-msgstr ""
+msgstr "Start fehlgeschlagen. Überprüfe dein Netzwerk und deine Relay-Einstellungen und versuche es erneut."
 
 #: ui/tokens.slint:449
 msgctxt "ErrorCopy"
 msgid "Couldn't switch accounts. Please try again in a moment."
-msgstr ""
+msgstr "Konto konnte nicht gewechselt werden. Bitte versuche es gleich noch einmal."
 
 #: ui/tokens.slint:450
 msgctxt "ErrorCopy"
 msgid "Couldn't accept the invitation. Please try again in a moment."
-msgstr ""
+msgstr "Einladung konnte nicht angenommen werden. Bitte versuche es gleich noch einmal."
 
 #: ui/tokens.slint:451
 msgctxt "ErrorCopy"
 msgid "Couldn't decline the invitation. Please try again in a moment."
-msgstr ""
+msgstr "Einladung konnte nicht abgelehnt werden. Bitte versuche es gleich noch einmal."
 
 #: ui/tokens.slint:452
 msgctxt "ErrorCopy"
 msgid "Couldn't archive this chat. Please try again."
-msgstr ""
+msgstr "Dieser Chat konnte nicht archiviert werden. Bitte versuche es erneut."
 
 #: ui/tokens.slint:453
 msgctxt "ErrorCopy"
 msgid "Couldn't restore this chat. Please try again."
-msgstr ""
+msgstr "Dieser Chat konnte nicht wiederhergestellt werden. Bitte versuche es erneut."
 
 #: ui/tokens.slint:454
 msgctxt "ErrorCopy"
 msgid "Couldn't send your message. Check your connection and try again."
-msgstr ""
+msgstr "Nachricht konnte nicht gesendet werden. Überprüfe deine Verbindung und versuche es erneut."
 
 #: ui/tokens.slint:455
 msgctxt "ErrorCopy"
 msgid "Couldn't save your edit. Check your connection and try again."
-msgstr ""
+msgstr "Änderung konnte nicht gespeichert werden. Überprüfe deine Verbindung und versuche es erneut."
 
 #: ui/tokens.slint:456
 msgctxt "ErrorCopy"
 msgid "Couldn't add your reaction. Please try again."
-msgstr ""
+msgstr "Reaktion konnte nicht hinzugefügt werden. Bitte versuche es erneut."
 
 #: ui/tokens.slint:457
 msgctxt "ErrorCopy"
 msgid "Couldn't remove your reaction. Please try again."
-msgstr ""
+msgstr "Reaktion konnte nicht entfernt werden. Bitte versuche es erneut."
 
 #: ui/tokens.slint:458
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't publish your key package. Check your relay settings and try again."
-msgstr ""
+msgstr "Dein Key Package konnte nicht veröffentlicht werden. Überprüfe deine Relay-Einstellungen und versuche es erneut."
 
 #: ui/tokens.slint:459
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't rotate your key package. Check your relay settings and try again."
-msgstr ""
+msgstr "Dein Key Package konnte nicht erneuert werden. Überprüfe deine Relay-Einstellungen und versuche es erneut."
 
 #: ui/tokens.slint:460
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't refresh your key packages. Check your relay settings and try again."
-msgstr ""
+msgstr "Deine Key Packages konnten nicht aktualisiert werden. Überprüfe deine Relay-Einstellungen und versuche es erneut."
 
 #: ui/tokens.slint:461
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't republish to your relays. Check your relay settings and try again."
-msgstr ""
+msgstr "Erneutes Veröffentlichen auf deinen Relays fehlgeschlagen. Überprüfe deine Relay-Einstellungen und versuche es erneut."
 
 #: ui/tokens.slint:462
 msgctxt "ErrorCopy"
 msgid "Couldn't add that account. Please check the key and try again."
-msgstr ""
+msgstr "Dieses Konto konnte nicht hinzugefügt werden. Bitte überprüfe den Schlüssel und versuche es erneut."
 
 #: ui/tokens.slint:463
 msgctxt "ErrorCopy"
 msgid "Couldn't create the chat. Please try again."
-msgstr ""
+msgstr "Chat konnte nicht erstellt werden. Bitte versuche es erneut."
 
 #: ui/tokens.slint:464
 msgctxt "ErrorCopy"
 msgid "Couldn't add that contact. Please try again."
-msgstr ""
+msgstr "Dieser Kontakt konnte nicht hinzugefügt werden. Bitte versuche es erneut."
 
 #: ui/tokens.slint:465
 msgctxt "ErrorCopy"
 msgid "Couldn't add that member. Please try again."
-msgstr ""
+msgstr "Dieses Mitglied konnte nicht hinzugefügt werden. Bitte versuche es erneut."
 
 #: ui/tokens.slint:466
 msgctxt "ErrorCopy"
 msgid "Couldn't update the group settings. Please try again."
-msgstr ""
+msgstr "Gruppeneinstellungen konnten nicht aktualisiert werden. Bitte versuche es erneut."
 
 #: ui/tokens.slint:467
 msgctxt "ErrorCopy"
 msgid "Couldn't update the group image. Please try again."
-msgstr ""
+msgstr "Gruppenbild konnte nicht aktualisiert werden. Bitte versuche es erneut."
 
 #: ui/tokens.slint:468
 msgctxt "ErrorCopy"
 msgid "Couldn't save your profile. Check your connection and try again."
-msgstr ""
+msgstr "Dein Profil konnte nicht gespeichert werden. Überprüfe deine Verbindung und versuche es erneut."
 
 #: ui/tokens.slint:469
 msgctxt "ErrorCopy"
 msgid "Couldn't upload your picture. Please try again."
-msgstr ""
+msgstr "Dein Bild konnte nicht hochgeladen werden. Bitte versuche es erneut."
 
 #: ui/tokens.slint:470
 msgctxt "ErrorCopy"
 msgid "Something went wrong. Please try again."
-msgstr ""
+msgstr "Etwas ist schiefgelaufen. Bitte versuche es erneut."
 
 #. Network-pane status copy (also Rust-set).
 #: ui/tokens.slint:472
 msgctxt "ErrorCopy"
 msgid "Not connected yet. Please wait a moment and try again."
-msgstr ""
+msgstr "Noch nicht verbunden. Bitte warte einen Moment und versuche es erneut."
 
 #: ui/tokens.slint:473
 msgctxt "ErrorCopy"
 msgid "That relay is already in your list."
-msgstr ""
+msgstr "Dieses Relay ist bereits in deiner Liste."
 
 #: ui/tokens.slint:474
 msgctxt "ErrorCopy"
 msgid "Couldn't save your relay list. Please try again."
-msgstr ""
+msgstr "Deine Relay-Liste konnte nicht gespeichert werden. Bitte versuche es erneut."
 
 #: ui/tokens.slint:475
 msgctxt "ErrorCopy"
 msgid "Relay added."
-msgstr ""
+msgstr "Relay hinzugefügt."
 
 #: ui/tokens.slint:476
 msgctxt "ErrorCopy"
 msgid "Relay removed."
-msgstr ""
+msgstr "Relay entfernt."
 
 #: ui/tokens.slint:477
-#, fuzzy
 msgctxt "ErrorCopy"
 msgid "Republishing…"
-msgstr "Veröffentliche…"
+msgstr "Erneut veröffentlichen…"
 
 #~ msgctxt "AppearancePane"
 #~ msgid "FUN"

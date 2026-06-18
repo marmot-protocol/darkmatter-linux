@@ -2,7 +2,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-06-18 12:43+0000\n"
+"POT-Creation-Date: 2026-06-18 16:16+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -757,52 +757,62 @@ msgctxt "ChatRequestBanner"
 msgid "session."
 msgstr ""
 
-#: ui/main-pane/composer.slint:89
+#: ui/main-pane/composer.slint:58
+msgctxt "Composer"
+msgid "Send message"
+msgstr ""
+
+#: ui/main-pane/composer.slint:58
+msgctxt "Composer"
+msgid "Record voice message"
+msgstr ""
+
+#: ui/main-pane/composer.slint:91
 msgctxt "Composer"
 msgid "Editing message  ·  Enter to save"
 msgstr ""
 
-#: ui/main-pane/composer.slint:98
+#: ui/main-pane/composer.slint:100
 msgctxt "Composer"
 msgid "Cancel edit"
 msgstr ""
 
-#: ui/main-pane/composer.slint:137
+#: ui/main-pane/composer.slint:139
 msgctxt "Composer"
 msgid "Replying to message:"
 msgstr ""
 
-#: ui/main-pane/composer.slint:138
+#: ui/main-pane/composer.slint:140
 msgctxt "Composer"
 msgid "Replying to {}:"
 msgstr ""
 
-#: ui/main-pane/composer.slint:157
+#: ui/main-pane/composer.slint:159
 msgctxt "Composer"
 msgid "Cancel reply"
 msgstr ""
 
-#: ui/main-pane/composer.slint:239
+#: ui/main-pane/composer.slint:241
 msgctxt "Composer"
 msgid "Remove"
 msgstr ""
 
-#: ui/main-pane/composer.slint:296
+#: ui/main-pane/composer.slint:298
 msgctxt "Composer"
 msgid "Send a message…"
 msgstr ""
 
-#: ui/main-pane/composer.slint:407
+#: ui/main-pane/composer.slint:410
 msgctxt "Composer"
 msgid "{}s"
 msgstr ""
 
-#: ui/main-pane/composer.slint:417
+#: ui/main-pane/composer.slint:420
 msgctxt "Composer"
 msgid "Send"
 msgstr ""
 
-#: ui/main-pane/composer.slint:510
+#: ui/main-pane/composer.slint:522
 msgctxt "Composer"
 msgid "Shift+Enter for newline"
 msgstr ""

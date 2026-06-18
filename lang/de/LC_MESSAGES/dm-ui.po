@@ -2,7 +2,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-06-18 12:43+0000\n"
+"POT-Creation-Date: 2026-06-18 16:16+0000\n"
 "PO-Revision-Date: 2026-05-27 13:20+0000\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -789,6 +789,16 @@ msgstr "Dieser Absender ist nicht in deinen Kontakten. Annehmen, um eine"
 msgctxt "ChatRequestBanner"
 msgid "session."
 msgstr "Sitzung zu starten."
+
+#: ui/main-pane/composer.slint:58
+msgctxt "Composer"
+msgid "Send message"
+msgstr "Nachricht senden"
+
+#: ui/main-pane/composer.slint:58
+msgctxt "Composer"
+msgid "Record voice message"
+msgstr "Sprachnachricht aufnehmen"
 
 #: ui/main-pane/composer.slint:89
 msgctxt "Composer"

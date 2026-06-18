@@ -54,6 +54,10 @@ export component Button inherits Rectangle {
         : (root.hovered ? root.hover-bg : root.bg-color);
     opacity: root.enabled ? 1.0 : 0.5;
     animate opacity { duration: 120ms; easing: ease-out; }
+    accessible-role: button;
+    accessible-enabled: root.enabled;
+    accessible-label: root.label;
+    accessible-action-default => { if root.enabled { root.clicked(); } }
     drop-shadow-color: Theme.hard-shadow && root.has-fill ? Palette.shadow
         : (root.is-primary && root.has-fill ? Palette.mint-glow : transparent);
     // In retro: hover pushes the shadow further (3px) for a "lifted" SNES-button feel.

@@ -5,6 +5,7 @@ import { SmileyIcon } from "../icons/smiley-icon.slint";
 import { SendIcon } from "../icons/send-icon.slint";
 import { LineInput } from "../primitives/line-input.slint";
 import { Button, MicroButton } from "../primitives/button.slint";
+import { Tooltip } from "../primitives/tooltip.slint";
 
 export component Composer inherits Rectangle {
     in-out property <string> draft <=> composer-input.text;
@@ -54,6 +55,7 @@ export component Composer inherits Rectangle {
     property <length> chip-h: (root.reply-target-id == "" && root.editing-message-id == "") ? 0px : 36px;
     property <length> staged-h: root.staged.length == 0 ? 0px : 58px;
     property <bool> can-send: root.draft != "" || root.staged.length > 0;
+    property <string> primary-action-label: root.can-send ? @tr("Send message") : @tr("Record voice message");
     // Message-effect picker (Telegram-style): opened by right-click / long-press
     // on Send. The chosen effect lives in EffectCatalog.selected and rides the
     // next send; Rust reads + clears it. The popover only toggles visibility.
@@ -339,6 +341,7 @@ export component Composer inherits Rectangle {
                 // effect badge/popover anchor math below is unchanged.
                 send-button := Button {
                     focusable: true;
+                    accessible-label: root.primary-action-label;
                     clicked => {
                         if (root.can-send) { root.send-clicked(); }
                         else { root.record-clicked(); }
@@ -484,6 +487,15 @@ export component Composer inherits Rectangle {
                 source-clip-height: EmojiSheet.tile;
             }
         }
+    }
+
+    if send-button.has-hover : Tooltip {
+        x: send-button.absolute-position.x - root.absolute-position.x
+           + send-button.width - self.width;
+        y: send-button.absolute-position.y - root.absolute-position.y - self.height - 8px;
+        label: root.primary-action-label;
+        is-visible: send-button.has-hover;
+        offset-y: 0px;
     }
 
     // Newline hint — teaches Shift+Enter on entry, then gets out of the way:

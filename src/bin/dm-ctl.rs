@@ -537,6 +537,28 @@ fn dispatch(backend: &Backend, cmd: &str, args: &[String]) -> Result<Value> {
             Ok(send_json(backend.rename_group(g, name)?))
         }
 
+        "accept" => {
+            let g = arg(args, 0, "group_hex")?;
+            Ok(serde_json::to_value(backend.accept_group_invite(g)?)?)
+        }
+
+        "decline" => {
+            let g = arg(args, 0, "group_hex")?;
+            backend.decline_group_invite(g)?;
+            Ok(json!({ "declined": g }))
+        }
+
+        // Pending group invites (welcomes not yet accepted).
+        "invites" => {
+            let pending: Vec<Value> = backend
+                .chats()?
+                .into_iter()
+                .filter(|c| c.pending_confirmation)
+                .map(|c| json!({ "group_id_hex": c.group_id_hex, "name": c.profile.name }))
+                .collect();
+            Ok(json!(pending))
+        }
+
         "send" => {
             let g = arg(args, 0, "group_hex")?;
             let text = args.get(1..).map(|s| s.join(" ")).unwrap_or_default();

@@ -263,6 +263,7 @@ module DMVM
   def start_daemon
     require_running
     dm_build unless dmctl_built?
+    ensure_relays_config # serve's boot needs relays to publish the account's lists
     if daemon_running?
       info 'control daemon already running'
       return
@@ -448,6 +449,27 @@ module DMVM
     run!(qemu_img, 'resize', '-q', overlay, "#{DISK_GB}G")
   end
 
+  # Fast multi-VM: create a thin copy-on-write overlay backed by an already-
+  # provisioned VM's disk, so we skip cloud-init entirely. The source must be
+  # stopped (clones read its overlay as a backing file).
+  def cmd_clone(args)
+    src = args.first or die('usage: dmvm --vm <new> clone <src-vm>')
+    die("target '#{vm_name}' is already running") if running?
+    src_overlay = File.join(instances_root, src, 'overlay.qcow2')
+    File.exist?(src_overlay) or die("source VM '#{src}' has no overlay — bring it up & provision it first")
+    src_pid = File.join(instances_root, src, 'qemu.pid')
+    if File.exist?(src_pid) && (pid = File.read(src_pid).to_i) > 0 && (Process.kill(0, pid) rescue false)
+      die("source VM '#{src}' is running — stop it first (`dmvm --vm #{src} down`); clones back onto its disk")
+    end
+    FileUtils.mkdir_p(instance_dir)
+    FileUtils.rm_f(overlay)
+    run!(qemu_img, 'create', '-q', '-f', 'qcow2', '-b', src_overlay, '-F', 'qcow2', overlay)
+    FileUtils.touch(provisioned_marker)
+    FileUtils.touch(File.join(instance_dir, '.cloned'))
+    assign_port unless File.exist?(port_file)
+    info "cloned '#{src}' → '#{vm_name}' (thin overlay, ssh :#{ssh_port}). Boot: dmvm --vm #{vm_name} up"
+  end
+
   def cmd_up(args)
     gui = args.delete('--gui') || args.delete('--window')
     args.delete('--headless') # the default now; accepted for explicitness
@@ -457,12 +479,15 @@ module DMVM
       info "VM '#{vm_name}' already running (pid #{File.read(pid_file).to_i}); ssh on port #{ssh_port}"
       return
     end
+    cloned = File.exist?(File.join(instance_dir, '.cloned'))
     FileUtils.mkdir_p(instance_dir)
     assign_port unless File.exist?(port_file)
     ensure_key
     ensure_base_image
     ensure_overlay
-    write_seed
+    # Cloned VMs inherit a fully-provisioned disk; cloud-init already ran in the
+    # source, so they boot with no seed (and won't re-provision).
+    write_seed unless cloned
     [qmp_sock, serial_sock].each { |s| File.unlink(s) if File.exist?(s) }
 
     accel = File.exist?('/dev/kvm') ? 'kvm' : 'tcg'
@@ -492,7 +517,7 @@ module DMVM
       '-smp', CPUS.to_s,
       '-m', MEM_MB.to_s,
       '-drive', "if=virtio,file=#{overlay},format=qcow2",
-      '-drive', "file=#{seed_iso},media=cdrom",
+      *(cloned ? [] : ['-drive', "file=#{seed_iso},media=cdrom"]),
       '-device', 'virtio-net-pci,netdev=net0',
       '-netdev', "user,id=net0,hostfwd=tcp::#{ssh_port}-:22",
       *gpu,
@@ -630,9 +655,13 @@ module DMVM
     force = args.delete('--force')
     keepdbg = args.delete('--debug-symbols')
     profile = args.delete('--release') ? 'release' : 'debug'
+    # Remaining args (if any) select which binaries to push, e.g. `push dm-ctl`.
+    wanted = args
+    targets = wanted.empty? ? push_bins : push_bins.select { |n, _| wanted.include?(n) }
+    die("unknown binary #{wanted.inspect} (known: #{push_bins.keys.join(', ')})") if targets.empty?
 
     pushed = 0
-    push_bins.each do |name, dest|
+    targets.each do |name, dest|
       bin = host_bin(profile, name) or next
       maxv = bin_glibc_max(bin)
       if maxv && !force && ver_gt(maxv, guest_glibc)
@@ -1063,6 +1092,8 @@ module DMVM
 
         up [--gui]          download image (first run), boot, provision
                             (default: headless w/ VNC; --gui opens a QEMU window)
+        clone <src>         fast-create this VM as a thin copy of a provisioned
+                            VM (skips cloud-init); `dmvm --vm new clone default`
         sync                rsync this working copy into the guest
         build [--release]   cargo build inside the VM
         build --host        build on the HOST for the guest's glibc (cargo-zigbuild)
@@ -1104,6 +1135,7 @@ module DMVM
   DISPATCH = {
     'up' => :cmd_up, 'sync' => :cmd_sync, 'build' => :cmd_build, 'run' => :cmd_run,
     'dm' => :cmd_dm, 'size' => :cmd_size, 'resize' => :cmd_size, 'push' => :cmd_push,
+    'clone' => :cmd_clone,
     'click' => :cmd_click, 'move' => :cmd_move, 'type' => :cmd_type, 'key' => :cmd_key,
     'ssh' => :cmd_ssh, 'screenshot' => :cmd_screenshot, 'shot' => :cmd_screenshot,
     'console' => :cmd_console, 'qmp' => :cmd_qmp, 'status' => :cmd_status, 'ls' => :cmd_ls,

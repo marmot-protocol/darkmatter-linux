@@ -47,6 +47,10 @@ module DMVM
   GUEST_DM_HOME = "/home/#{GUEST_USER}/dm-home"
   CTL_PW     = ENV['DMVM_CTL_PW'] || 'darkmatter'
   DMCTL      = "#{GUEST_DIR}/target/debug/dm-ctl"
+  # Default relays written to the guest's config so load_relays() is non-empty
+  # for BOTH the GUI and dm-ctl. Mirrors the app's dev-policy DISCOVERY_RELAYS
+  # (whitenoise official relays only, until release).
+  DEFAULT_RELAYS = %w[wss://relay.eu.whitenoise.chat wss://relay.us.whitenoise.chat].freeze
 
   # Named screen sizes for `dmvm size <preset>` (WxH, portrait unless -l).
   SIZE_PRESETS = {
@@ -208,6 +212,7 @@ module DMVM
     -o UserKnownHostsFile=/dev/null
     -o LogLevel=ERROR
     -o ConnectTimeout=5
+    -o ControlPath=none
   ].freeze
 
   def ssh_base
@@ -315,8 +320,10 @@ module DMVM
       # password login for the local console, in case you poke at the VT directly
       chpasswd:
         expire: false
-        list: |
-          #{GUEST_USER}:darkmatter
+        users:
+          - name: #{GUEST_USER}
+            password: darkmatter
+            type: text
       ssh_pwauth: true
       package_update: true
       packages:
@@ -328,7 +335,7 @@ module DMVM
         - ca-certificates
         - libssl-dev
         - libfontconfig1-dev
-        - libfreetype6-dev
+        - libfreetype-dev
         - libxkbcommon-dev
         - libxkbcommon-x11-dev
         - libwayland-dev
@@ -347,6 +354,7 @@ module DMVM
         - xwayland
         - foot
         - wtype
+        - grim
         - wl-clipboard
         - xclip
         - seatd
@@ -360,6 +368,10 @@ module DMVM
             ExecStart=-/sbin/agetty --autologin #{GUEST_USER} --noclear %I $TERM
         - path: /home/#{GUEST_USER}/.bash_profile
           owner: #{GUEST_USER}:#{GUEST_USER}
+          # Deferred to the final stage: the early write_files pass runs BEFORE
+          # the users module creates `ubuntu`, so an ubuntu-owned file there
+          # aborts the whole module.
+          defer: true
           content: |
             [ -f ~/.bashrc ] && . ~/.bashrc
             [ -f ~/.cargo/env ] && . ~/.cargo/env
@@ -370,6 +382,10 @@ module DMVM
         - path: /etc/profile.d/dmvm.sh
           content: |
             export DM_HOME=#{GUEST_DM_HOME}
+        - path: /home/#{GUEST_USER}/.config/darkmatter-linux/relays.json
+          owner: #{GUEST_USER}:#{GUEST_USER}
+          defer: true
+          content: '#{JSON.generate(DEFAULT_RELAYS)}'
         - path: /usr/local/bin/dm-run
           permissions: '0755'
           content: |
@@ -433,7 +449,10 @@ module DMVM
   end
 
   def cmd_up(args)
-    headless = args.delete('--headless')
+    gui = args.delete('--gui') || args.delete('--window')
+    args.delete('--headless') # the default now; accepted for explicitness
+    no_gl = args.delete('--no-gl')
+    headless = !gui
     if running?
       info "VM '#{vm_name}' already running (pid #{File.read(pid_file).to_i}); ssh on port #{ssh_port}"
       return
@@ -449,7 +468,21 @@ module DMVM
     accel = File.exist?('/dev/kvm') ? 'kvm' : 'tcg'
     info "no /dev/kvm — falling back to slow TCG emulation" if accel == 'tcg'
 
-    display = headless ? ['-display', 'none', '-vnc', ":#{vnc_display}"] : ['-display', 'gtk,gl=off']
+    # GPU + display. virtio-vga is the PRIMARY VGA so the boot console and sway
+    # share the one visible scanout. The GL variant (virgl) gives sway a real
+    # GLES renderer — clean, accelerated, no software-render tearing. `--no-gl`
+    # falls back to software 2D if the host lacks virgl.
+    gl = !headless && !no_gl
+    if headless
+      gpu = ['-vga', 'virtio']
+      display = ['-display', 'none', '-vnc', ":#{vnc_display}"]
+    elsif gl
+      gpu = ['-vga', 'none', '-device', 'virtio-vga-gl']
+      display = ['-display', 'gtk,gl=on']
+    else
+      gpu = ['-vga', 'virtio']
+      display = ['-display', 'gtk,gl=off']
+    end
 
     qemu = [
       qemu_bin,
@@ -462,7 +495,7 @@ module DMVM
       '-drive', "file=#{seed_iso},media=cdrom",
       '-device', 'virtio-net-pci,netdev=net0',
       '-netdev', "user,id=net0,hostfwd=tcp::#{ssh_port}-:22",
-      '-device', 'virtio-gpu-pci',
+      *gpu,
       '-device', 'virtio-keyboard-pci',
       '-device', 'virtio-tablet-pci',
       *display,
@@ -471,7 +504,7 @@ module DMVM
       '-pidfile', pid_file
     ]
 
-    vnc_note = headless ? " [headless/vnc :#{5900 + vnc_display}]" : ''
+    vnc_note = headless ? " [headless/vnc :#{5900 + vnc_display}]" : (gl ? ' [virgl]' : ' [soft-gl]')
     info "booting VM '#{vm_name}' (#{accel}, #{CPUS} cpu, #{MEM_MB} MiB, ssh :#{ssh_port})#{vnc_note}"
     log = File.open(log_file, 'w')
     pid = Process.spawn(*qemu, in: :close, out: log, err: log, pgroup: true)
@@ -485,6 +518,12 @@ module DMVM
     if first_boot
       info 'first boot: waiting for cloud-init provisioning to finish (Rust + deps, several minutes) …'
       ssh_exec('cloud-init status --wait || true')
+      detail, = ssh_capture('cloud-init status --long')
+      if detail.include?('status: error')
+        warn detail
+        die("cloud-init provisioning FAILED (not marking provisioned). Inspect with " \
+            "`dmvm ssh -- cloud-init status --long`; fix and re-run `dmvm destroy && dmvm up`.")
+      end
       FileUtils.touch(provisioned_marker)
       info 'provisioned. Next: `dmvm sync && dmvm build && dmvm run`'
     end
@@ -504,20 +543,187 @@ module DMVM
   end
 
   def cmd_build(args)
+    return build_on_host(release: args.include?('--release')) if args.delete('--host')
     require_running
     profile = args.include?('--release') ? '--release' : ''
     ssh_exec("source ~/.cargo/env && cd #{GUEST_DIR} && cargo build #{profile}", tty: true) ||
       die('build failed')
   end
 
+  # ---- host-side build + binary push -----------------------------------
+  # Building on the host is far faster than in the VM, but the host (Arch,
+  # glibc 2.43) is newer than the guest (Ubuntu 2.39), so a native binary won't
+  # load. cargo-zigbuild links against the guest's glibc version; the binary
+  # then runs in the VM (all its .so deps are installed there).
+
+  GUEST_RUST_TARGET = 'x86_64-unknown-linux-gnu'
+  APP_BIN_GUEST = "#{GUEST_DIR}/target/debug/darkmatter-linux"
+
+  # Guest glibc version (drives the zigbuild target). Falls back to noble's
+  # 2.39 when the VM isn't up, so host builds don't depend on a running VM.
+  def guest_glibc
+    @guest_glibc ||=
+      if ENV['DMVM_GUEST_GLIBC']
+        ENV['DMVM_GUEST_GLIBC']
+      elsif running?
+        out, ok = ssh_capture('ldd --version')
+        (ok && out[/(\d+\.\d+)/, 1]) || '2.39'
+      else
+        '2.39'
+      end
+  end
+
+  # Binaries cross-built on the host and pushed in: name => guest destination.
+  def push_bins = { 'darkmatter-linux' => APP_BIN_GUEST, 'dm-ctl' => DMCTL }
+
+  def host_bin(profile, name)
+    [File.join(REPO_ROOT, 'target', GUEST_RUST_TARGET, profile, name),
+     File.join(REPO_ROOT, 'target', profile, name)].find { |p| File.exist?(p) }
+  end
+
+  def bin_glibc_max(path)
+    od = which('objdump') or return nil
+    out = IO.popen([od, '-T', path], err: File::NULL, &:read)
+    out.scan(/GLIBC_(\d+\.\d+(?:\.\d+)?)/).flatten.max_by { |v| v.split('.').map(&:to_i) }
+  end
+
+  def ver_gt(a, b) = (a.split('.').map(&:to_i) <=> b.split('.').map(&:to_i)).positive?
+
+  def ensure_zigbuild
+    return if which('cargo-zigbuild')
+    which('zig') || die('zig not found on host (needed by cargo-zigbuild)')
+    info 'installing cargo-zigbuild (one-time)…'
+    run!('cargo', 'install', 'cargo-zigbuild')
+  end
+
+  def build_on_host(release:)
+    ensure_zigbuild
+    target = "#{GUEST_RUST_TARGET}.#{guest_glibc}"
+    cmd = ['cargo', 'zigbuild', '--target', target, '--bin', 'darkmatter-linux', '--bin', 'dm-ctl']
+    cmd << '--release' if release
+    info "building on host for #{target} (cargo-zigbuild): darkmatter-linux + dm-ctl …"
+    run!(*cmd, chdir: REPO_ROOT)
+    info "host build done. Push it in with `dmvm push#{release ? ' --release' : ''}`"
+  end
+
+  def push_one(bin, dest, keepdbg)
+    local = bin
+    if !keepdbg && (strip = which('strip'))
+      FileUtils.mkdir_p(instance_dir)
+      local = File.join(instance_dir, "#{File.basename(bin)}.push")
+      FileUtils.cp(bin, local)
+      run!(strip, '-s', local)
+    end
+    info "  #{File.basename(bin)} → #{dest} (#{(File.size(local) / 1_048_576.0).round} MiB#{keepdbg ? '' : ', stripped'})"
+    ssh_exec("mkdir -p #{File.dirname(dest)}")
+    if (rsync = which('rsync'))
+      ssh = "ssh #{SSH_OPTS.join(' ')} -i #{ssh_key} -p #{ssh_port}"
+      run!(rsync, '-z', '--inplace', '-e', ssh, local, "#{GUEST_USER}@127.0.0.1:#{dest}")
+    else
+      run!('scp', *SSH_OPTS, '-i', ssh_key, '-P', ssh_port.to_s, local, "#{GUEST_USER}@127.0.0.1:#{dest}")
+    end
+    ssh_exec("chmod +x #{dest}")
+  end
+
+  def cmd_push(args)
+    require_running
+    force = args.delete('--force')
+    keepdbg = args.delete('--debug-symbols')
+    profile = args.delete('--release') ? 'release' : 'debug'
+
+    pushed = 0
+    push_bins.each do |name, dest|
+      bin = host_bin(profile, name) or next
+      maxv = bin_glibc_max(bin)
+      if maxv && !force && ver_gt(maxv, guest_glibc)
+        die("#{name} needs GLIBC_#{maxv} but the guest has #{guest_glibc} — it won't load. " \
+            "Build against the guest glibc: `dmvm build --host`. (Override with --force.)")
+      end
+      push_one(bin, dest, keepdbg)
+      pushed += 1
+    end
+    die("no host binaries for #{profile}. Build with `dmvm build --host#{profile == 'release' ? ' --release' : ''}`.") if pushed.zero?
+    info 'pushed. launch with `dmvm run`'
+  end
+
+  def guest_vault? = ssh_capture("test -f #{GUEST_DM_HOME}/vault.db").last
+
+  # First run: create a fresh nsec + vault (telemetry/audit on) via dm-ctl, so
+  # the user lands on the app's unlock screen instead of generating a key by
+  # hand. No-op once a vault exists.
+  # Seed the guest's relays.json (in XDG config, read by load_relays) so the
+  # backend can publish account relay lists on first login.
+  def ensure_relays_config
+    json = JSON.generate(DEFAULT_RELAYS)
+    ssh_exec("mkdir -p ~/.config/darkmatter-linux && printf '%s' #{Shellwords.escape(json)} > ~/.config/darkmatter-linux/relays.json")
+  end
+
+  def ensure_identity
+    return if guest_vault?
+    unless dmctl_built?
+      die('dm-ctl not in the guest yet — push it first with `dmvm run --host` (or `dmvm push`).')
+    end
+    info 'first run: generating a new nsec + vault (telemetry + audit on)…'
+    out, ok = ssh_capture(dmctl_cmdline(['init']))
+    die("identity setup failed:\n#{out}") unless ok
+    npub = out.lines.reverse_each.lazy.filter_map { |l| (JSON.parse(l)['npub'] rescue nil) }.first
+    info "identity ready#{npub ? " — #{npub}" : ''} (vault password: #{CTL_PW})"
+  end
+
+  # Type the known vault password into the app's unlock screen. The password
+  # LineInput isn't auto-focused, so click it first (centered card, ~59% down),
+  # type, and Enter. Coordinates scale with the output resolution.
+  def auto_unlock
+    return unless guest_vault?
+    # The app needs a moment to render the unlock screen; retry get_outputs
+    # since it can transiently report nothing right after launch.
+    w = h = 0
+    10.times do
+      m = (sway_outputs.first || {})['current_mode'] || {}
+      w = m['width'].to_i
+      h = m['height'].to_i
+      break if w.positive? && h.positive?
+      sleep 1
+    end
+    return if w.zero?
+    fx = (w * 0.5).round
+    fy = (h * 0.587).round
+    info 'unlocking the app (vault password)…'
+    ssh_exec("#{sway_env}; " \
+             "swaymsg seat seat0 cursor set #{fx} #{fy}; " \
+             "swaymsg seat seat0 cursor press button1; swaymsg seat seat0 cursor release button1; " \
+             "sleep 0.3; wtype #{Shellwords.escape(CTL_PW)}; sleep 0.2; wtype -k Return")
+  end
+
   def cmd_run(args)
     require_running
-    if args.include?('--build')
+    release = args.include?('--release')
+    no_unlock = args.delete('--no-unlock')
+    if args.delete('--host')
+      build_on_host(release: release)
+      cmd_push(release ? ['--release'] : [])
+    elsif args.delete('--push')
+      cmd_push(release ? ['--release'] : [])
+    elsif args.include?('--build')
       cmd_sync([])
       cmd_build([])
     end
+    bin = APP_BIN_GUEST
+    unless ssh_capture("test -x #{bin}").last
+      die("app not built yet (#{bin} missing). Run `dmvm run --build`, `--host`, or `--push` first.")
+    end
+    unless ssh_capture("#{sway_env}; [ -n \"$WAYLAND_DISPLAY\" ]").last
+      die('no Wayland session — sway is not up on tty1 yet. Check `dmvm screenshot` / `dmvm ssh -- pgrep sway`.')
+    end
+    ensure_relays_config
+    ensure_identity
     info 'launching GUI in the VM window (logs → guest ~/dm.log)'
-    ssh_exec("nohup dm-run >~/dm.log 2>&1 & sleep 1; echo started")
+    # Anchor the pattern at end-of-cmdline so this very shell command (whose
+    # text contains 'darkmatter-linux') isn't matched by pgrep.
+    started = ssh_exec("nohup dm-run >~/dm.log 2>&1 & sleep 2; " \
+             "pgrep -f 'darkmatter-linux$' >/dev/null && echo 'app running' || " \
+             "{ echo 'app exited immediately — last log:'; tail -n 15 ~/dm.log; }")
+    auto_unlock if started && !no_unlock
   end
 
   # ---- display / screen size (sway over the GUI session) ---------------
@@ -526,15 +732,20 @@ module DMVM
   # so swaymsg (needs SWAYSOCK) and wtype (needs WAYLAND_DISPLAY) both work over
   # a non-login ssh command.
   def sway_env
+    # SWAYSOCK must point at the RUNNING sway's socket: the name embeds sway's
+    # pid, and dead sways leave stale sockets behind, so a glob+head picks the
+    # wrong one. Build it from the live pid; pick the newest wayland socket.
     "export XDG_RUNTIME_DIR=/run/user/#{GUEST_UID}; " \
-      "export SWAYSOCK=$(ls /run/user/#{GUEST_UID}/sway-ipc.* 2>/dev/null | head -1); " \
-      "export WAYLAND_DISPLAY=$(basename $(ls /run/user/#{GUEST_UID}/wayland-* 2>/dev/null | grep -v '\\.lock' | head -1))"
+      "export SWAYSOCK=/run/user/#{GUEST_UID}/sway-ipc.#{GUEST_UID}.$(pgrep -x sway | head -1).sock; " \
+      "export WAYLAND_DISPLAY=$(basename $(ls -t /run/user/#{GUEST_UID}/wayland-* 2>/dev/null | grep -v '\\.lock' | head -1))"
   end
 
   def sway_outputs
     out, ok = ssh_capture("#{sway_env}; swaymsg -t get_outputs -r")
     return [] unless ok
-    JSON.parse(out)
+    # Strip any leading noise (e.g. ssh warnings) before the JSON array.
+    json = out[/\[.*\]/m] or return []
+    JSON.parse(json)
   rescue StandardError
     []
   end
@@ -548,7 +759,9 @@ module DMVM
   # works headless and for every concurrent VM independently. Typing uses wtype
   # (Wayland virtual-keyboard protocol).
 
-  MOUSE_BUTTONS = { 'left' => 272, 'right' => 273, 'middle' => 274 }.freeze
+  # sway's `cursor press` uses X button numbers (1=left, 2=middle, 3=right),
+  # not libinput event codes.
+  MOUSE_BUTTONS = { 'left' => 1, 'middle' => 2, 'right' => 3 }.freeze
 
   def cmd_click(args)
     require_running
@@ -736,18 +949,40 @@ module DMVM
     end
   end
 
+  def scp_from(remote, local)
+    system('scp', *SSH_OPTS, '-i', ssh_key, '-P', ssh_port.to_s,
+           "#{GUEST_USER}@127.0.0.1:#{remote}", local)
+  end
+
+  # Wayland-native capture via grim (works with gl=on/virgl, pixel-perfect).
+  def grim_capture(out)
+    return false unless ssh_capture("#{sway_env}; command -v grim >/dev/null && [ -n \"$WAYLAND_DISPLAY\" ]").last
+    return false unless ssh_capture("#{sway_env}; grim /tmp/dmvm-shot.png").last
+    scp_from('/tmp/dmvm-shot.png', out)
+  end
+
   def cmd_screenshot(args)
+    require_running
     out = args[0] || 'screenshot.png'
+    if grim_capture(out)
+      info "wrote #{out} (grim)"
+      return
+    end
+    # Fallback: host-side QMP screendump (boot console / headless / no grim).
+    # Note: fails under gl=on (texture scanout has no readable surface).
     ppm = "#{out}.ppm"
     res = qmp('screendump', { filename: File.absolute_path(ppm) })
-    die("screendump failed: #{res['error']}") if res&.key?('error')
+    if res&.key?('error')
+      die("grim unavailable and QMP screendump failed (#{res['error']['desc']}). " \
+          'Under virgl, capture needs grim in the guest — `dmvm ssh -- sudo apt install -y grim`.')
+    end
     if (conv = which('magick') || which('convert'))
       run!(conv, ppm, out)
       File.unlink(ppm)
-      info "wrote #{out}"
+      info "wrote #{out} (qmp)"
     else
       FileUtils.mv(ppm, out.sub(/\.png\z/i, '.ppm'))
-      info "wrote #{out.sub(/\.png\z/i, '.ppm')} (install ImageMagick for PNG)"
+      info "wrote #{out.sub(/\.png\z/i, '.ppm')} (qmp; install ImageMagick for PNG)"
     end
   end
 
@@ -826,10 +1061,16 @@ module DMVM
 
       Usage: scripts/dmvm.rb [--vm <name>] <command> [options]
 
-        up [--headless]     download image (first run), boot, provision
+        up [--gui]          download image (first run), boot, provision
+                            (default: headless w/ VNC; --gui opens a QEMU window)
         sync                rsync this working copy into the guest
         build [--release]   cargo build inside the VM
-        run [--build]       launch the GUI in the VM window (--build = sync+build first)
+        build --host        build on the HOST for the guest's glibc (cargo-zigbuild)
+        push [--release]    copy host-built binaries (app + dm-ctl) into the VM
+        run [--build]       launch the app (--build=in-VM build; --host=build-on-host
+                            +push; --push=copy host binaries, then run). On first
+                            run, auto-creates an nsec+vault and unlocks the app
+                            (--no-unlock to skip the auto-unlock)
         dm <subcommand>     drive the app headlessly (accounts/groups/messages/settings);
                             run `dmvm dm help` for the full list
         size [WxH|preset]   resize the VM screen live (no args = show current);
@@ -862,7 +1103,7 @@ module DMVM
 
   DISPATCH = {
     'up' => :cmd_up, 'sync' => :cmd_sync, 'build' => :cmd_build, 'run' => :cmd_run,
-    'dm' => :cmd_dm, 'size' => :cmd_size, 'resize' => :cmd_size,
+    'dm' => :cmd_dm, 'size' => :cmd_size, 'resize' => :cmd_size, 'push' => :cmd_push,
     'click' => :cmd_click, 'move' => :cmd_move, 'type' => :cmd_type, 'key' => :cmd_key,
     'ssh' => :cmd_ssh, 'screenshot' => :cmd_screenshot, 'shot' => :cmd_screenshot,
     'console' => :cmd_console, 'qmp' => :cmd_qmp, 'status' => :cmd_status, 'ls' => :cmd_ls,

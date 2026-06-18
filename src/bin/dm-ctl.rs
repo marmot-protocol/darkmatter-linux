@@ -87,6 +87,12 @@ fn main() {
                 std::process::exit(1);
             }
         }
+        "init" => {
+            if let Err(e) = init_once() {
+                eprintln!("dm-ctl init: {e:#}");
+                std::process::exit(1);
+            }
+        }
         "help" | "-h" | "--help" => {
             eprintln!("usage: dm-ctl serve | dm-ctl <command> [args...]  (see file header)");
         }
@@ -163,7 +169,7 @@ fn client(cmd: &str, args: &[String]) -> i32 {
 
 // ---- daemon -------------------------------------------------------------
 
-fn serve() -> Result<()> {
+fn init_tracing() {
     let _ = tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
@@ -171,7 +177,12 @@ fn serve() -> Result<()> {
         )
         .with_writer(std::io::stderr)
         .try_init();
+}
 
+/// Open or first-run-create the vault (generating an nsec), boot the Backend,
+/// and on a freshly created identity flip telemetry + audit logs ON. Shared by
+/// `serve` and `init`. Returns (backend, first_run).
+fn boot_with_setup() -> Result<(Backend, bool)> {
     let pw = std::env::var("DM_CTL_PW").unwrap_or_else(|_| "darkmatter".to_string());
     let relays: Vec<String> = std::env::var("BENCH_RELAYS")
         .ok()
@@ -216,6 +227,26 @@ fn serve() -> Result<()> {
         }
         eprintln!("[dm-ctl] telemetry + audit logs enabled by default");
     }
+    Ok((backend, first_run))
+}
+
+/// One-shot: ensure an identity exists (creating a fresh nsec on first run),
+/// print its npub, then exit. Used to seed the account before the GUI launches.
+fn init_once() -> Result<()> {
+    init_tracing();
+    let (backend, first_run) = boot_with_setup()?;
+    let a = backend.account();
+    let npub = npub_of(&a.account_id_hex);
+    println!(
+        "{}",
+        json!({ "first_run": first_run, "account_id_hex": a.account_id_hex, "npub": npub })
+    );
+    Ok(())
+}
+
+fn serve() -> Result<()> {
+    init_tracing();
+    let (backend, _first_run) = boot_with_setup()?;
 
     let path = sock_path();
     let _ = std::fs::remove_file(&path);

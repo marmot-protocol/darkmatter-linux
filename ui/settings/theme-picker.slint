@@ -45,8 +45,17 @@ export component ThemePicker inherits Rectangle {
     property <[string]> names: [@tr("Dark"), @tr("Light"), @tr("Retro"), @tr("Terminal"), @tr("Sketch"), @tr("Synthwave"), @tr("Chalkboard")];
     property <[string]> modes: ["dark", "light", "retro", "terminal", "crayon", "synthwave", "chalkboard"];
 
+    // Keyboard cursor inside the open dropdown; reset to the active theme each
+    // time the popup opens.
+    property <int> focus-idx: 0;
+
     width: 184px;
     height: 38px;
+
+    function open-popup() {
+        root.focus-idx = root.selected-id;
+        popup.show();
+    }
 
     // ── Trigger ──
     trigger := Rectangle {
@@ -82,7 +91,32 @@ export component ThemePicker inherits Rectangle {
         }
         trig-touch := TouchArea {
             mouse-cursor: pointer;
-            clicked => { popup.show(); }
+            clicked => { root.open-popup(); }
+        }
+
+        // Zero-size FocusScope so the trigger joins the Tab chain without
+        // stealing pointer focus. Enter/Space/Down/Up open the dropdown.
+        trig-fs := FocusScope {
+            width: 0px; height: 0px;
+            key-pressed(event) => {
+                if (event.text == Key.Return || event.text == " "
+                    || event.text == Key.DownArrow || event.text == Key.UpArrow) {
+                    root.open-popup();
+                    return accept;
+                }
+                return reject;
+            }
+        }
+
+        // Accent focus ring on the trigger when Tab-focused.
+        if trig-fs.has-focus : Rectangle {
+            x: -3px; y: -3px;
+            width: parent.width + 6px;
+            height: parent.height + 6px;
+            border-radius: (11px) * Theme.r-scale;
+            border-width: 2px;
+            border-color: Palette.mint;
+            background: transparent;
         }
     }
 
@@ -103,47 +137,77 @@ export component ThemePicker inherits Rectangle {
             drop-shadow-offset-y: Theme.hard-shadow ? 4px : 10px;
             drop-shadow-blur: Theme.hard-shadow ? 0px : 24px;
 
-            VerticalLayout {
-                padding: 5px;
-                spacing: 2px;
-                for name[i] in root.names : Rectangle {
-                    height: 44px;
-                    border-radius: 7px * Theme.r-scale;
-                    background: i == root.selected-id
-                        ? Palette.selected
-                        : (row-touch.has-hover ? Palette.hover : transparent);
-                    animate background { duration: 80ms; }
-                    HorizontalLayout {
-                        padding-left: 8px; padding-right: 10px;
-                        spacing: 10px;
-                        alignment: start;
-                        ThemeSwatch {
-                            pack-id: i;
-                            y: (parent.height - self.height) / 2;
-                        }
-                        Text {
-                            text: name;
-                            color: Palette.text-hi;
-                            font-family: Theme.font;
-                            font-size: 12px * Theme.fs-scale;
-                            font-weight: i == root.selected-id ? 700 : 500;
-                            vertical-alignment: center;
-                            horizontal-stretch: 1;
-                        }
-                        if i == root.selected-id : Text {
-                            text: "✓";
-                            color: Palette.mint;
-                            font-family: Theme.font;
-                            font-size: 13px * Theme.fs-scale;
-                            font-weight: 700;
-                            vertical-alignment: center;
-                        }
+            // FocusScope owns the keyboard while the dropdown is open:
+            // ↑/↓ move the cursor, Enter/Space commit, Esc closes.
+            pop-fs := FocusScope {
+                init => { self.focus(); }
+                key-pressed(event) => {
+                    if (event.text == Key.Escape) {
+                        popup.close();
+                        return accept;
                     }
-                    row-touch := TouchArea {
-                        mouse-cursor: pointer;
-                        clicked => {
-                            root.theme-mode-selected(root.modes[i]);
-                            popup.close();
+                    if (event.text == Key.UpArrow) {
+                        root.focus-idx = root.focus-idx == 0
+                            ? root.names.length - 1
+                            : root.focus-idx - 1;
+                        return accept;
+                    }
+                    if (event.text == Key.DownArrow) {
+                        root.focus-idx = mod(root.focus-idx + 1, root.names.length);
+                        return accept;
+                    }
+                    if (event.text == Key.Return || event.text == " ") {
+                        root.theme-mode-selected(root.modes[root.focus-idx]);
+                        popup.close();
+                        return accept;
+                    }
+                    return reject;
+                }
+
+                VerticalLayout {
+                    padding: 5px;
+                    spacing: 2px;
+                    for name[i] in root.names : Rectangle {
+                        height: 44px;
+                        border-radius: 7px * Theme.r-scale;
+                        background: i == root.selected-id
+                            ? Palette.selected
+                            : (i == root.focus-idx
+                                ? Palette.hover
+                                : (row-touch.has-hover ? Palette.hover : transparent));
+                        animate background { duration: 80ms; }
+                        HorizontalLayout {
+                            padding-left: 8px; padding-right: 10px;
+                            spacing: 10px;
+                            alignment: start;
+                            ThemeSwatch {
+                                pack-id: i;
+                                y: (parent.height - self.height) / 2;
+                            }
+                            Text {
+                                text: name;
+                                color: Palette.text-hi;
+                                font-family: Theme.font;
+                                font-size: 12px * Theme.fs-scale;
+                                font-weight: i == root.selected-id ? 700 : 500;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                            }
+                            if i == root.selected-id : Text {
+                                text: "✓";
+                                color: Palette.mint;
+                                font-family: Theme.font;
+                                font-size: 13px * Theme.fs-scale;
+                                font-weight: 700;
+                                vertical-alignment: center;
+                            }
+                        }
+                        row-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                root.theme-mode-selected(root.modes[i]);
+                                popup.close();
+                            }
                         }
                     }
                 }

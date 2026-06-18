@@ -5,11 +5,14 @@ import { CheckMark } from "../icons/check-mark.slint";
 component LanguageRow inherits Rectangle {
     in property <string> label;
     in property <bool> selected: false;
+    in property <bool> focused: false;
     in property <bool> show-divider: true;
     callback clicked;
 
     height: 44px;
-    background: ta.pressed ? Palette.hover : (root.selected ? Palette.mint-surface : transparent);
+    background: ta.pressed ? Palette.hover
+        : (root.focused ? Palette.hover
+            : (root.selected ? Palette.mint-surface : transparent));
     animate background { duration: 80ms; }
 
     ta := TouchArea {
@@ -37,6 +40,16 @@ component LanguageRow inherits Rectangle {
         }
     }
 
+    // Accent focus bar on the keyboard-focused row.
+    if root.focused : Rectangle {
+        x: 0;
+        width: 2px;
+        y: (parent.height - self.height) / 2;
+        height: 22px;
+        background: Palette.mint;
+        border-radius: 1px;
+    }
+
     if root.show-divider : Rectangle {
         y: parent.height - 1px;
         width: parent.width;
@@ -52,6 +65,23 @@ export component LanguagePickerModal inherits Modal {
     card-width: 360px;
     title: @tr("Interface language");
 
+    // Labels are language endonyms (proper nouns), so they stay out of @tr().
+    property <[string]> labels: ["English", "Italiano", "Deutsch", "日本語"];
+    property <[string]> locales: ["en", "it", "de", "ja"];
+
+    // Keyboard cursor. Initialised to the active locale on open so Tab/arrows
+    // start from the current language.
+    property <int> focus-idx: 0;
+
+    // Let our own FocusScope own the keyboard instead of the Modal's esc-scope,
+    // matching the command-palette pattern. Esc is handled here too.
+    grab-focus: false;
+
+    function commit(i: int) {
+        root.locale-selected(root.locales[i]);
+        root.dismissed();
+    }
+
     Rectangle {
         height: rows-layout.preferred-height;
         border-radius: (8px) * Theme.r-scale;
@@ -60,40 +90,51 @@ export component LanguagePickerModal inherits Modal {
         background: Palette.panel-2;
         clip: true;
 
-        rows-layout := VerticalLayout {
-            padding: 0;
+        // ↑/↓ move the cursor, Enter/Space commit, Esc dismisses.
+        nav := FocusScope {
+            init => {
+                // Start the cursor on the active locale.
+                root.focus-idx =
+                    root.active-locale == "it" ? 1
+                    : root.active-locale == "de" ? 2
+                    : root.active-locale == "ja" ? 3
+                    : 0;
+                self.focus();
+            }
+            key-pressed(event) => {
+                if (event.text == Key.Escape) {
+                    root.dismissed();
+                    return accept;
+                }
+                if (event.text == Key.UpArrow) {
+                    root.focus-idx = root.focus-idx == 0
+                        ? root.labels.length - 1
+                        : root.focus-idx - 1;
+                    return accept;
+                }
+                if (event.text == Key.DownArrow) {
+                    root.focus-idx = mod(root.focus-idx + 1, root.labels.length);
+                    return accept;
+                }
+                if (event.text == Key.Return || event.text == " ") {
+                    root.commit(root.focus-idx);
+                    return accept;
+                }
+                return reject;
+            }
 
-            LanguageRow {
-                label: "English";
-                selected: root.active-locale == "en";
-                clicked => {
-                    root.locale-selected("en");
-                    root.dismissed();
-                }
-            }
-            LanguageRow {
-                label: "Italiano";
-                selected: root.active-locale == "it";
-                clicked => {
-                    root.locale-selected("it");
-                    root.dismissed();
-                }
-            }
-            LanguageRow {
-                label: "Deutsch";
-                selected: root.active-locale == "de";
-                clicked => {
-                    root.locale-selected("de");
-                    root.dismissed();
-                }
-            }
-            LanguageRow {
-                label: "日本語";
-                selected: root.active-locale == "ja";
-                show-divider: false;
-                clicked => {
-                    root.locale-selected("ja");
-                    root.dismissed();
+            rows-layout := VerticalLayout {
+                padding: 0;
+
+                for label[i] in root.labels : LanguageRow {
+                    label: label;
+                    selected: root.active-locale == root.locales[i];
+                    focused: nav.has-focus && root.focus-idx == i;
+                    show-divider: i < root.labels.length - 1;
+                    clicked => {
+                        root.focus-idx = i;
+                        root.commit(i);
+                    }
                 }
             }
         }

@@ -30,24 +30,67 @@ export component AccentPicker inherits Rectangle {
         ? swatches-retro
         : (Theme.light ? swatches-light : swatches-dark);
 
+    // Keyboard-navigation cursor (independent of the committed `selected`).
+    // Reset to the active swatch whenever the picker gains focus so Tab-in
+    // starts from the current accent.
+    property <int> focus-idx: 0;
+
     height: 32px;
 
-    HorizontalLayout {
-        spacing: 8px;
-        alignment: start;
+    // FocusScope owns the keyboard: ←/→ move the cursor, Enter/Space commit.
+    // Mirrors the command-palette list-navigation pattern.
+    fs := FocusScope {
+        changed has-focus => {
+            if (self.has-focus) { root.focus-idx = root.selected; }
+        }
+        key-pressed(event) => {
+            if (event.text == Key.LeftArrow) {
+                root.focus-idx = root.focus-idx == 0
+                    ? root.swatches.length - 1
+                    : root.focus-idx - 1;
+                return accept;
+            }
+            if (event.text == Key.RightArrow) {
+                root.focus-idx = mod(root.focus-idx + 1, root.swatches.length);
+                return accept;
+            }
+            if (event.text == Key.Return || event.text == " ") {
+                root.selected = root.focus-idx;
+                root.accent-selected(root.focus-idx);
+                return accept;
+            }
+            return reject;
+        }
 
-        for color[idx] in root.swatches: Rectangle {
-            width: 24px; height: 24px;
-            border-radius: (12px) * Theme.r-scale;
-            background: color;
-            border-width: root.selected == idx ? 2px : (touch.has-hover ? 1px : 0px);
-            border-color: Palette.text-hi;
-            animate border-width { duration: 100ms; }
+        HorizontalLayout {
+            spacing: 8px;
+            alignment: start;
 
-            touch := TouchArea {
-                clicked => {
-                    root.selected = idx;
-                    root.accent-selected(idx);
+            for color[idx] in root.swatches: Rectangle {
+                width: 24px; height: 24px;
+                border-radius: (12px) * Theme.r-scale;
+                background: color;
+                border-width: root.selected == idx ? 2px : (touch.has-hover ? 1px : 0px);
+                border-color: Palette.text-hi;
+                animate border-width { duration: 100ms; }
+
+                // Accent focus ring just outside the swatch (keyboard only).
+                if fs.has-focus && root.focus-idx == idx : Rectangle {
+                    x: -3px; y: -3px;
+                    width: parent.width + 6px;
+                    height: parent.height + 6px;
+                    border-radius: (15px) * Theme.r-scale;
+                    border-width: 2px;
+                    border-color: Palette.mint;
+                    background: transparent;
+                }
+
+                touch := TouchArea {
+                    clicked => {
+                        root.focus-idx = idx;
+                        root.selected = idx;
+                        root.accent-selected(idx);
+                    }
                 }
             }
         }

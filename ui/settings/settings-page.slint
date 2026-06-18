@@ -46,6 +46,10 @@ export component SettingsPage inherits Rectangle {
     in property <string> storage-cache-size;
     in property <bool> storage-clearing: false;
     callback storage-clear-cache();
+    in property <string> storage-vault-dir;
+    callback storage-open-vault-folder();
+    callback storage-create-backup();
+    callback storage-import-backup();
 
     // Notifications pane — desktop-alert toggles. Forwarded to NotificationsPane.
     in-out property <bool> notifications-enabled: true;
@@ -132,6 +136,10 @@ export component SettingsPage inherits Rectangle {
                 cache-size: root.storage-cache-size;
                 clearing: root.storage-clearing;
                 clear-cache => { root.storage-clear-cache(); }
+                vault-dir: root.storage-vault-dir;
+                open-vault-folder => { root.storage-open-vault-folder(); }
+                create-backup => { root.storage-create-backup(); }
+                import-backup => { root.storage-import-backup(); }
             }
             if root.active-tab == 5 : AdvancedPane {
                 width: parent.width; height: parent.height;

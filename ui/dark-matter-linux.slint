@@ -19,6 +19,8 @@ import { AddContactModal } from "modals/add-contact-modal.slint";
 import { NicknameModal } from "modals/nickname-modal.slint";
 import { AccountSwitcherModal } from "modals/account-switcher-modal.slint";
 import { AddAccountModal } from "modals/add-account-modal.slint";
+import { ImportBackupModal } from "modals/import-backup-modal.slint";
+import { BackupCreateModal } from "modals/backup-create-modal.slint";
 import { ConfirmModal } from "modals/confirm-modal.slint";
 import { CommandPalette, PaletteAction } from "modals/command-palette.slint";
 import { LanguagePickerModal } from "modals/language-picker-modal.slint";
@@ -74,6 +76,33 @@ export component DarkMatterLinux inherits Window {
     in property <string> storage-cache-size;
     in property <bool> storage-clearing: false;
     callback storage-clear-cache();
+    // Secret-vault affordances (Settings → Storage): the data-dir path, a button
+    // to reveal it in the file manager, plus whole-folder backup / restore.
+    in property <string> storage-vault-dir;
+    callback storage-open-vault-folder();
+    callback storage-create-backup();
+    callback storage-import-backup();
+    // Import-backup modal state. `import-backup-file` is the chosen file's display
+    // name; `import-backup-path` round-trips the full path through Slint because
+    // the off-thread picker can't touch a UI-thread Rust cell. `restore-mode`
+    // flips the copy on a fresh install (restore vs merge).
+    in-out property <bool> show-import-backup: false;
+    in property <string> import-backup-file;
+    in-out property <string> import-backup-path;
+    in property <bool> import-backup-busy: false;
+    in property <string> import-backup-status;
+    in property <bool> import-backup-restore-mode: false;
+    in-out property <string> import-backup-password;
+    callback import-backup-pick-file();
+    callback import-backup-submit(string);
+    callback import-backup-dismissed();
+    // Create-backup modal state.
+    in-out property <bool> show-create-backup: false;
+    in property <bool> create-backup-busy: false;
+    in property <string> create-backup-status;
+    in-out property <string> create-backup-password;
+    callback create-backup-submit(string);
+    callback create-backup-dismissed();
     // Desktop-notification preferences (Settings → Notifications). Rust mirrors
     // these to settings.json and to the live NotifState the chat watcher reads.
     in-out property <bool> notifications-enabled: true;
@@ -803,6 +832,10 @@ export component DarkMatterLinux inherits Window {
                         storage-cache-size: root.storage-cache-size;
                         storage-clearing: root.storage-clearing;
                         storage-clear-cache => { root.storage-clear-cache(); }
+                        storage-vault-dir: root.storage-vault-dir;
+                        storage-open-vault-folder => { root.storage-open-vault-folder(); }
+                        storage-create-backup => { root.storage-create-backup(); }
+                        storage-import-backup => { root.storage-import-backup(); }
                         notifications-enabled <=> root.notifications-enabled;
                         notification-sound <=> root.notification-sound;
                         notification-preview <=> root.notification-preview;
@@ -905,6 +938,31 @@ export component DarkMatterLinux inherits Window {
         add(nsec) => { root.add-account(nsec); }
         generate => { root.generate-add-account-key(); }
         dismissed => { root.add-account-dismissed(); }
+    }
+
+    if root.show-import-backup : ImportBackupModal {
+        x: 0; y: 0;
+        width: root.width;
+        height: root.height;
+        file-name: root.import-backup-file;
+        restore-mode: root.import-backup-restore-mode;
+        password-text <=> root.import-backup-password;
+        primary-busy: root.import-backup-busy;
+        status: root.import-backup-status;
+        pick-file => { root.import-backup-pick-file(); }
+        import(pw) => { root.import-backup-submit(pw); }
+        dismissed => { root.import-backup-dismissed(); }
+    }
+
+    if root.show-create-backup : BackupCreateModal {
+        x: 0; y: 0;
+        width: root.width;
+        height: root.height;
+        password-text <=> root.create-backup-password;
+        primary-busy: root.create-backup-busy;
+        status: root.create-backup-status;
+        create(pw) => { root.create-backup-submit(pw); }
+        dismissed => { root.create-backup-dismissed(); }
     }
 
     if root.show-nickname-modal : NicknameModal {
@@ -1098,6 +1156,7 @@ export component DarkMatterLinux inherits Window {
         unlock(p) => { root.unlock(p); }
         reset-vault => { root.reset-vault(); }
         copy-nsec(s) => { root.copy-nsec(s); }
+        import-backup => { root.storage-import-backup(); }
     }
 
     // Emoji glyph pre-paint. This Text contains every emoji in the catalog

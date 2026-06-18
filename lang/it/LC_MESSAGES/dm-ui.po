@@ -2,7 +2,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-06-18 02:51+0000\n"
+"POT-Creation-Date: 2026-06-18 05:37+0000\n"
 "PO-Revision-Date: 2026-05-27 13:20+0000\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -255,25 +255,25 @@ msgctxt "ContactsSidebar"
 msgid "Search contacts…"
 msgstr "Cerca contatti…"
 
-#: ui/dark-matter-linux.slint:339
+#: ui/dark-matter-linux.slint:368
 msgctxt "DarkMatterLinux"
 msgid "Connecting to relays…"
 msgstr "Connessione ai relay…"
 
-#: ui/dark-matter-linux.slint:924
+#: ui/dark-matter-linux.slint:982
 #, fuzzy
 msgctxt "DarkMatterLinux"
 msgid "Block this chat request?"
 msgstr "Richiesta chat"
 
-#: ui/dark-matter-linux.slint:925
+#: ui/dark-matter-linux.slint:983
 msgctxt "DarkMatterLinux"
 msgid ""
 "This declines the invite from {}. It can't be restored unless they invite "
 "you again."
 msgstr ""
 
-#: ui/dark-matter-linux.slint:926
+#: ui/dark-matter-linux.slint:984
 #, fuzzy
 msgctxt "DarkMatterLinux"
 msgid "Block"
@@ -590,87 +590,92 @@ msgctxt "LeftRail"
 msgid "Accounts"
 msgstr ""
 
-#: ui/login/login-screen.slint:182
+#: ui/login/login-screen.slint:183
 msgctxt "LoginScreen"
 msgid "Sign in to your Nostr identity"
 msgstr "Accedi alla tua identità Nostr"
 
-#: ui/login/login-screen.slint:184
+#: ui/login/login-screen.slint:185
 msgctxt "LoginScreen"
 msgid "Import a key & set a password"
 msgstr ""
 
-#: ui/login/login-screen.slint:186
+#: ui/login/login-screen.slint:187
 msgctxt "LoginScreen"
 msgid "Enter your password to unlock"
 msgstr ""
 
-#: ui/login/login-screen.slint:187
+#: ui/login/login-screen.slint:188
 msgctxt "LoginScreen"
 msgid "Save your new key"
 msgstr "Salva la tua nuova chiave"
 
-#: ui/login/login-screen.slint:199
+#: ui/login/login-screen.slint:200
 msgctxt "LoginScreen"
 msgid "I have an nsec"
 msgstr "Ho un nsec"
 
-#: ui/login/login-screen.slint:219
+#: ui/login/login-screen.slint:220
 msgctxt "LoginScreen"
 msgid "Generate a new key"
 msgstr "Genera una nuova chiave"
 
-#: ui/login/login-screen.slint:239
+#: ui/login/login-screen.slint:238
+msgctxt "LoginScreen"
+msgid "Import a backup"
+msgstr ""
+
+#: ui/login/login-screen.slint:255
 msgctxt "LoginScreen"
 msgid "Your key never leaves this device."
 msgstr "La tua chiave non lascia mai questo dispositivo."
 
-#: ui/login/login-screen.slint:258 ui/login/login-screen.slint:476
+#: ui/login/login-screen.slint:274 ui/login/login-screen.slint:492
 msgctxt "LoginScreen"
 msgid "VAULT PASSWORD"
 msgstr ""
 
-#: ui/login/login-screen.slint:259 ui/login/login-screen.slint:477
+#: ui/login/login-screen.slint:275 ui/login/login-screen.slint:493
 msgctxt "LoginScreen"
 msgid "Choose a password"
 msgstr ""
 
-#: ui/login/login-screen.slint:265 ui/login/login-screen.slint:483
+#: ui/login/login-screen.slint:281 ui/login/login-screen.slint:499
 msgctxt "LoginScreen"
 msgid "CONFIRM PASSWORD"
 msgstr ""
 
-#: ui/login/login-screen.slint:266 ui/login/login-screen.slint:484
+#: ui/login/login-screen.slint:282 ui/login/login-screen.slint:500
 msgctxt "LoginScreen"
 msgid "Re-enter password"
 msgstr ""
 
-#: ui/login/login-screen.slint:284 ui/login/login-screen.slint:502
+#: ui/login/login-screen.slint:300 ui/login/login-screen.slint:518
 msgctxt "LoginScreen"
 msgid "Back"
 msgstr "Indietro"
 
-#: ui/login/login-screen.slint:294
+#: ui/login/login-screen.slint:310
 msgctxt "LoginScreen"
 msgid "Signing in…"
 msgstr "Accesso…"
 
-#: ui/login/login-screen.slint:294
+#: ui/login/login-screen.slint:310
 msgctxt "LoginScreen"
 msgid "Continue"
 msgstr "Continua"
 
-#: ui/login/login-screen.slint:339
+#: ui/login/login-screen.slint:355
 msgctxt "LoginScreen"
 msgid "YOUR DISPLAY NAME"
 msgstr ""
 
-#: ui/login/login-screen.slint:376
+#: ui/login/login-screen.slint:392
 msgctxt "LoginScreen"
 msgid "Back up your nsec before saving"
 msgstr "Fai backup del nsec prima di salvare"
 
-#: ui/login/login-screen.slint:382
+#: ui/login/login-screen.slint:398
 #, fuzzy
 msgctxt "LoginScreen"
 msgid ""
@@ -680,42 +685,42 @@ msgstr ""
 "Salva lo memorizza nel portachiavi del sistema. Tieni anche una tua copia — "
 "se lo perdi, l'identità è persa."
 
-#: ui/login/login-screen.slint:451
+#: ui/login/login-screen.slint:467
 msgctxt "LoginScreen"
 msgid "Regenerate"
 msgstr "Rigenera"
 
-#: ui/login/login-screen.slint:462
+#: ui/login/login-screen.slint:478
 msgctxt "LoginScreen"
 msgid "Copy"
 msgstr "Copia"
 
-#: ui/login/login-screen.slint:509
+#: ui/login/login-screen.slint:525
 msgctxt "LoginScreen"
 msgid "Saving…"
 msgstr "Salvataggio…"
 
-#: ui/login/login-screen.slint:509
+#: ui/login/login-screen.slint:525
 msgctxt "LoginScreen"
 msgid "Create vault"
 msgstr ""
 
-#: ui/login/login-screen.slint:528
+#: ui/login/login-screen.slint:544
 msgctxt "LoginScreen"
 msgid "Enter your password"
 msgstr ""
 
-#: ui/login/login-screen.slint:547
+#: ui/login/login-screen.slint:563
 msgctxt "LoginScreen"
 msgid "Use another key"
 msgstr ""
 
-#: ui/login/login-screen.slint:554
+#: ui/login/login-screen.slint:570
 msgctxt "LoginScreen"
 msgid "Unlocking…"
 msgstr ""
 
-#: ui/login/login-screen.slint:554
+#: ui/login/login-screen.slint:570
 #, fuzzy
 msgctxt "LoginScreen"
 msgid "Unlock"
@@ -837,18 +842,18 @@ msgctxt "GroupMemberRow"
 msgid "ADMIN"
 msgstr ""
 
-#: ui/main-pane/group-member-row.slint:86
+#: ui/main-pane/group-member-row.slint:87
 msgctxt "GroupMemberRow"
 msgid "Make admin"
 msgstr ""
 
-#: ui/main-pane/group-member-row.slint:105
+#: ui/main-pane/group-member-row.slint:107
 #, fuzzy
 msgctxt "GroupMemberRow"
 msgid "Remove admin"
 msgstr "Rimuovi contatto"
 
-#: ui/main-pane/group-member-row.slint:124
+#: ui/main-pane/group-member-row.slint:127
 msgctxt "GroupMemberRow"
 msgid "Step down"
 msgstr ""
@@ -1043,6 +1048,45 @@ msgctxt "AddContactModal"
 msgid "PUBLIC KEY"
 msgstr ""
 
+#: ui/modals/backup-create-modal.slint:13
+msgctxt "BackupCreateModal"
+msgid "Create backup"
+msgstr ""
+
+#: ui/modals/backup-create-modal.slint:14
+msgctxt "BackupCreateModal"
+msgid ""
+"Pack everything — accounts, chats, settings — into one encrypted file, "
+"sealed with your vault password. The media cache is left out."
+msgstr ""
+
+#: ui/modals/backup-create-modal.slint:15
+#, fuzzy
+msgctxt "BackupCreateModal"
+msgid "Cancel"
+msgstr "Annulla"
+
+#: ui/modals/backup-create-modal.slint:16
+msgctxt "BackupCreateModal"
+msgid "Choose location…"
+msgstr ""
+
+#: ui/modals/backup-create-modal.slint:17
+#, fuzzy
+msgctxt "BackupCreateModal"
+msgid "Saving…"
+msgstr "Salvataggio…"
+
+#: ui/modals/backup-create-modal.slint:21
+msgctxt "BackupCreateModal"
+msgid "VAULT PASSWORD"
+msgstr ""
+
+#: ui/modals/backup-create-modal.slint:22
+msgctxt "BackupCreateModal"
+msgid "Confirm your vault password"
+msgstr ""
+
 #: ui/modals/command-palette.slint:80
 msgctxt "CommandPalette"
 msgid "Type a command…"
@@ -1085,6 +1129,78 @@ msgstr ""
 msgctxt "ImageViewerModal"
 msgid "Loading…"
 msgstr "Salvataggio…"
+
+#: ui/modals/import-backup-modal.slint:22
+msgctxt "ImportBackupModal"
+msgid "Import backup"
+msgstr ""
+
+#: ui/modals/import-backup-modal.slint:24
+msgctxt "ImportBackupModal"
+msgid ""
+"Restore everything from an encrypted backup. Use the password the backup was "
+"created with."
+msgstr ""
+
+#: ui/modals/import-backup-modal.slint:25
+msgctxt "ImportBackupModal"
+msgid ""
+"Merge the accounts from an encrypted backup into this install. Use the "
+"password the backup was created with."
+msgstr ""
+
+#: ui/modals/import-backup-modal.slint:26
+#, fuzzy
+msgctxt "ImportBackupModal"
+msgid "Cancel"
+msgstr "Annulla"
+
+#: ui/modals/import-backup-modal.slint:27
+msgctxt "ImportBackupModal"
+msgid "Restore"
+msgstr ""
+
+#: ui/modals/import-backup-modal.slint:27
+msgctxt "ImportBackupModal"
+msgid "Import"
+msgstr ""
+
+#: ui/modals/import-backup-modal.slint:28
+#, fuzzy
+msgctxt "ImportBackupModal"
+msgid "Restoring…"
+msgstr "Salvataggio…"
+
+#: ui/modals/import-backup-modal.slint:28
+#, fuzzy
+msgctxt "ImportBackupModal"
+msgid "Importing…"
+msgstr "Salvataggio…"
+
+#: ui/modals/import-backup-modal.slint:35
+msgctxt "ImportBackupModal"
+msgid "BACKUP FILE"
+msgstr ""
+
+#: ui/modals/import-backup-modal.slint:45
+msgctxt "ImportBackupModal"
+msgid "Choose file…"
+msgstr ""
+
+#: ui/modals/import-backup-modal.slint:54
+msgctxt "ImportBackupModal"
+msgid "No file selected"
+msgstr ""
+
+#: ui/modals/import-backup-modal.slint:66
+msgctxt "ImportBackupModal"
+msgid "BACKUP PASSWORD"
+msgstr ""
+
+#: ui/modals/import-backup-modal.slint:67
+msgctxt "ImportBackupModal"
+msgid "Password the backup was sealed with"
+msgstr ""
 
 #: ui/modals/language-picker-modal.slint:53
 msgctxt "LanguagePickerModal"
@@ -1204,17 +1320,17 @@ msgctxt "VideoViewerModal"
 msgid "Loading…"
 msgstr "Salvataggio…"
 
-#: ui/primitives/context-menu.slint:110
+#: ui/primitives/context-menu.slint:154
 msgctxt "MessageContextMenu"
 msgid "Add reaction"
 msgstr ""
 
-#: ui/primitives/context-menu.slint:115
+#: ui/primitives/context-menu.slint:161
 msgctxt "MessageContextMenu"
 msgid "Reply"
 msgstr ""
 
-#: ui/primitives/context-menu.slint:120
+#: ui/primitives/context-menu.slint:168
 #, fuzzy
 msgctxt "MessageContextMenu"
 msgid "Edit message"
@@ -1915,41 +2031,86 @@ msgctxt "SettingsSidebar"
 msgid "Debug"
 msgstr "Debug"
 
-#: ui/settings/storage-pane.slint:22
+#: ui/settings/storage-pane.slint:28
 #, fuzzy
 msgctxt "StoragePane"
 msgid "Storage"
 msgstr "Archiviazione"
 
-#: ui/settings/storage-pane.slint:23
+#: ui/settings/storage-pane.slint:29
 msgctxt "StoragePane"
 msgid "ON THIS DEVICE"
 msgstr ""
 
-#: ui/settings/storage-pane.slint:28
+#: ui/settings/storage-pane.slint:34
 msgctxt "StoragePane"
 msgid "MEDIA CACHE"
 msgstr ""
 
-#: ui/settings/storage-pane.slint:31
+#: ui/settings/storage-pane.slint:37
 msgctxt "StoragePane"
 msgid "Cached attachments"
 msgstr ""
 
-#: ui/settings/storage-pane.slint:32
+#: ui/settings/storage-pane.slint:38
 msgctxt "StoragePane"
 msgid "Decrypted images and files, sealed with your vault key."
 msgstr ""
 
-#: ui/settings/storage-pane.slint:36
+#: ui/settings/storage-pane.slint:42
 #, fuzzy
 msgctxt "StoragePane"
 msgid "Clearing…"
 msgstr "Salvataggio…"
 
-#: ui/settings/storage-pane.slint:36
+#: ui/settings/storage-pane.slint:42
 msgctxt "StoragePane"
 msgid "Clear cache"
+msgstr ""
+
+#: ui/settings/storage-pane.slint:51
+msgctxt "StoragePane"
+msgid "SECRET VAULT"
+msgstr ""
+
+#: ui/settings/storage-pane.slint:54
+msgctxt "StoragePane"
+msgid "Vault location"
+msgstr ""
+
+#: ui/settings/storage-pane.slint:58
+msgctxt "StoragePane"
+msgid "Open folder"
+msgstr ""
+
+#: ui/settings/storage-pane.slint:63
+msgctxt "StoragePane"
+msgid "Back up everything"
+msgstr ""
+
+#: ui/settings/storage-pane.slint:64
+msgctxt "StoragePane"
+msgid "Pack accounts, chats, and settings into one encrypted file."
+msgstr ""
+
+#: ui/settings/storage-pane.slint:67
+msgctxt "StoragePane"
+msgid "Create backup…"
+msgstr ""
+
+#: ui/settings/storage-pane.slint:72
+msgctxt "StoragePane"
+msgid "Import a backup"
+msgstr ""
+
+#: ui/settings/storage-pane.slint:73
+msgctxt "StoragePane"
+msgid "Merge the accounts from a backup file into this install."
+msgstr ""
+
+#: ui/settings/storage-pane.slint:76
+msgctxt "StoragePane"
+msgid "Import…"
 msgstr ""
 
 #: ui/settings/theme-picker.slint:44
@@ -2021,14 +2182,17 @@ msgctxt "ErrorCopy"
 msgid ""
 "That doesn't look like a valid npub or public key. Double-check it and try "
 "again."
-msgstr "Non sembra un npub o una chiave pubblica valida. Controllala e riprova."
+msgstr ""
+"Non sembra un npub o una chiave pubblica valida. Controllala e riprova."
 
 #: ui/tokens.slint:445
 msgctxt "ErrorCopy"
 msgid ""
 "Can't reach your relays right now. Check your network and relay settings, "
 "then try again."
-msgstr "Non riesco a raggiungere i tuoi relay in questo momento. Controlla la rete e le impostazioni dei relay, poi riprova."
+msgstr ""
+"Non riesco a raggiungere i tuoi relay in questo momento. Controlla la rete e "
+"le impostazioni dei relay, poi riprova."
 
 #. Tier 2 — operation-specific fallbacks.
 #: ui/tokens.slint:447
@@ -2036,13 +2200,17 @@ msgctxt "ErrorCopy"
 msgid ""
 "Couldn't finish syncing. We'll keep retrying — check your relay settings if "
 "this keeps happening."
-msgstr "Sincronizzazione non completata. Continueremo a riprovare — se il problema persiste, controlla le impostazioni dei relay."
+msgstr ""
+"Sincronizzazione non completata. Continueremo a riprovare — se il problema "
+"persiste, controlla le impostazioni dei relay."
 
 #: ui/tokens.slint:448
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't start up. Check your network and relay settings, then try again."
-msgstr "Avvio non riuscito. Controlla la rete e le impostazioni dei relay, poi riprova."
+msgstr ""
+"Avvio non riuscito. Controlla la rete e le impostazioni dei relay, poi "
+"riprova."
 
 #: ui/tokens.slint:449
 msgctxt "ErrorCopy"
@@ -2093,25 +2261,33 @@ msgstr "Impossibile rimuovere la reazione. Riprova."
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't publish your key package. Check your relay settings and try again."
-msgstr "Impossibile pubblicare il tuo key package. Controlla le impostazioni dei relay e riprova."
+msgstr ""
+"Impossibile pubblicare il tuo key package. Controlla le impostazioni dei "
+"relay e riprova."
 
 #: ui/tokens.slint:459
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't rotate your key package. Check your relay settings and try again."
-msgstr "Impossibile ruotare il tuo key package. Controlla le impostazioni dei relay e riprova."
+msgstr ""
+"Impossibile ruotare il tuo key package. Controlla le impostazioni dei relay "
+"e riprova."
 
 #: ui/tokens.slint:460
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't refresh your key packages. Check your relay settings and try again."
-msgstr "Impossibile aggiornare i tuoi key package. Controlla le impostazioni dei relay e riprova."
+msgstr ""
+"Impossibile aggiornare i tuoi key package. Controlla le impostazioni dei "
+"relay e riprova."
 
 #: ui/tokens.slint:461
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't republish to your relays. Check your relay settings and try again."
-msgstr "Impossibile ripubblicare sui tuoi relay. Controlla le impostazioni dei relay e riprova."
+msgstr ""
+"Impossibile ripubblicare sui tuoi relay. Controlla le impostazioni dei relay "
+"e riprova."
 
 #: ui/tokens.slint:462
 msgctxt "ErrorCopy"

@@ -15,6 +15,7 @@ use tokio::task::JoinHandle;
 mod animal_avatar;
 mod audio;
 mod backend;
+mod backup;
 mod blossom;
 mod media_cache;
 mod mpv;
@@ -27,6 +28,13 @@ mod vault;
 use backend::Backend;
 use settings::Settings;
 use vault::Vault;
+
+// Tests that point `DM_HOME` at a temp dir mutate a single process-global env
+// var, so the vault and backup suites must not run concurrently — they share
+// this lock to serialize. (Poisoning is ignored: a panicking test still leaves
+// the lock usable for the next.)
+#[cfg(test)]
+pub(crate) static DM_HOME_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 // Generated Slint UI (components, ui/tokens.slint structs, globals) plus the
 // build-time emoji sprite artifacts — all owned by the dm-ui crate so Rust
@@ -2294,6 +2302,219 @@ fn main() -> Result<(), slint::PlatformError> {
         }
     };
     refresh_storage_size();
+    // Static for the session — the data dir doesn't move while we're running.
+    ui.set_storage_vault_dir(vault::vault_dir().display().to_string().into());
+
+    // Reveal the folder holding vault.db in the platform file manager. Reuses the
+    // same xdg-open/open handler as external links — a directory path is fine.
+    ui.on_storage_open_vault_folder(move || {
+        open_external(&vault::vault_dir().display().to_string());
+    });
+
+    // ─── Whole-folder backup & restore ─────────────────────────────────
+    // A backup is the entire data dir packed into one file, sealed with the
+    // vault password (see backup.rs). Open the create-backup modal.
+    ui.on_storage_create_backup({
+        let weak = ui.as_weak();
+        move || {
+            let Some(ui) = weak.upgrade() else { return };
+            ui.set_create_backup_password(s(""));
+            ui.set_create_backup_status(s(""));
+            ui.set_create_backup_busy(false);
+            ui.set_show_create_backup(true);
+        }
+    });
+
+    ui.on_create_backup_dismissed({
+        let weak = ui.as_weak();
+        move || {
+            let Some(ui) = weak.upgrade() else { return };
+            ui.set_show_create_backup(false);
+            ui.set_create_backup_password(s(""));
+            ui.set_create_backup_status(s(""));
+        }
+    });
+
+    // Confirm vault password → native save dialog → write the encrypted backup.
+    // The picker is sync rfd on a plain thread (no backend needed, and never on
+    // the UI thread).
+    ui.on_create_backup_submit({
+        let weak = ui.as_weak();
+        move |password| {
+            let Some(ui) = weak.upgrade() else { return };
+            let password = password.to_string();
+            if password.is_empty() {
+                ui.set_create_backup_status(s("Enter your vault password."));
+                return;
+            }
+            ui.set_create_backup_busy(true);
+            ui.set_create_backup_status(s(""));
+            let weak = weak.clone();
+            std::thread::spawn(move || {
+                let dest = rfd::FileDialog::new()
+                    .set_title("Save backup")
+                    .set_file_name(backup::DEFAULT_FILENAME)
+                    .save_file();
+                let Some(dest) = dest else {
+                    // Cancelled — drop the busy state, leave the modal open.
+                    let _ = slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = weak.upgrade() {
+                            ui.set_create_backup_busy(false);
+                        }
+                    });
+                    return;
+                };
+                let result = backup::create(&dest, &password);
+                let _ = slint::invoke_from_event_loop(move || {
+                    let Some(ui) = weak.upgrade() else { return };
+                    ui.set_create_backup_busy(false);
+                    match result {
+                        Ok(()) => {
+                            ui.set_show_create_backup(false);
+                            ui.set_create_backup_password(s(""));
+                        }
+                        Err(backup::BackupError::WrongPassword) => {
+                            ui.set_create_backup_status(s("Wrong vault password."));
+                        }
+                        Err(e) => {
+                            ui.set_create_backup_status(format!("Backup failed: {e}").into());
+                        }
+                    }
+                });
+            });
+        }
+    });
+
+    // Open the import-backup modal. On a fresh install (no vault) it restores the
+    // whole folder; otherwise it merges accounts — the modal copy follows suit.
+    ui.on_storage_import_backup({
+        let weak = ui.as_weak();
+        move || {
+            let Some(ui) = weak.upgrade() else { return };
+            ui.set_import_backup_path(s(""));
+            ui.set_import_backup_file(s(""));
+            ui.set_import_backup_password(s(""));
+            ui.set_import_backup_status(s(""));
+            ui.set_import_backup_busy(false);
+            ui.set_import_backup_restore_mode(!vault::exists());
+            ui.set_show_import_backup(true);
+        }
+    });
+
+    ui.on_import_backup_dismissed({
+        let weak = ui.as_weak();
+        move || {
+            let Some(ui) = weak.upgrade() else { return };
+            ui.set_show_import_backup(false);
+            ui.set_import_backup_path(s(""));
+            ui.set_import_backup_password(s(""));
+            ui.set_import_backup_status(s(""));
+        }
+    });
+
+    // Native file picker for the backup file. Sync rfd on a plain thread so it
+    // works before the backend exists (first-run restore) and never blocks the UI
+    // thread. The chosen path round-trips through a Slint property (Send-safe).
+    ui.on_import_backup_pick_file({
+        let weak = ui.as_weak();
+        move || {
+            let weak = weak.clone();
+            std::thread::spawn(move || {
+                let Some(picked) = rfd::FileDialog::new()
+                    .set_title("Import backup")
+                    .pick_file()
+                else {
+                    return;
+                };
+                let name = picked
+                    .file_name()
+                    .map(|n| n.to_string_lossy().into_owned())
+                    .unwrap_or_else(|| picked.display().to_string());
+                let path = picked.display().to_string();
+                let _ = slint::invoke_from_event_loop(move || {
+                    let Some(ui) = weak.upgrade() else { return };
+                    ui.set_import_backup_path(path.into());
+                    ui.set_import_backup_file(name.into());
+                    ui.set_import_backup_status(s(""));
+                });
+            });
+        }
+    });
+
+    // Submit: decrypt the backup, then either restore the whole folder (fresh
+    // install) or merge its accounts (running install). The branch is decided by
+    // whether a vault already exists.
+    ui.on_import_backup_submit({
+        let weak = ui.as_weak();
+        let backend_cell = backend_cell.clone();
+        let vault_cell = vault_cell.clone();
+        move |password| {
+            let Some(ui) = weak.upgrade() else { return };
+            let path = ui.get_import_backup_path().to_string();
+            if path.is_empty() {
+                ui.set_import_backup_status(s("Choose a backup file first."));
+                return;
+            }
+            if password.is_empty() {
+                ui.set_import_backup_status(s("Enter the backup password."));
+                return;
+            }
+            let path = std::path::PathBuf::from(path);
+            let password = password.to_string();
+            let restoring = !vault::exists();
+            ui.set_import_backup_busy(true);
+            ui.set_import_backup_status(s(""));
+            let weak = weak.clone();
+            let backend_cell = backend_cell.clone();
+            let vault_cell = vault_cell.clone();
+            // Argon2id derive + archive IO — off the UI thread.
+            std::thread::spawn(move || {
+                if restoring {
+                    // Fresh install: extract the whole folder, then unlock the
+                    // restored vault with the same password to boot straight in.
+                    let result = backup::restore_into_home(&path, &password);
+                    let _ = slint::invoke_from_event_loop(move || {
+                        let Some(ui) = weak.upgrade() else { return };
+                        match result {
+                            Ok(()) => {
+                                ui.set_import_backup_busy(false);
+                                ui.set_show_import_backup(false);
+                                ui.set_import_backup_password(s(""));
+                                // The restored vault.db unlocks with this very
+                                // password — reuse the unlock path to boot.
+                                ui.invoke_unlock(password.into());
+                            }
+                            Err(e) => {
+                                ui.set_import_backup_busy(false);
+                                ui.set_import_backup_status(import_backup_error(&e).into());
+                            }
+                        }
+                    });
+                } else {
+                    // Running install: pull keys from the backup's vault.db and
+                    // re-login the missing accounts.
+                    let result = backup::merge_nsecs(&path, &password);
+                    let _ = slint::invoke_from_event_loop(move || {
+                        let Some(ui) = weak.upgrade() else { return };
+                        let nsecs = match result {
+                            Ok(n) => n,
+                            Err(e) => {
+                                ui.set_import_backup_busy(false);
+                                ui.set_import_backup_status(import_backup_error(&e).into());
+                                return;
+                            }
+                        };
+                        let Some(backend) = backend_cell.lock().unwrap().clone() else {
+                            ui.set_import_backup_busy(false);
+                            ui.set_import_backup_status(s("Backend isn't ready yet."));
+                            return;
+                        };
+                        merge_imported_accounts(&ui, &backend, &vault_cell, nsecs);
+                    });
+                }
+            });
+        }
+    });
 
     let go_to_page = {
         let weak = ui.as_weak();
@@ -8794,6 +9015,122 @@ fn vault_set_async(vault: &Arc<Mutex<Vault>>, key: String, value: String) {
             eprintln!("[vault] set {key} failed: {e}");
         }
     });
+}
+
+/// User-facing message for a backup decrypt/read failure. A bad password is the
+/// common case and gets its own clear line; everything else shows the detail.
+fn import_backup_error(e: &backup::BackupError) -> String {
+    match e {
+        backup::BackupError::WrongPassword => "Wrong backup password.".to_string(),
+        backup::BackupError::NotFound => "That backup file is gone.".to_string(),
+        other => format!("Couldn't read backup: {other}"),
+    }
+}
+
+/// Merge a set of nsecs (decrypted from an imported backup) into the running app.
+/// Each nsec whose account isn't already present is re-logged via marmot — which
+/// registers it and re-seals its secret into the active vault — and its bech32
+/// backup is stored under `nsec:<hex>`. Already-present keys are counted as
+/// skipped, not re-added. Runs on the UI thread; per-account completions hop
+/// through a worker before the final summary lands back on the event loop.
+fn merge_imported_accounts(
+    ui: &DarkMatterLinux,
+    backend: &Arc<Backend>,
+    vault_cell: &Arc<Mutex<Option<Arc<Mutex<Vault>>>>>,
+    nsecs: Vec<String>,
+) {
+    let existing: std::collections::BTreeSet<String> = backend
+        .accounts()
+        .into_iter()
+        .map(|a| a.account_id_hex.to_ascii_lowercase())
+        .collect();
+
+    // (nsec, account-id-hex) for keys we don't already have.
+    let mut to_add: Vec<(String, String)> = Vec::new();
+    let mut skipped = 0usize;
+    for nsec in nsecs {
+        let Ok(keys) = Keys::parse(&nsec) else {
+            continue;
+        };
+        let id = keys.public_key().to_hex().to_ascii_lowercase();
+        if existing.contains(&id) || to_add.iter().any(|(_, e)| *e == id) {
+            skipped += 1;
+        } else {
+            to_add.push((nsec, id));
+        }
+    }
+
+    let total = to_add.len();
+    if total == 0 {
+        ui.set_import_backup_busy(false);
+        ui.set_import_backup_status(if skipped == 0 {
+            s("That backup holds no keys to import.")
+        } else {
+            format!("Nothing new — {skipped} account(s) already present.").into()
+        });
+        return;
+    }
+
+    // Shared tally across the per-account completions (each fires on a worker
+    // thread). When the last one reports in, summarize on the UI thread.
+    let done = Arc::new(Mutex::new((0usize, 0usize, 0usize))); // (ok, fail, done)
+    let vault = vault_cell.lock().unwrap().clone();
+    for (nsec, id) in to_add {
+        let weak = ui.as_weak();
+        let backend_final = backend.clone();
+        let vault = vault.clone();
+        let done = done.clone();
+        backend.add_account_async(nsec.clone(), move |result| {
+            // Seal the bech32 backup next to marmot's own secret so the boot
+            // self-heal / export paths have it (mirrors the add-account flow).
+            if result.is_ok()
+                && let Some(vault) = vault.as_ref()
+            {
+                vault_set_async(vault, vault::nsec_key_for(&id), nsec.clone());
+            }
+            let finished = {
+                let mut g = done.lock().unwrap();
+                if result.is_ok() {
+                    g.0 += 1;
+                } else {
+                    if let Err(e) = &result {
+                        eprintln!("[import] add account {id} failed: {e:#}");
+                    }
+                    g.1 += 1;
+                }
+                g.2 += 1;
+                g.2 == total
+            };
+            if !finished {
+                return;
+            }
+            let (ok, fail) = {
+                let g = done.lock().unwrap();
+                (g.0, g.1)
+            };
+            let _ = slint::invoke_from_event_loop(move || {
+                let Some(ui) = weak.upgrade() else { return };
+                ui.set_import_backup_busy(false);
+                if ok > 0 {
+                    refresh_accounts_model(&ui, &backend_final);
+                }
+                let mut msg = format!("Merged {ok} of {total} account(s).");
+                if skipped > 0 {
+                    msg.push_str(&format!(" {skipped} already present."));
+                }
+                if fail > 0 {
+                    msg.push_str(&format!(" {fail} failed."));
+                }
+                ui.set_import_backup_status(msg.into());
+                // Clean exit on a full success; otherwise keep the dialog open
+                // so the partial-failure summary stays visible.
+                if fail == 0 {
+                    ui.set_show_import_backup(false);
+                    ui.set_import_backup_password(s(""));
+                }
+            });
+        });
+    }
 }
 
 /// Clock-skew margin for the notification recency gate: a peer's clock can run

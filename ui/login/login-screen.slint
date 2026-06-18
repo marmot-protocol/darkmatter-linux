@@ -106,6 +106,7 @@ export component LoginScreen inherits Rectangle {
     callback unlock(string);                            // vault password
     callback reset-vault();
     callback copy-nsec(string);
+    callback import-backup();                            // restore from an encrypted backup
 
     // Guarded action helpers so submit-on-Enter and button clicks share a path.
     function create-account() {
@@ -230,6 +231,21 @@ export component LoginScreen inherits Rectangle {
                         root.password-input = "";
                         root.password-confirm = "";
                         root.generate-requested();
+                    }
+                }
+
+                Button {
+                    label: @tr("Import a backup");
+                    button-height: 44px;
+                    radius: 8px;
+                    font-size: Theme.fs(13px, 16px);
+                    bg-color: Palette.field;
+                    outline: Palette.field-border;
+                    hover-bg: Palette.field-hover;
+                    hover-outline: Palette.field-border-hover;
+                    clicked => {
+                        root.error = "";
+                        root.import-backup();
                     }
                 }
 

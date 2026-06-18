@@ -15,8 +15,8 @@
 // Every mutation re-seals the whole map under a fresh random nonce. The derived
 // key is held in a `Zeroizing` buffer so it is wiped from memory on drop.
 
-use std::collections::BTreeMap;
-use std::path::PathBuf;
+use std::collections::{BTreeMap, BTreeSet};
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use argon2::{Algorithm, Argon2, Params, Version};
@@ -107,6 +107,57 @@ pub fn vault_path() -> PathBuf {
     crate::backend::default_home().join("vault.db")
 }
 
+/// The directory that holds `vault.db` (the data dir). Surfaced so the UI can
+/// offer an "open vault folder" affordance — a user keeping their own backup of
+/// the encrypted vault needs to know where it lives.
+pub fn vault_dir() -> PathBuf {
+    crate::backend::default_home()
+}
+
+/// Decrypt an in-memory vault envelope with `password` and extract every distinct
+/// secret key it holds, as canonical bech32 nsecs. Used when merging a backup:
+/// the `vault.db` inside it is re-logged account-by-account into the running app
+/// (each returned nsec registers with marmot and re-seals into the *active*
+/// vault). Merging raw maps wouldn't work — marmot's account list comes from its
+/// own DB, not the secret store, so an account only becomes real once logged in.
+///
+/// Sources, all deduped by public key: the primary `nsec`, per-account
+/// `nsec:<hex>` backups, and `account:<label>` marmot secret-key hex (the last
+/// covers vaults that predate the per-account nsec backfill). A wrong password
+/// surfaces as [`VaultError::WrongPassword`], same as a normal unlock.
+pub fn import_nsecs_from_bytes(bytes: &[u8], password: &str) -> Result<Vec<String>, VaultError> {
+    let plaintext = open_with_password(bytes, password)?;
+    let data: BTreeMap<String, String> = serde_json::from_slice(&plaintext)
+        .map_err(|e| VaultError::Corrupt(format!("inner json: {e}")))?;
+    Ok(nsecs_from_map(&data))
+}
+
+/// Pull every distinct secret key out of a decrypted vault map, as bech32 nsecs,
+/// deduped by public key. Sources: the primary `nsec`, `nsec:<hex>` backups, and
+/// `account:<label>` marmot secret-key hex.
+fn nsecs_from_map(data: &BTreeMap<String, String>) -> Vec<String> {
+    use nostr::ToBech32;
+    let mut seen: BTreeSet<String> = BTreeSet::new();
+    let mut out: Vec<String> = Vec::new();
+    for (k, val) in data {
+        let is_secret = k == NSEC_KEY || k.starts_with("nsec:") || k.starts_with("account:");
+        if !is_secret {
+            continue;
+        }
+        // `Keys::parse` accepts both bech32 nsec (primary / nsec:* backups) and
+        // raw secret-key hex (account:* marmot secrets), so one path covers all.
+        let Ok(keys) = nostr::Keys::parse(val) else {
+            continue;
+        };
+        if seen.insert(keys.public_key().to_hex()) {
+            // `to_bech32` on a secret key is infallible here; `.ok()` keeps the
+            // collect tidy without an irrefutable-pattern lint.
+            out.extend(keys.secret_key().to_bech32().ok());
+        }
+    }
+    out
+}
+
 /// Whether a vault file already exists (drives unlock-vs-create UI flow).
 pub fn exists() -> bool {
     vault_path().exists()
@@ -156,49 +207,21 @@ impl Vault {
         Ok(v)
     }
 
-    /// Open and decrypt an existing vault with `password`.
+    /// Open and decrypt the default vault (`$DM_HOME/vault.db`) with `password`.
     pub fn open(password: &str) -> Result<Self, VaultError> {
-        let path = vault_path();
+        Self::open_path(&vault_path(), password)
+    }
+
+    /// Open and decrypt the vault file at `path` with `password`. Backs both the
+    /// default unlock ([`open`]) and reading a foreign vault for import.
+    fn open_path(path: &Path, password: &str) -> Result<Self, VaultError> {
+        let path = path.to_path_buf();
         let bytes = match std::fs::read(&path) {
             Ok(b) => b,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Err(VaultError::NotFound),
             Err(e) => return Err(VaultError::Io(e.to_string())),
         };
-        let env: VaultEnvelope =
-            serde_json::from_slice(&bytes).map_err(|e| VaultError::Corrupt(e.to_string()))?;
-        if env.version != VAULT_VERSION {
-            return Err(VaultError::Corrupt(format!(
-                "unsupported vault version {}",
-                env.version
-            )));
-        }
-        if env.kdf.algo != "argon2id" {
-            return Err(VaultError::Corrupt(format!("unknown kdf {}", env.kdf.algo)));
-        }
-        let salt_vec = hex::decode(&env.kdf.salt_hex)
-            .map_err(|e| VaultError::Corrupt(format!("salt hex: {e}")))?;
-        let salt: [u8; SALT_LEN] = salt_vec
-            .as_slice()
-            .try_into()
-            .map_err(|_| VaultError::Corrupt("bad salt length".into()))?;
-        let nonce = hex::decode(&env.nonce_hex)
-            .map_err(|e| VaultError::Corrupt(format!("nonce hex: {e}")))?;
-        let ciphertext = hex::decode(&env.ciphertext_hex)
-            .map_err(|e| VaultError::Corrupt(format!("ciphertext hex: {e}")))?;
-
-        let key = derive_key_with_params(
-            password,
-            &salt,
-            env.kdf.m_cost,
-            env.kdf.t_cost,
-            env.kdf.p_cost,
-        )?;
-
-        let cipher = XChaCha20Poly1305::new(Key::from_slice(&*key));
-        let plaintext = cipher
-            .decrypt(XNonce::from_slice(&nonce), ciphertext.as_ref())
-            // The only realistic decrypt failure here is a bad auth tag => wrong password.
-            .map_err(|_| VaultError::WrongPassword)?;
+        let (salt, plaintext, key) = open_envelope_keyed(&bytes, password)?;
         let data: BTreeMap<String, String> = serde_json::from_slice(&plaintext)
             .map_err(|e| VaultError::Corrupt(format!("inner json: {e}")))?;
 
@@ -347,6 +370,81 @@ fn random_bytes(buf: &mut [u8]) -> Result<(), VaultError> {
     getrandom::getrandom(buf).map_err(|e| VaultError::Crypto(format!("rng: {e}")))
 }
 
+/// Parse and decrypt a `VaultEnvelope` JSON blob, returning the salt, the
+/// recovered plaintext, and the derived Argon2id key. The single decrypt path
+/// behind [`Vault::open_path`] and the generic [`open_with_password`].
+fn open_envelope_keyed(
+    bytes: &[u8],
+    password: &str,
+) -> Result<([u8; SALT_LEN], Vec<u8>, Zeroizing<[u8; 32]>), VaultError> {
+    let env: VaultEnvelope =
+        serde_json::from_slice(bytes).map_err(|e| VaultError::Corrupt(e.to_string()))?;
+    if env.version != VAULT_VERSION {
+        return Err(VaultError::Corrupt(format!(
+            "unsupported vault version {}",
+            env.version
+        )));
+    }
+    if env.kdf.algo != "argon2id" {
+        return Err(VaultError::Corrupt(format!("unknown kdf {}", env.kdf.algo)));
+    }
+    let salt_vec =
+        hex::decode(&env.kdf.salt_hex).map_err(|e| VaultError::Corrupt(format!("salt hex: {e}")))?;
+    let salt: [u8; SALT_LEN] = salt_vec
+        .as_slice()
+        .try_into()
+        .map_err(|_| VaultError::Corrupt("bad salt length".into()))?;
+    let nonce =
+        hex::decode(&env.nonce_hex).map_err(|e| VaultError::Corrupt(format!("nonce hex: {e}")))?;
+    let ciphertext = hex::decode(&env.ciphertext_hex)
+        .map_err(|e| VaultError::Corrupt(format!("ciphertext hex: {e}")))?;
+
+    let key =
+        derive_key_with_params(password, &salt, env.kdf.m_cost, env.kdf.t_cost, env.kdf.p_cost)?;
+    let cipher = XChaCha20Poly1305::new(Key::from_slice(&*key));
+    let plaintext = cipher
+        .decrypt(XNonce::from_slice(&nonce), ciphertext.as_ref())
+        // The only realistic decrypt failure here is a bad auth tag => wrong password.
+        .map_err(|_| VaultError::WrongPassword)?;
+    Ok((salt, plaintext, key))
+}
+
+/// Seal arbitrary bytes into a fresh `VaultEnvelope` JSON blob keyed by
+/// `Argon2id(password)`. Shares the vault's on-disk format and cost parameters
+/// so the folder-backup file (`backup.rs`) is the same crypto as the vault, just
+/// wrapping a tar instead of the secret map.
+pub(crate) fn seal_with_password(password: &str, plaintext: &[u8]) -> Result<Vec<u8>, VaultError> {
+    let mut salt = [0u8; SALT_LEN];
+    random_bytes(&mut salt)?;
+    let key = derive_key(password, &salt)?;
+    let mut nonce = [0u8; NONCE_LEN];
+    random_bytes(&mut nonce)?;
+    let cipher = XChaCha20Poly1305::new(Key::from_slice(&*key));
+    let ciphertext = cipher
+        .encrypt(XNonce::from_slice(&nonce), plaintext)
+        .map_err(|e| VaultError::Crypto(e.to_string()))?;
+    let env = VaultEnvelope {
+        version: VAULT_VERSION,
+        kdf: KdfParams {
+            algo: "argon2id".to_string(),
+            salt_hex: hex::encode(salt),
+            m_cost: ARGON_M_COST,
+            t_cost: ARGON_T_COST,
+            p_cost: ARGON_P_COST,
+        },
+        nonce_hex: hex::encode(nonce),
+        ciphertext_hex: hex::encode(&ciphertext),
+    };
+    serde_json::to_vec(&env).map_err(|e| VaultError::Crypto(e.to_string()))
+}
+
+/// Reverse of [`seal_with_password`]: decrypt a `VaultEnvelope` blob to its raw
+/// plaintext. Wrong password surfaces as [`VaultError::WrongPassword`].
+pub(crate) fn open_with_password(bytes: &[u8], password: &str) -> Result<Vec<u8>, VaultError> {
+    let (_salt, plaintext, _key) = open_envelope_keyed(bytes, password)?;
+    Ok(plaintext)
+}
+
 #[cfg(unix)]
 fn set_owner_only(path: &std::path::Path) {
     use std::os::unix::fs::PermissionsExt;
@@ -412,12 +510,17 @@ mod tests {
     use super::*;
 
     // Points the vault at a unique temp dir via DM_HOME, runs `f`, then cleans up.
-    // Single test fn => no env-var race with other tests.
+    // Holds the shared DM_HOME lock so the backup suite (which also rebinds the
+    // env var) can't run concurrently.
     fn with_temp_home(f: impl FnOnce()) {
+        let _guard = crate::DM_HOME_TEST_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
         let dir = std::env::temp_dir().join(format!("dm-vault-test-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
-        // SAFETY: single-threaded test; no other thread reads DM_HOME concurrently.
+        // SAFETY: the lock above guarantees no other test reads/writes DM_HOME
+        // concurrently.
         unsafe {
             std::env::set_var("DM_HOME", &dir);
         }
@@ -478,6 +581,61 @@ mod tests {
             };
             assert!(matches!(
                 foreign.open_blob(&sealed),
+                Err(VaultError::WrongPassword)
+            ));
+
+            // ── import_nsecs: pull every distinct key out of a foreign vault ──
+            use nostr::ToBech32;
+            let k1 = nostr::Keys::generate();
+            let k2 = nostr::Keys::generate();
+            let k3 = nostr::Keys::generate();
+            let import_path = vault_path().with_file_name("import-test.db");
+            {
+                // Build a foreign vault directly (the test module sees private
+                // fields) holding all three key encodings the importer handles:
+                // primary bech32 nsec, an nsec:<hex> backup, and an account:<label>
+                // raw secret-hex — plus a duplicate of k1 that must dedup away.
+                let mut salt = [0u8; SALT_LEN];
+                random_bytes(&mut salt).unwrap();
+                let key = derive_key("pw2", &salt).unwrap();
+                let mut data = BTreeMap::new();
+                data.insert(NSEC_KEY.to_string(), k1.secret_key().to_bech32().unwrap());
+                data.insert(
+                    nsec_key_for(&k2.public_key().to_hex()),
+                    k2.secret_key().to_bech32().unwrap(),
+                );
+                data.insert(account_key("work"), k3.secret_key().to_secret_hex());
+                data.insert(account_key("dup-of-k1"), k1.secret_key().to_secret_hex());
+                let fv = Vault {
+                    path: import_path.clone(),
+                    key,
+                    salt,
+                    data,
+                };
+                fv.persist().unwrap();
+            }
+
+            let bytes = std::fs::read(&import_path).unwrap();
+            let got = import_nsecs_from_bytes(&bytes, "pw2").unwrap();
+            let have: BTreeSet<String> = got.into_iter().collect();
+            let want: BTreeSet<String> = [&k1, &k2, &k3]
+                .iter()
+                .map(|k| k.secret_key().to_bech32().unwrap())
+                .collect();
+            assert_eq!(have, want, "all three distinct keys, k1 deduped");
+
+            // Wrong password for the foreign vault surfaces as WrongPassword.
+            assert!(matches!(
+                import_nsecs_from_bytes(&bytes, "nope"),
+                Err(VaultError::WrongPassword)
+            ));
+
+            // Generic seal/open round-trips arbitrary bytes (backs backup.rs).
+            let blob = b"darkmatter folder archive bytes".to_vec();
+            let sealed = seal_with_password("pw2", &blob).unwrap();
+            assert_eq!(open_with_password(&sealed, "pw2").unwrap(), blob);
+            assert!(matches!(
+                open_with_password(&sealed, "wrong"),
                 Err(VaultError::WrongPassword)
             ));
         });

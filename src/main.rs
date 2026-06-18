@@ -4,11 +4,11 @@ use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 use marmot_app::{
-    npub_for_account_id, AppGroupMemberRecord, AppGroupRecord, AppMessageRecord, AuditLogFile,
-    MediaAttachmentReference, MediaLocator, UserDirectoryRecord, UserProfileMetadata,
+    AppGroupMemberRecord, AppGroupRecord, AppMessageRecord, AuditLogFile, MediaAttachmentReference,
+    MediaLocator, UserDirectoryRecord, UserProfileMetadata, npub_for_account_id,
 };
-use nostr::nips::nip19::ToBech32;
 use nostr::Keys;
+use nostr::nips::nip19::ToBech32;
 use slint::{Color, Model, ModelRc, SharedString, VecModel, Weak};
 use tokio::task::JoinHandle;
 
@@ -20,6 +20,7 @@ mod media_cache;
 mod mpv;
 mod notify;
 mod observability;
+mod offline_queue;
 mod settings;
 mod vault;
 
@@ -131,7 +132,10 @@ struct PendingState {
 
 impl PendingState {
     fn add_send(&mut self, group_hex: &str, send: PendingSend) {
-        self.sends.entry(group_hex.to_string()).or_default().push(send);
+        self.sends
+            .entry(group_hex.to_string())
+            .or_default()
+            .push(send);
     }
     fn drop_send(&mut self, group_hex: &str, temp_id: &str) {
         if let Some(v) = self.sends.get_mut(group_hex) {
@@ -148,7 +152,8 @@ impl PendingState {
         }
     }
     fn find_send(&self, group_hex: &str, temp_id: &str) -> Option<PendingSend> {
-        self.sends.get(group_hex)
+        self.sends
+            .get(group_hex)
             .and_then(|v| v.iter().find(|p| p.temp_id == temp_id).cloned())
     }
 }
@@ -162,6 +167,96 @@ fn next_temp_id() -> String {
     format!("pending:{v}")
 }
 
+// ─── Durable offline send queue ────────────────────────────────────────────
+//
+// The optimistic overlay above lives only in RAM. These process-wide handles
+// add the missing durability + auto-flush-on-reconnect: see `offline_queue.rs`
+// for the encrypted on-disk store. The *disk* queue is the source of truth for
+// any (re)dispatch — the overlay is just what's rendered.
+
+use std::collections::HashSet;
+use std::sync::OnceLock;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering as AtomicOrdering};
+
+/// temp_ids whose send is currently in flight (dispatched, not yet resolved).
+/// The reconnect flush skips these so a send can't be dispatched twice
+/// concurrently. Entries are inserted at dispatch and removed when the op
+/// resolves (ack or error), on whichever thread resolves it.
+fn offline_inflight() -> &'static Mutex<HashSet<String>> {
+    static S: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
+    S.get_or_init(|| Mutex::new(HashSet::new()))
+}
+
+fn offline_inflight_insert(temp_id: &str) {
+    if let Ok(mut s) = offline_inflight().lock() {
+        s.insert(temp_id.to_string());
+    }
+}
+
+fn offline_inflight_remove(temp_id: &str) {
+    if let Ok(mut s) = offline_inflight().lock() {
+        s.remove(temp_id);
+    }
+}
+
+fn offline_inflight_contains(temp_id: &str) -> bool {
+    offline_inflight()
+        .lock()
+        .map(|s| s.contains(temp_id))
+        .unwrap_or(false)
+}
+
+/// Set by the background connectivity watcher when there's queued work to (re)try
+/// — on first boot-ready and on every offline→online relay transition. The UI
+/// timer consumes it and calls `flush_now`.
+fn offline_flush_requested() -> &'static AtomicBool {
+    static B: AtomicBool = AtomicBool::new(false);
+    &B
+}
+
+/// Last-known connected relay count, published by the watcher thread so the
+/// UI-thread flush can decide whether to dispatch (online) or only render the
+/// queued bubbles (offline) without itself blocking on `relay_health`.
+fn offline_last_connected() -> &'static AtomicUsize {
+    static N: AtomicUsize = AtomicUsize::new(0);
+    &N
+}
+
+/// Seal `send` into the durable queue using the session vault, if it's unlocked.
+/// A no-op (best-effort) when the vault handle isn't present.
+fn offline_persist(
+    vault_cell: &Arc<Mutex<Option<Arc<Mutex<Vault>>>>>,
+    send: &offline_queue::QueuedSend,
+) {
+    if let Some(vault) = vault_cell.lock().ok().and_then(|g| g.clone()) {
+        offline_queue::put(&vault, send);
+    }
+}
+
+/// Boot-only duplicate guard for the narrow kill-after-publish-before-ack
+/// window: a queued send whose relay publish actually succeeded but whose
+/// durable entry we never got to delete before the process exited. On the next
+/// boot we'd otherwise re-send it. Returns true when an outgoing kind-9 from
+/// `my_id` whose body matches one of `bodies` already exists near the enqueue
+/// time (±10 min). Text-only — attachment bodies have no stable comparison key.
+fn looks_already_sent(
+    backend: &Backend,
+    group_hex: &str,
+    my_id: &str,
+    bodies: &[String],
+    enqueued_at: u64,
+) -> bool {
+    let Ok(msgs) = backend.messages(group_hex, Some(msg_window_for(group_hex))) else {
+        return false;
+    };
+    msgs.iter().any(|m| {
+        m.kind == 9
+            && m.sender.eq_ignore_ascii_case(my_id)
+            && bodies.iter().any(|b| &m.plaintext == b)
+            && m.recorded_at.abs_diff(enqueued_at) <= 600
+    })
+}
+
 // ─── Voice-message state ───────────────────────────────────────────────────
 
 // The active cpal recorder and the currently-playing rodio audio player are
@@ -169,16 +264,16 @@ fn next_temp_id() -> String {
 // thread only reads the monotonic start instant; it never touches the
 // recorder. The monitor thread only touches the rodio Sink (Send + Sync).
 thread_local! {
-    static ACTIVE_AUDIO_RECORDER: RefCell<Option<audio::AudioRecorder>> = RefCell::new(None);
-    static ACTIVE_AUDIO_PLAYER: RefCell<Option<audio::AudioPlayer>> = RefCell::new(None);
+    static ACTIVE_AUDIO_RECORDER: RefCell<Option<audio::AudioRecorder>> = const { RefCell::new(None) };
+    static ACTIVE_AUDIO_PLAYER: RefCell<Option<audio::AudioPlayer>> = const { RefCell::new(None) };
 }
 
 fn with_active_recorder<R>(f: impl FnOnce(&mut Option<audio::AudioRecorder>) -> R) -> R {
-    ACTIVE_AUDIO_RECORDER.with(|r| f(&mut *r.borrow_mut()))
+    ACTIVE_AUDIO_RECORDER.with(|r| f(&mut r.borrow_mut()))
 }
 
 fn with_active_player<R>(f: impl FnOnce(&mut Option<audio::AudioPlayer>) -> R) -> R {
-    ACTIVE_AUDIO_PLAYER.with(|p| f(&mut *p.borrow_mut()))
+    ACTIVE_AUDIO_PLAYER.with(|p| f(&mut p.borrow_mut()))
 }
 
 /// Start instant of the current recording, shared with the timer thread.
@@ -233,6 +328,146 @@ fn validate_new_password(pw: &str, confirm: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// Localized snapshot of the user-facing error/status copy.
+///
+/// The strings themselves are authored as `@tr()` properties on the Slint
+/// `ErrorCopy` global so they flow through the same gettext catalogs as the
+/// rest of the UI (the project keeps *all* i18n in the Slint `@tr` catalogs —
+/// see the `notification_body` note). But `friendly_error` and the relay-pane
+/// status setters run on worker threads, where touching a Slint getter is
+/// unsound. So we snapshot the translated strings on the UI thread (at startup
+/// and on every locale change) into this process-global, and worker threads
+/// read the snapshot instead.
+#[derive(Clone)]
+struct ErrorCopySnapshot {
+    invalid_key: String,
+    network: String,
+    sync: String,
+    backend: String,
+    switch_account: String,
+    accept: String,
+    block: String,
+    archive: String,
+    unarchive: String,
+    send: String,
+    edit: String,
+    react: String,
+    unreact: String,
+    kp_publish: String,
+    kp_rotate: String,
+    kp_refresh: String,
+    republish: String,
+    add_account: String,
+    create_chat: String,
+    add_contact: String,
+    add_member: String,
+    group_settings: String,
+    group_image: String,
+    save_profile: String,
+    upload_picture: String,
+    generic: String,
+    not_connected: String,
+    relay_already_listed: String,
+    save_relays_failed: String,
+    relay_added: String,
+    relay_removed: String,
+    republishing: String,
+}
+
+impl Default for ErrorCopySnapshot {
+    /// English fallback, identical to the `@tr()` source strings. Used before
+    /// the first UI-thread snapshot lands (and as a belt-and-braces default).
+    fn default() -> Self {
+        Self {
+            invalid_key: "That doesn't look like a valid npub or public key. Double-check it and try again.".into(),
+            network: "Can't reach your relays right now. Check your network and relay settings, then try again.".into(),
+            sync: "Couldn't finish syncing. We'll keep retrying — check your relay settings if this keeps happening.".into(),
+            backend: "Couldn't start up. Check your network and relay settings, then try again.".into(),
+            switch_account: "Couldn't switch accounts. Please try again in a moment.".into(),
+            accept: "Couldn't accept the invitation. Please try again in a moment.".into(),
+            block: "Couldn't decline the invitation. Please try again in a moment.".into(),
+            archive: "Couldn't archive this chat. Please try again.".into(),
+            unarchive: "Couldn't restore this chat. Please try again.".into(),
+            send: "Couldn't send your message. Check your connection and try again.".into(),
+            edit: "Couldn't save your edit. Check your connection and try again.".into(),
+            react: "Couldn't add your reaction. Please try again.".into(),
+            unreact: "Couldn't remove your reaction. Please try again.".into(),
+            kp_publish: "Couldn't publish your key package. Check your relay settings and try again.".into(),
+            kp_rotate: "Couldn't rotate your key package. Check your relay settings and try again.".into(),
+            kp_refresh: "Couldn't refresh your key packages. Check your relay settings and try again.".into(),
+            republish: "Couldn't republish to your relays. Check your relay settings and try again.".into(),
+            add_account: "Couldn't add that account. Please check the key and try again.".into(),
+            create_chat: "Couldn't create the chat. Please try again.".into(),
+            add_contact: "Couldn't add that contact. Please try again.".into(),
+            add_member: "Couldn't add that member. Please try again.".into(),
+            group_settings: "Couldn't update the group settings. Please try again.".into(),
+            group_image: "Couldn't update the group image. Please try again.".into(),
+            save_profile: "Couldn't save your profile. Check your connection and try again.".into(),
+            upload_picture: "Couldn't upload your picture. Please try again.".into(),
+            generic: "Something went wrong. Please try again.".into(),
+            not_connected: "Not connected yet. Please wait a moment and try again.".into(),
+            relay_already_listed: "That relay is already in your list.".into(),
+            save_relays_failed: "Couldn't save your relay list. Please try again.".into(),
+            relay_added: "Relay added.".into(),
+            relay_removed: "Relay removed.".into(),
+            republishing: "Republishing…".into(),
+        }
+    }
+}
+
+fn error_copy_cell() -> &'static Mutex<ErrorCopySnapshot> {
+    static C: OnceLock<Mutex<ErrorCopySnapshot>> = OnceLock::new();
+    C.get_or_init(|| Mutex::new(ErrorCopySnapshot::default()))
+}
+
+/// Snapshot the localized `ErrorCopy` strings off the Slint global into the
+/// process-global cache. MUST be called on the UI/event-loop thread (it reads
+/// Slint property getters). Call at startup and after every locale change so
+/// worker-thread error copy follows the active language.
+fn refresh_error_copy(ui: &DarkMatterLinux) {
+    let g = ui.global::<ErrorCopy>();
+    let snap = ErrorCopySnapshot {
+        invalid_key: g.get_invalid_key().to_string(),
+        network: g.get_network().to_string(),
+        sync: g.get_sync().to_string(),
+        backend: g.get_backend().to_string(),
+        switch_account: g.get_switch_account().to_string(),
+        accept: g.get_accept().to_string(),
+        block: g.get_block().to_string(),
+        archive: g.get_archive().to_string(),
+        unarchive: g.get_unarchive().to_string(),
+        send: g.get_send().to_string(),
+        edit: g.get_edit().to_string(),
+        react: g.get_react().to_string(),
+        unreact: g.get_unreact().to_string(),
+        kp_publish: g.get_kp_publish().to_string(),
+        kp_rotate: g.get_kp_rotate().to_string(),
+        kp_refresh: g.get_kp_refresh().to_string(),
+        republish: g.get_republish().to_string(),
+        add_account: g.get_add_account().to_string(),
+        create_chat: g.get_create_chat().to_string(),
+        add_contact: g.get_add_contact().to_string(),
+        add_member: g.get_add_member().to_string(),
+        group_settings: g.get_group_settings().to_string(),
+        group_image: g.get_group_image().to_string(),
+        save_profile: g.get_save_profile().to_string(),
+        upload_picture: g.get_upload_picture().to_string(),
+        generic: g.get_generic().to_string(),
+        not_connected: g.get_not_connected().to_string(),
+        relay_already_listed: g.get_relay_already_listed().to_string(),
+        save_relays_failed: g.get_save_relays_failed().to_string(),
+        relay_added: g.get_relay_added().to_string(),
+        relay_removed: g.get_relay_removed().to_string(),
+        republishing: g.get_republishing().to_string(),
+    };
+    *error_copy_cell().lock().unwrap() = snap;
+}
+
+/// Read the current localized `ErrorCopy` snapshot. Safe from any thread.
+fn error_copy() -> ErrorCopySnapshot {
+    error_copy_cell().lock().unwrap().clone()
+}
+
 /// Map a low-level backend error into approachable, action-oriented UI copy.
 ///
 /// User-facing error surfaces must never show raw `anyhow` context strings,
@@ -245,15 +480,18 @@ fn validate_new_password(pw: &str, confirm: &str) -> Result<(), String> {
 /// unreachable relay); failing that we fall back to a reassuring, operation-
 /// specific message. `op` is the short internal label already used at the call
 /// site (e.g. "sync", "switch account", "send").
+///
+/// The returned text is localized: it comes from the `ErrorCopy` snapshot which
+/// mirrors the Slint `@tr()` catalogs for the active locale.
 fn friendly_error(op: &str, e: &anyhow::Error) -> String {
+    let copy = error_copy();
     // Flatten the whole error chain once for case-insensitive keyword matching.
     let detail = format!("{e:#}").to_lowercase();
 
     // Tier 1 — content-based classification. These conditions name a concrete
     // thing the user can fix, so they take priority over the op default.
     if detail.contains("npub") || detail.contains("pubkey") || detail.contains("public key") {
-        return "That doesn't look like a valid npub or public key. Double-check it and try again."
-            .to_string();
+        return copy.invalid_key;
     }
     if detail.contains("timed out")
         || detail.contains("timeout")
@@ -265,44 +503,36 @@ fn friendly_error(op: &str, e: &anyhow::Error) -> String {
         || detail.contains("unreachable")
         || detail.contains("dns")
     {
-        return "Can't reach your relays right now. Check your network and relay settings, then try again."
-            .to_string();
+        return copy.network;
     }
 
     // Tier 2 — operation-specific fallback. Reassuring, names no internals.
     match op {
-        "sync" => {
-            "Couldn't finish syncing. We'll keep retrying — check your relay settings if this keeps happening."
-        }
-        "backend" => "Couldn't start up. Check your network and relay settings, then try again.",
-        "switch account" => "Couldn't switch accounts. Please try again in a moment.",
-        "accept" => "Couldn't accept the invitation. Please try again in a moment.",
-        "block" => "Couldn't decline the invitation. Please try again in a moment.",
-        "archive" => "Couldn't archive this chat. Please try again.",
-        "unarchive" => "Couldn't restore this chat. Please try again.",
-        "send" => "Couldn't send your message. Check your connection and try again.",
-        "edit" => "Couldn't save your edit. Check your connection and try again.",
-        "react" => "Couldn't add your reaction. Please try again.",
-        "unreact" => "Couldn't remove your reaction. Please try again.",
-        "kp_publish" => {
-            "Couldn't publish your key package. Check your relay settings and try again."
-        }
-        "kp_rotate" => "Couldn't rotate your key package. Check your relay settings and try again.",
-        "kp_refresh" => {
-            "Couldn't refresh your key packages. Check your relay settings and try again."
-        }
-        "republish" => "Couldn't republish to your relays. Check your relay settings and try again.",
-        "add account" => "Couldn't add that account. Please check the key and try again.",
-        "create chat" => "Couldn't create the chat. Please try again.",
-        "add contact" => "Couldn't add that contact. Please try again.",
-        "add member" => "Couldn't add that member. Please try again.",
-        "group settings" => "Couldn't update the group settings. Please try again.",
-        "group image" => "Couldn't update the group image. Please try again.",
-        "save profile" => "Couldn't save your profile. Check your connection and try again.",
-        "upload picture" => "Couldn't upload your picture. Please try again.",
-        _ => "Something went wrong. Please try again.",
+        "sync" => copy.sync,
+        "backend" => copy.backend,
+        "switch account" => copy.switch_account,
+        "accept" => copy.accept,
+        "block" => copy.block,
+        "archive" => copy.archive,
+        "unarchive" => copy.unarchive,
+        "send" => copy.send,
+        "edit" => copy.edit,
+        "react" => copy.react,
+        "unreact" => copy.unreact,
+        "kp_publish" => copy.kp_publish,
+        "kp_rotate" => copy.kp_rotate,
+        "kp_refresh" => copy.kp_refresh,
+        "republish" => copy.republish,
+        "add account" => copy.add_account,
+        "create chat" => copy.create_chat,
+        "add contact" => copy.add_contact,
+        "add member" => copy.add_member,
+        "group settings" => copy.group_settings,
+        "group image" => copy.group_image,
+        "save profile" => copy.save_profile,
+        "upload picture" => copy.upload_picture,
+        _ => copy.generic,
     }
-    .to_string()
 }
 
 fn model<T: Clone + 'static>(v: Vec<T>) -> ModelRc<T> {
@@ -399,7 +629,13 @@ fn filter_palette(all: &[PaletteAction], query: &str) -> Vec<PaletteAction> {
 }
 
 fn normalize_locale(code: &str) -> &'static str {
-    let base = code.split('.').next().unwrap_or(code).split('_').next().unwrap_or(code);
+    let base = code
+        .split('.')
+        .next()
+        .unwrap_or(code)
+        .split('_')
+        .next()
+        .unwrap_or(code);
     match base {
         "it" => "it",
         "de" => "de",
@@ -472,7 +708,6 @@ fn main() -> Result<(), slint::PlatformError> {
         .with_writer(std::io::stderr)
         .try_init();
 
-
     let ui = DarkMatterLinux::new()?;
 
     // Settings (locale + theme + accent + debug toggle) — load early so
@@ -487,6 +722,9 @@ fn main() -> Result<(), slint::PlatformError> {
     apply_locale(&locale);
     ui.set_locale(s(&locale));
     ui.set_locale_display(s(locale_display(&locale)));
+    // Snapshot the localized error/status copy off the Slint `ErrorCopy` global
+    // now that the locale is applied, so worker threads have it from the start.
+    refresh_error_copy(&ui);
     apply_theme_mode(&ui, &theme_mode);
     ui.set_accent_color(accent_color_idx(accent_color));
     ui.set_outgoing_on_right(initial_settings.outgoing_on_right);
@@ -669,7 +907,9 @@ fn main() -> Result<(), slint::PlatformError> {
                 let on_synced = move |sync_result: anyhow::Result<()>| {
                     let _ = slint::invoke_from_event_loop(move || {
                         sync_done_for_sync.store(true, std::sync::atomic::Ordering::Relaxed);
-                        let Some(ui) = weak_for_sync.upgrade() else { return };
+                        let Some(ui) = weak_for_sync.upgrade() else {
+                            return;
+                        };
                         if let Err(e) = sync_result {
                             eprintln!("[backend] background sync failed: {e:#}");
                             ui.set_backend_error(friendly_error("sync", &e).into());
@@ -719,7 +959,9 @@ fn main() -> Result<(), slint::PlatformError> {
                     Some(on_status),
                 );
                 let _ = slint::invoke_from_event_loop(move || {
-                    let Some(ui) = weak_for_worker.upgrade() else { return };
+                    let Some(ui) = weak_for_worker.upgrade() else {
+                        return;
+                    };
                     match result {
                         Ok(b) => {
                             let b = Arc::new(b);
@@ -732,16 +974,21 @@ fn main() -> Result<(), slint::PlatformError> {
                             let weak_banner = ui.as_weak();
                             let group_ids_banner = group_ids.clone();
                             let banner_seen_boot = encryption_banner_seen.clone();
-                            slint::Timer::single_shot(std::time::Duration::from_millis(350), move || {
-                                let Some(ui) = weak_banner.upgrade() else { return };
-                                let idx = ui.get_active_chat() as usize;
-                                let key = group_ids_banner.lock().unwrap().get(idx).cloned();
-                                trigger_encryption_banner_entrance(
-                                    &ui,
-                                    key.as_deref(),
-                                    &banner_seen_boot,
-                                );
-                            });
+                            slint::Timer::single_shot(
+                                std::time::Duration::from_millis(350),
+                                move || {
+                                    let Some(ui) = weak_banner.upgrade() else {
+                                        return;
+                                    };
+                                    let idx = ui.get_active_chat() as usize;
+                                    let key = group_ids_banner.lock().unwrap().get(idx).cloned();
+                                    trigger_encryption_banner_entrance(
+                                        &ui,
+                                        key.as_deref(),
+                                        &banner_seen_boot,
+                                    );
+                                },
+                            );
                             // The displayed account may be the vault's
                             // last-active hint rather than the nsec we booted
                             // with — derive the identity-bound chrome from the
@@ -761,14 +1008,22 @@ fn main() -> Result<(), slint::PlatformError> {
                                 let vault = vault_for_migrate.clone();
                                 std::thread::spawn(move || {
                                     let mut v = vault.lock().unwrap();
-                                    if !v.has(&key) {
-                                        if let Err(e) = v.set(&key, &nsec) {
-                                            eprintln!("[vault] migrate {key} failed: {e}");
-                                        }
+                                    if !v.has(&key)
+                                        && let Err(e) = v.set(&key, &nsec)
+                                    {
+                                        eprintln!("[vault] migrate {key} failed: {e}");
                                     }
                                 });
                             }
-                            install_chat_watcher(&b, ui.as_weak(), group_ids.clone(), backend_cell.clone(), notif.clone(), now_unix_secs(), &chats_watcher);
+                            install_chat_watcher(
+                                &b,
+                                ui.as_weak(),
+                                group_ids.clone(),
+                                backend_cell.clone(),
+                                notif.clone(),
+                                now_unix_secs(),
+                                &chats_watcher,
+                            );
                             *backend_cell.lock().unwrap() = Some(b.clone());
                             ui.set_backend_ready(true);
                             ui.set_booting(false);
@@ -808,9 +1063,7 @@ fn main() -> Result<(), slint::PlatformError> {
                                             return;
                                         }
                                         let Some(ui) = weak.upgrade() else { return };
-                                        let Some(b) =
-                                            backend_cell.lock().unwrap().clone()
-                                        else {
+                                        let Some(b) = backend_cell.lock().unwrap().clone() else {
                                             return;
                                         };
                                         merge_chat_list_rows_async(&ui, &b, &group_ids);
@@ -904,7 +1157,11 @@ fn main() -> Result<(), slint::PlatformError> {
             {
                 vm.set_vec(Vec::new());
             }
-            if let Some(vm) = ui.get_contacts().as_any().downcast_ref::<VecModel<Contact>>() {
+            if let Some(vm) = ui
+                .get_contacts()
+                .as_any()
+                .downcast_ref::<VecModel<Contact>>()
+            {
                 vm.set_vec(Vec::new());
             }
             if let Some(vm) = ui
@@ -1010,9 +1267,7 @@ fn main() -> Result<(), slint::PlatformError> {
                     ui.set_add_account_generated(true);
                     ui.set_add_account_status(s(""));
                 }
-                Err(e) => {
-                    ui.set_add_account_status(format!("Failed to encode key: {e}").into())
-                }
+                Err(e) => ui.set_add_account_status(format!("Failed to encode key: {e}").into()),
             }
         }
     });
@@ -1129,7 +1384,8 @@ fn main() -> Result<(), slint::PlatformError> {
                 let result = (|| -> Result<(String, String, Arc<Mutex<Vault>>), String> {
                     let npub = keys.public_key().to_bech32().map_err(|e| e.to_string())?;
                     let nsec = keys.secret_key().to_bech32().map_err(|e| e.to_string())?;
-                    let mut v = Vault::create(&password).map_err(|e| format!("create vault: {e}"))?;
+                    let mut v =
+                        Vault::create(&password).map_err(|e| format!("create vault: {e}"))?;
                     v.set(vault::NSEC_KEY, &nsec)
                         .map_err(|e| format!("seal nsec: {e}"))?;
                     Ok((npub, nsec, Arc::new(Mutex::new(v))))
@@ -1170,14 +1426,16 @@ fn main() -> Result<(), slint::PlatformError> {
             let weak = weak.clone();
             let boot = boot.clone();
             std::thread::spawn(move || {
-                let result = (|| -> Result<(String, String, Arc<Mutex<Vault>>, Option<String>), String> {
+                type UnlockOutcome =
+                    Result<(String, String, Arc<Mutex<Vault>>, Option<String>), String>;
+                let result = (|| -> UnlockOutcome {
                     let v = Vault::open(&password).map_err(|e| match e {
                         vault::VaultError::WrongPassword => "Wrong password.".to_string(),
                         other => format!("{other}"),
                     })?;
-                    let nsec = v
-                        .nsec()
-                        .ok_or_else(|| "Vault has no key. Reset and re-enter your nsec.".to_string())?;
+                    let nsec = v.nsec().ok_or_else(|| {
+                        "Vault has no key. Reset and re-enter your nsec.".to_string()
+                    })?;
                     let keys =
                         Keys::parse(&nsec).map_err(|_| "Stored key is invalid.".to_string())?;
                     let npub = keys.public_key().to_bech32().map_err(|e| e.to_string())?;
@@ -1216,6 +1474,8 @@ fn main() -> Result<(), slint::PlatformError> {
             if let Err(e) = vault::delete() {
                 eprintln!("[login] vault reset failed: {e}");
             }
+            // Queued sends were sealed under the old vault key — unreadable now.
+            offline_queue::clear();
             ui.set_password_input(s(""));
             ui.set_password_confirm(s(""));
             ui.set_login_error(s(""));
@@ -1292,7 +1552,8 @@ fn main() -> Result<(), slint::PlatformError> {
                         .to_bech32()
                         .map_err(|e| format!("npub encode: {e}"))?;
                     let id_hex = keys.public_key().to_hex();
-                    let mut v = Vault::create(&password).map_err(|e| format!("create vault: {e}"))?;
+                    let mut v =
+                        Vault::create(&password).map_err(|e| format!("create vault: {e}"))?;
                     v.set(vault::NSEC_KEY, &nsec)
                         .map_err(|e| format!("seal nsec: {e}"))?;
                     Ok((npub, id_hex, Arc::new(Mutex::new(v))))
@@ -1374,6 +1635,8 @@ fn main() -> Result<(), slint::PlatformError> {
                 ui.set_locale(s(&locale));
                 ui.set_locale_display(s(locale_display(&locale)));
                 ui.set_show_language_picker(false);
+                // Re-snapshot the now-localized error/status copy for worker threads.
+                refresh_error_copy(&ui);
             }
         }
     });
@@ -1438,7 +1701,9 @@ fn main() -> Result<(), slint::PlatformError> {
         let settings_cell = settings_cell.clone();
         let notif = notif.clone();
         move |on| {
-            notif.enabled.store(on, std::sync::atomic::Ordering::Relaxed);
+            notif
+                .enabled
+                .store(on, std::sync::atomic::Ordering::Relaxed);
             let mut s = settings_cell.borrow_mut();
             s.notifications_enabled = on;
             s.save();
@@ -1458,7 +1723,9 @@ fn main() -> Result<(), slint::PlatformError> {
         let settings_cell = settings_cell.clone();
         let notif = notif.clone();
         move |on| {
-            notif.preview.store(on, std::sync::atomic::Ordering::Relaxed);
+            notif
+                .preview
+                .store(on, std::sync::atomic::Ordering::Relaxed);
             let mut s = settings_cell.borrow_mut();
             s.notification_preview = on;
             s.save();
@@ -1705,7 +1972,6 @@ fn main() -> Result<(), slint::PlatformError> {
         }
     });
 
-
     // ─── Network & relays pane ─────────────────────────────────────────
     // The on-disk list (`backend::load_relays`) is the source of truth and
     // what we mutate from the UI. `backend.booted_relays()` is what the
@@ -1779,17 +2045,17 @@ fn main() -> Result<(), slint::PlatformError> {
             }
             let mut list: Vec<String> = vec_string_from_model(&ui.get_network_relays());
             if list.iter().any(|u| u.eq_ignore_ascii_case(&trimmed)) {
-                ui.set_network_status("That relay is already in your list.".into());
+                ui.set_network_status(error_copy().relay_already_listed.into());
                 return;
             }
             list.push(trimmed);
             if let Err(e) = backend::save_relays(&list) {
                 eprintln!("[network] save relays failed: {e}");
-                ui.set_network_status("Couldn't save your relay list. Please try again.".into());
+                ui.set_network_status(error_copy().save_relays_failed.into());
                 return;
             }
             push_network_relays(&ui, &list);
-            ui.set_network_status("Relay added.".into());
+            ui.set_network_status(error_copy().relay_added.into());
             // First-run: connect the freshly-added relay live (no-op otherwise).
             reboot();
         }
@@ -1808,11 +2074,11 @@ fn main() -> Result<(), slint::PlatformError> {
             }
             if let Err(e) = backend::save_relays(&list) {
                 eprintln!("[network] save relays failed: {e}");
-                ui.set_network_status("Couldn't save your relay list. Please try again.".into());
+                ui.set_network_status(error_copy().save_relays_failed.into());
                 return;
             }
             push_network_relays(&ui, &list);
-            ui.set_network_status("Relay removed.".into());
+            ui.set_network_status(error_copy().relay_removed.into());
             // First-run: re-boot so the live transport drops the removed relay.
             reboot();
         }
@@ -1839,7 +2105,7 @@ fn main() -> Result<(), slint::PlatformError> {
                             // We just polled the relay pool — that's a real sync.
                             ui.set_sync_secs(0);
                         }
-                        None => ui.set_network_status("Not connected yet. Please wait a moment and try again.".into()),
+                        None => ui.set_network_status(error_copy().not_connected.into()),
                     }
                 });
             });
@@ -1852,7 +2118,7 @@ fn main() -> Result<(), slint::PlatformError> {
         let backend_cell = backend_cell.clone();
         move || {
             let Some(ui) = weak.upgrade() else { return };
-            ui.set_network_status("Republishing…".into());
+            ui.set_network_status(error_copy().republishing.into());
             let weak = weak.clone();
             let backend_cell = backend_cell.clone();
             std::thread::spawn(move || {
@@ -1860,7 +2126,7 @@ fn main() -> Result<(), slint::PlatformError> {
                 // the relay publish.
                 let b = backend_cell.lock().unwrap().clone();
                 let result = match b {
-                    None => Err("Not connected yet. Please wait a moment and try again.".to_string()),
+                    None => Err(error_copy().not_connected),
                     Some(b) => b
                         .republish_relay_lists()
                         .map_err(|e| friendly_error("republish", &e)),
@@ -1900,7 +2166,7 @@ fn main() -> Result<(), slint::PlatformError> {
             std::thread::spawn(move || {
                 let result: Result<String, String> = {
                     match b.as_deref() {
-                        None => Err("Not connected yet. Please wait a moment and try again.".to_string()),
+                        None => Err(error_copy().not_connected),
                         Some(b) => match op_kind {
                             // NOTE: the SDK returns the key-package size in bytes,
                             // not a relay-ack count — so we don't surface the number
@@ -1915,7 +2181,13 @@ fn main() -> Result<(), slint::PlatformError> {
                                 .map_err(|e| friendly_error("kp_rotate", &e)),
                             "refresh" => b
                                 .key_packages_fetch()
-                                .map(|recs| format!("fetched · {} record{}", recs.len(), if recs.len() == 1 { "" } else { "s" }))
+                                .map(|recs| {
+                                    format!(
+                                        "fetched · {} record{}",
+                                        recs.len(),
+                                        if recs.len() == 1 { "" } else { "s" }
+                                    )
+                                })
                                 .map_err(|e| friendly_error("kp_refresh", &e)),
                             _ => Err("Something went wrong. Please try again.".to_string()),
                         },
@@ -1992,7 +2264,6 @@ fn main() -> Result<(), slint::PlatformError> {
             });
         }
     });
-
 
     // After any selection mutation, refresh the breadcrumb so the title bar matches state.
     // Captures only the weak handle, so clones are `Send` and can ride
@@ -2120,7 +2391,12 @@ fn main() -> Result<(), slint::PlatformError> {
             let me_npub = npub_for_account_id(&b.account().account_id_hex).ok();
             let members: Vec<String> = members
                 .into_iter()
-                .filter(|m| me_npub.as_deref().map(|n| !m.eq_ignore_ascii_case(n)).unwrap_or(true))
+                .filter(|m| {
+                    me_npub
+                        .as_deref()
+                        .map(|n| !m.eq_ignore_ascii_case(n))
+                        .unwrap_or(true)
+                })
                 .collect();
             if members.is_empty() {
                 ui.set_new_chat_status(s("Can't start a chat with only yourself."));
@@ -2226,12 +2502,12 @@ fn main() -> Result<(), slint::PlatformError> {
                             // once the refreshed model is applied) so the detail
                             // pane shows it.
                             refresh_contacts_async(&ui, &b, move |ui| {
-                                if let Ok(npub) = npub_for_account_id(&account_id_hex) {
-                                    if let Some(pos) = ui.get_contacts().iter().position(|c| {
+                                if let Ok(npub) = npub_for_account_id(&account_id_hex)
+                                    && let Some(pos) = ui.get_contacts().iter().position(|c| {
                                         c.npub_full.as_str().eq_ignore_ascii_case(&npub)
-                                    }) {
-                                        ui.set_active_contact(pos as i32);
-                                    }
+                                    })
+                                {
+                                    ui.set_active_contact(pos as i32);
                                 }
                             });
                             ui.set_add_contact_input(s(""));
@@ -2259,7 +2535,9 @@ fn main() -> Result<(), slint::PlatformError> {
             if npub.is_empty() {
                 return;
             }
-            let Some(b) = backend_cell.lock().unwrap().clone() else { return };
+            let Some(b) = backend_cell.lock().unwrap().clone() else {
+                return;
+            };
             ui.set_peer_profile_adding(true);
             ui.set_peer_profile_status(s(""));
             let weak = weak.clone();
@@ -2288,7 +2566,9 @@ fn main() -> Result<(), slint::PlatformError> {
         let contacts = contacts.clone();
         move || {
             let Some(ui) = weak.upgrade() else { return };
-            let Some(row) = contacts.row_data(ui.get_active_contact() as usize) else { return };
+            let Some(row) = contacts.row_data(ui.get_active_contact() as usize) else {
+                return;
+            };
             ui.set_nickname_input(row.nickname.clone());
             ui.set_nickname_contact_name(row.real_name.clone());
             ui.set_show_nickname_modal(true);
@@ -2311,19 +2591,26 @@ fn main() -> Result<(), slint::PlatformError> {
         move |nick| {
             let Some(ui) = weak.upgrade() else { return };
             let idx = ui.get_active_contact() as usize;
-            let Some(mut row) = contacts.row_data(idx) else { return };
+            let Some(mut row) = contacts.row_data(idx) else {
+                return;
+            };
             let nick = nick.trim().to_string();
             {
                 let mut st = settings_cell.borrow_mut();
                 if nick.is_empty() {
                     st.nicknames.remove(row.account_id.as_str());
                 } else {
-                    st.nicknames.insert(row.account_id.to_string(), nick.clone());
+                    st.nicknames
+                        .insert(row.account_id.to_string(), nick.clone());
                 }
                 st.save();
             }
             // Patch the one row in place — no relay round-trip involved.
-            row.name = if nick.is_empty() { row.real_name.clone() } else { nick.clone().into() };
+            row.name = if nick.is_empty() {
+                row.real_name.clone()
+            } else {
+                nick.clone().into()
+            };
             row.nickname = nick.into();
             contacts.set_row_data(idx, row);
             ui.set_show_nickname_modal(false);
@@ -2354,7 +2641,7 @@ fn main() -> Result<(), slint::PlatformError> {
             // Inviting publishes an MLS commit + welcome to relays — worker.
             let weak = weak.clone();
             std::thread::spawn(move || {
-                let result = b.invite_members(&group_hex, &[npub.clone()]);
+                let result = b.invite_members(&group_hex, std::slice::from_ref(&npub));
                 let _ = slint::invoke_from_event_loop(move || {
                     let Some(ui) = weak.upgrade() else { return };
                     ui.set_add_member_busy(false);
@@ -2405,7 +2692,9 @@ fn main() -> Result<(), slint::PlatformError> {
                         }
                         Err(e) => {
                             eprintln!("[promote] {e:#}");
-                            ui.set_group_settings_status(friendly_error("group settings", &e).into());
+                            ui.set_group_settings_status(
+                                friendly_error("group settings", &e).into(),
+                            );
                         }
                     }
                 });
@@ -2443,7 +2732,9 @@ fn main() -> Result<(), slint::PlatformError> {
                         }
                         Err(e) => {
                             eprintln!("[demote] {e:#}");
-                            ui.set_group_settings_status(friendly_error("group settings", &e).into());
+                            ui.set_group_settings_status(
+                                friendly_error("group settings", &e).into(),
+                            );
                         }
                     }
                 });
@@ -2477,7 +2768,9 @@ fn main() -> Result<(), slint::PlatformError> {
                         }
                         Err(e) => {
                             eprintln!("[self-demote] {e:#}");
-                            ui.set_group_settings_status(friendly_error("group settings", &e).into());
+                            ui.set_group_settings_status(
+                                friendly_error("group settings", &e).into(),
+                            );
                         }
                     }
                 });
@@ -2521,7 +2814,9 @@ fn main() -> Result<(), slint::PlatformError> {
                         }
                         Err(e) => {
                             eprintln!("[rename] {e:#}");
-                            ui.set_group_settings_status(friendly_error("group settings", &e).into());
+                            ui.set_group_settings_status(
+                                friendly_error("group settings", &e).into(),
+                            );
                         }
                     }
                 });
@@ -2555,7 +2850,9 @@ fn main() -> Result<(), slint::PlatformError> {
             };
             b.set_group_image_async(&group_hex, Vec::new(), String::new(), move |result| {
                 let _ = slint::invoke_from_event_loop(move || {
-                    let Some(ui) = weak_done.upgrade() else { return };
+                    let Some(ui) = weak_done.upgrade() else {
+                        return;
+                    };
                     ui.set_group_image_busy(false);
                     match result {
                         Ok(_) => {
@@ -2667,19 +2964,28 @@ fn main() -> Result<(), slint::PlatformError> {
                 };
                 backend.set_group_image_async(&group_hex, bytes, content_type, move |result| {
                     let _ = slint::invoke_from_event_loop(move || {
-                        let Some(ui) = weak_done.upgrade() else { return };
+                        let Some(ui) = weak_done.upgrade() else {
+                            return;
+                        };
                         ui.set_group_image_busy(false);
                         match result {
                             Ok(_) => {
                                 ui.set_group_settings_status(s("group image updated"));
                                 if let Some(backend) = backend_cell_done.lock().unwrap().as_ref() {
-                                    refresh_chats_async(&ui, backend, &group_ids_done, |_, _, _| {});
+                                    refresh_chats_async(
+                                        &ui,
+                                        backend,
+                                        &group_ids_done,
+                                        |_, _, _| {},
+                                    );
                                     push_group_members_to_ui_async(&ui, backend, &group_hex_done);
                                 }
                             }
                             Err(e) => {
                                 eprintln!("[group-image] upload failed: {e:#}");
-                                ui.set_group_settings_status(friendly_error("group image", &e).into());
+                                ui.set_group_settings_status(
+                                    friendly_error("group image", &e).into(),
+                                );
                             }
                         }
                     });
@@ -2710,14 +3016,8 @@ fn main() -> Result<(), slint::PlatformError> {
                 };
                 let group_hex = group_ids.lock().unwrap().get(idx as usize).cloned();
                 // Reflect this chat's mute state in the header bell.
-                ui.set_active_chat_muted(
-                    group_hex.as_deref().is_some_and(|g| notif.is_muted(g)),
-                );
-                trigger_encryption_banner_entrance(
-                    &ui,
-                    group_hex.as_deref(),
-                    &banner_seen,
-                );
+                ui.set_active_chat_muted(group_hex.as_deref().is_some_and(|g| notif.is_muted(g)));
+                trigger_encryption_banner_entrance(&ui, group_hex.as_deref(), &banner_seen);
                 if let Some(group_hex) = group_hex {
                     let t_switch = std::time::Instant::now();
                     // Re-entering a chat always starts from the default
@@ -2768,9 +3068,7 @@ fn main() -> Result<(), slint::PlatformError> {
                                 ui.set_messages_has_older(msgs.len() >= MESSAGE_WINDOW);
                                 // Opening a chat should land you at the most
                                 // recent message, not the top of the history.
-                                ui.set_messages_scroll_tick(
-                                    ui.get_messages_scroll_tick() + 1,
-                                );
+                                ui.set_messages_scroll_tick(ui.get_messages_scroll_tick() + 1);
                                 // Then attach a live watcher for new arrivals
                                 // (after the rebuild, so no echo lands in the
                                 // gap and gets overwritten). Abort any
@@ -2810,7 +3108,9 @@ fn main() -> Result<(), slint::PlatformError> {
             let Some(group_hex) = group_ids.lock().unwrap().get(idx).cloned() else {
                 return;
             };
-            let Some(backend) = backend_cell.lock().unwrap().clone() else { return };
+            let Some(backend) = backend_cell.lock().unwrap().clone() else {
+                return;
+            };
             let new_window = msg_window_expand(&group_hex);
             // Expanded-window read on the backend runtime; rows built back on
             // the UI thread. The Slint side anchors the scroll, so the rows
@@ -2910,7 +3210,9 @@ fn main() -> Result<(), slint::PlatformError> {
         let archived_group_ids = archived_group_ids.clone();
         move || {
             let Some(ui) = weak.upgrade() else { return };
-            let Some(b) = backend_cell.lock().unwrap().clone() else { return };
+            let Some(b) = backend_cell.lock().unwrap().clone() else {
+                return;
+            };
             refresh_all_chat_models_async(&ui, &b, &group_ids, &archived_group_ids);
         }
     };
@@ -2924,7 +3226,7 @@ fn main() -> Result<(), slint::PlatformError> {
             let Some(ui) = weak.upgrade() else { return };
             let Some(group_hex) = resolve() else { return };
             let Some(b) = backend_cell.lock().unwrap().clone() else {
-                ui.set_backend_error(s("Not connected yet. Please wait a moment and try again."));
+                ui.set_backend_error(error_copy().not_connected.into());
                 return;
             };
             // Accepting publishes to relays — worker; `refresh` captures only
@@ -2955,7 +3257,7 @@ fn main() -> Result<(), slint::PlatformError> {
             let Some(ui) = weak.upgrade() else { return };
             let Some(group_hex) = resolve() else { return };
             let Some(b) = backend_cell.lock().unwrap().clone() else {
-                ui.set_backend_error(s("Not connected yet. Please wait a moment and try again."));
+                ui.set_backend_error(error_copy().not_connected.into());
                 return;
             };
             let weak = weak.clone();
@@ -2997,11 +3299,15 @@ fn main() -> Result<(), slint::PlatformError> {
             // Locate the row in the chats model.
             let chats = ui.get_chats();
             let mut ids = group_ids.lock().unwrap();
-            let Some(pos) = ids.iter().position(|g| g == &group_hex) else { return };
+            let Some(pos) = ids.iter().position(|g| g == &group_hex) else {
+                return;
+            };
             let Some(chats_vm) = chats.as_any().downcast_ref::<VecModel<ChatMeta>>() else {
                 return;
             };
-            let Some(removed_meta) = chats_vm.row_data(pos) else { return };
+            let Some(removed_meta) = chats_vm.row_data(pos) else {
+                return;
+            };
 
             // 1. Optimistic UI mutation. Drop the chat row + its parallel
             //    messages model + its id. Append an `ArchivedChat` shaped
@@ -3012,10 +3318,9 @@ fn main() -> Result<(), slint::PlatformError> {
             if let Some(outer_vm) = chats_messages
                 .as_any()
                 .downcast_ref::<VecModel<ModelRc<ChatMessage>>>()
+                && pos < outer_vm.row_count()
             {
-                if pos < outer_vm.row_count() {
-                    outer_vm.remove(pos);
-                }
+                outer_vm.remove(pos);
             }
             ids.remove(pos);
             let archived_row = ArchivedChat {
@@ -3081,7 +3386,7 @@ fn main() -> Result<(), slint::PlatformError> {
             let Some(ui) = weak.upgrade() else { return };
             let idx = ui.get_active_archived() as usize;
             let Some(b) = backend_cell.lock().unwrap().clone() else {
-                ui.set_backend_error(s("Not connected yet. Please wait a moment and try again."));
+                ui.set_backend_error(error_copy().not_connected.into());
                 return;
             };
 
@@ -3094,8 +3399,12 @@ fn main() -> Result<(), slint::PlatformError> {
             let backend_cell = backend_cell.clone();
             let b2 = b.clone();
             b.tokio_handle().spawn(async move {
-                let Ok(records) = b2.archived_chats() else { return };
-                let Some(record) = records.get(idx).cloned() else { return };
+                let Ok(records) = b2.archived_chats() else {
+                    return;
+                };
+                let Some(record) = records.get(idx).cloned() else {
+                    return;
+                };
                 let _ = slint::invoke_from_event_loop(move || {
                     let Some(ui) = weak.upgrade() else { return };
                     let my_id = b2.account().account_id_hex.clone();
@@ -3108,10 +3417,9 @@ fn main() -> Result<(), slint::PlatformError> {
                     if let Some(vm) = archived_model
                         .as_any()
                         .downcast_ref::<VecModel<ArchivedChat>>()
+                        && idx < vm.row_count()
                     {
-                        if idx < vm.row_count() {
-                            vm.remove(idx);
-                        }
+                        vm.remove(idx);
                     }
                     if let Some(chats_vm) =
                         ui.get_chats().as_any().downcast_ref::<VecModel<ChatMeta>>()
@@ -3253,144 +3561,176 @@ fn main() -> Result<(), slint::PlatformError> {
         let backend_cell = backend_cell.clone();
         let group_ids = group_ids.clone();
         let pending_state = pending_state.clone();
-        Rc::new(move |group_hex: String, text: String, temp_id: String, parent_id: Option<String>| {
-            let guard = backend_cell.lock().unwrap();
-            let Some(backend) = guard.as_ref() else {
-                return;
-            };
-            let weak_cb = weak.clone();
-            let group_ids_cb = group_ids.clone();
-            let pending_state_cb = pending_state.clone();
-            let backend_cell_cb = backend_cell.clone();
-            let group_hex_cb = group_hex.clone();
-            let temp_id_cb = temp_id.clone();
-            let on_done = move |result: anyhow::Result<marmot_app::SendSummary>| {
-                // Tokio worker. `ModelRc` is `!Send` — look it up off the UI
-                // handle inside the invoke closure. The window snapshot is
-                // read HERE so the invoke closure never touches sqlite.
-                let weak = weak_cb.clone();
-                let group_ids = group_ids_cb.clone();
-                let pending_state = pending_state_cb.clone();
-                let backend_cell = backend_cell_cb.clone();
-                let group_hex = group_hex_cb.clone();
-                let temp_id = temp_id_cb.clone();
-                let all: Vec<AppMessageRecord> = if result.is_ok() {
-                    backend_cell
-                        .lock()
-                        .unwrap()
-                        .as_ref()
-                        .map(|b| {
-                            b.messages(&group_hex, Some(msg_window_for(&group_hex)))
-                                .unwrap_or_default()
-                        })
-                        .unwrap_or_default()
-                } else {
-                    Vec::new()
+        Rc::new(
+            move |group_hex: String, text: String, temp_id: String, parent_id: Option<String>| {
+                let guard = backend_cell.lock().unwrap();
+                let Some(backend) = guard.as_ref() else {
+                    return;
                 };
-                let _ = slint::invoke_from_event_loop(move || {
-                    let Some(ui) = weak.upgrade() else { return };
-                    let ids = group_ids.lock().unwrap();
-                    let Some(idx) = ids.iter().position(|g| g == &group_hex) else {
-                        return;
+                // Mark in flight so the reconnect flush won't dispatch it again
+                // concurrently. Cleared when this send resolves (ack or error).
+                offline_inflight_insert(&temp_id);
+                let weak_cb = weak.clone();
+                let group_ids_cb = group_ids.clone();
+                let pending_state_cb = pending_state.clone();
+                let backend_cell_cb = backend_cell.clone();
+                let group_hex_cb = group_hex.clone();
+                let temp_id_cb = temp_id.clone();
+                let on_done = move |result: anyhow::Result<marmot_app::SendSummary>| {
+                    // Tokio worker. `ModelRc` is `!Send` — look it up off the UI
+                    // handle inside the invoke closure. The window snapshot is
+                    // read HERE so the invoke closure never touches sqlite.
+                    let weak = weak_cb.clone();
+                    let group_ids = group_ids_cb.clone();
+                    let pending_state = pending_state_cb.clone();
+                    let backend_cell = backend_cell_cb.clone();
+                    let group_hex = group_hex_cb.clone();
+                    let temp_id = temp_id_cb.clone();
+                    // This send has resolved — drop the in-flight guard.
+                    offline_inflight_remove(&temp_id);
+                    // On a failure, decide here (on the worker thread, where a
+                    // blocking `relay_health` poll is fine) whether we're offline.
+                    // An offline failure keeps the bubble *pending* and the durable
+                    // entry queued for the reconnect flush; an online failure is a
+                    // real error and flips the bubble red.
+                    let (all, online): (Vec<AppMessageRecord>, bool) = if result.is_ok() {
+                        let all = backend_cell
+                            .lock()
+                            .unwrap()
+                            .as_ref()
+                            .map(|b| {
+                                b.messages(&group_hex, Some(msg_window_for(&group_hex)))
+                                    .unwrap_or_default()
+                            })
+                            .unwrap_or_default();
+                        (all, true)
+                    } else {
+                        let online = backend_cell
+                            .lock()
+                            .unwrap()
+                            .as_ref()
+                            .map(|b| b.relay_health().0 > 0)
+                            .unwrap_or(false);
+                        (Vec::new(), online)
                     };
-                    let chats_messages = ui.get_chats_messages();
+                    let _ = slint::invoke_from_event_loop(move || {
+                        let Some(ui) = weak.upgrade() else { return };
+                        let ids = group_ids.lock().unwrap();
+                        let Some(idx) = ids.iter().position(|g| g == &group_hex) else {
+                            return;
+                        };
+                        let chats_messages = ui.get_chats_messages();
 
-                    match result {
-                        Ok(summary) => {
-                            // Surgical reconciliation: find the pending row,
-                            // build the confirmed row from the backend record,
-                            // and swap that single row. Siblings don't remount.
-                            let real_id = summary.message_ids.first().cloned();
-                            pending_state
-                                .lock()
-                                .unwrap()
-                                .drop_send(&group_hex, &temp_id);
+                        match result {
+                            Ok(summary) => {
+                                // Surgical reconciliation: find the pending row,
+                                // build the confirmed row from the backend record,
+                                // and swap that single row. Siblings don't remount.
+                                let real_id = summary.message_ids.first().cloned();
+                                pending_state
+                                    .lock()
+                                    .unwrap()
+                                    .drop_send(&group_hex, &temp_id);
+                                // Confirmed — drop the durable queue entry.
+                                offline_queue::remove(&temp_id);
 
-                            let guard = backend_cell.lock().unwrap();
-                            let Some(backend) = guard.as_ref() else { return };
-                            let overlay = pending_state.lock().unwrap();
-                            let my_id = backend.account().account_id_hex.clone();
-                            let my_label = my_avatar_label(backend, &my_id);
-
-                            let confirmed_row: Option<ChatMessage> = real_id
-                                .as_deref()
-                                .and_then(|id| {
-                                    let rec = all
-                                        .iter()
-                                        .find(|m| m.message_id_hex == id)
-                                        .cloned()?;
-                                    Some(build_one_message_row(
-                                        &rec, &all, &my_id, &my_label, &group_hex, &overlay, backend,
-                                    ))
-                                });
-
-                            let swapped = with_inner_messages(&chats_messages, idx, |vm| {
-                                let Some(pos) = find_message_row(vm, &temp_id) else {
-                                    return false;
-                                };
-                                if let Some(mut row) = confirmed_row {
-                                    // Keep the grouping the pending row had so a
-                                    // confirmed send doesn't pop its avatar back.
-                                    preserve_grouping_flags(vm, pos, &mut row);
-                                    vm.set_row_data(pos, row);
-                                } else {
-                                    // No real id came back — just remove the
-                                    // pending placeholder; the watcher will
-                                    // append the real row when it echoes.
-                                    vm.remove(pos);
-                                }
-                                true
-                            });
-
-                            // Fallback: if the model wasn't shaped how we
-                            // expected, do a full rebuild rather than silently
-                            // lose the pending row.
-                            if swapped != Some(true) {
-                                rebuild_chat_messages_from(
-                                    backend,
-                                    &overlay,
-                                    &chats_messages,
-                                    idx,
-                                    &group_hex,
-                                    &all,
-                                );
-                            }
-                        }
-                        Err(e) => {
-                            eprintln!("[send] {e:#}");
-                            ui.set_backend_error(friendly_error("send", &e).into());
-                            // Mark failed in place — the bubble flips to red
-                            // without disturbing its neighbours.
-                            let mut overlay = pending_state.lock().unwrap();
-                            overlay.mark_send_failed(&group_hex, &temp_id);
-                            let failed_send = overlay.find_send(&group_hex, &temp_id);
-                            drop(overlay);
-                            if let Some(failed) = failed_send {
                                 let guard = backend_cell.lock().unwrap();
-                                let Some(backend) = guard.as_ref() else { return };
+                                let Some(backend) = guard.as_ref() else {
+                                    return;
+                                };
+                                let overlay = pending_state.lock().unwrap();
                                 let my_id = backend.account().account_id_hex.clone();
                                 let my_label = my_avatar_label(backend, &my_id);
-                                let _ = with_inner_messages(&chats_messages, idx, |vm| {
-                                    if let Some(pos) = find_message_row(vm, &temp_id) {
-                                        let mut row = pending_chat_message(&failed, &my_id, &my_label);
+
+                                let confirmed_row: Option<ChatMessage> =
+                                    real_id.as_deref().and_then(|id| {
+                                        let rec =
+                                            all.iter().find(|m| m.message_id_hex == id).cloned()?;
+                                        Some(build_one_message_row(
+                                            &rec, &all, &my_id, &my_label, &group_hex, &overlay,
+                                            backend,
+                                        ))
+                                    });
+
+                                let swapped = with_inner_messages(&chats_messages, idx, |vm| {
+                                    let Some(pos) = find_message_row(vm, &temp_id) else {
+                                        return false;
+                                    };
+                                    if let Some(mut row) = confirmed_row {
+                                        // Keep the grouping the pending row had so a
+                                        // confirmed send doesn't pop its avatar back.
                                         preserve_grouping_flags(vm, pos, &mut row);
                                         vm.set_row_data(pos, row);
+                                    } else {
+                                        // No real id came back — just remove the
+                                        // pending placeholder; the watcher will
+                                        // append the real row when it echoes.
+                                        vm.remove(pos);
                                     }
+                                    true
                                 });
+
+                                // Fallback: if the model wasn't shaped how we
+                                // expected, do a full rebuild rather than silently
+                                // lose the pending row.
+                                if swapped != Some(true) {
+                                    rebuild_chat_messages_from(
+                                        backend,
+                                        &overlay,
+                                        &chats_messages,
+                                        idx,
+                                        &group_hex,
+                                        &all,
+                                    );
+                                }
+                            }
+                            Err(e) => {
+                                eprintln!("[send] {e:#}");
+                                if !online {
+                                    // Offline: leave the bubble pending ("sending…")
+                                    // and the durable entry queued. The reconnect
+                                    // flush re-dispatches it automatically.
+                                    eprintln!("[send] offline — left queued for flush");
+                                    return;
+                                }
+                                ui.set_backend_error(friendly_error("send", &e).into());
+                                // Online failure: a real error. Mark failed in place
+                                // — the bubble flips to red without disturbing its
+                                // neighbours.
+                                let mut overlay = pending_state.lock().unwrap();
+                                overlay.mark_send_failed(&group_hex, &temp_id);
+                                let failed_send = overlay.find_send(&group_hex, &temp_id);
+                                drop(overlay);
+                                if let Some(failed) = failed_send {
+                                    let guard = backend_cell.lock().unwrap();
+                                    let Some(backend) = guard.as_ref() else {
+                                        return;
+                                    };
+                                    let my_id = backend.account().account_id_hex.clone();
+                                    let my_label = my_avatar_label(backend, &my_id);
+                                    let _ = with_inner_messages(&chats_messages, idx, |vm| {
+                                        if let Some(pos) = find_message_row(vm, &temp_id) {
+                                            let mut row =
+                                                pending_chat_message(&failed, &my_id, &my_label);
+                                            preserve_grouping_flags(vm, pos, &mut row);
+                                            vm.set_row_data(pos, row);
+                                        }
+                                    });
+                                }
                             }
                         }
+                    });
+                };
+                match parent_id {
+                    Some(parent) => {
+                        backend.reply_text_async(&group_hex, &parent, &text, on_done);
                     }
-                });
-            };
-            match parent_id {
-                Some(parent) => {
-                    backend.reply_text_async(&group_hex, &parent, &text, on_done);
+                    None => {
+                        backend.send_text_async(&group_hex, &text, on_done);
+                    }
                 }
-                None => {
-                    backend.send_text_async(&group_hex, &text, on_done);
-                }
-            }
-        })
+            },
+        )
     };
 
     // ─── Edit dispatch (optimistic, surgical) ─────────────────────────
@@ -3424,7 +3764,9 @@ fn main() -> Result<(), slint::PlatformError> {
 
             // 2. Dispatch + reconcile (also surgical).
             let guard = backend_cell.lock().unwrap();
-            let Some(backend) = guard.as_ref() else { return };
+            let Some(backend) = guard.as_ref() else {
+                return;
+            };
             let weak_cb = weak.clone();
             let group_ids_cb = group_ids.clone();
             let pending_state_cb = pending_state.clone();
@@ -3476,6 +3818,7 @@ fn main() -> Result<(), slint::PlatformError> {
         let staged_files = staged_files.clone();
         let dispatch_send = dispatch_send.clone();
         let edit_op = edit_op.clone();
+        let vault_cell = vault_cell.clone();
         move |text| {
             let Some(ui) = weak.upgrade() else { return };
             // A send closes the mention picker; the draft is about to clear.
@@ -3504,7 +3847,7 @@ fn main() -> Result<(), slint::PlatformError> {
             };
             let guard = backend_cell.lock().unwrap();
             let Some(backend) = guard.as_ref() else {
-                ui.set_backend_error(s("Not connected yet. Please wait a moment and try again."));
+                ui.set_backend_error(error_copy().not_connected.into());
                 return;
             };
 
@@ -3550,8 +3893,28 @@ fn main() -> Result<(), slint::PlatformError> {
                 }
                 let my_id = backend.account().account_id_hex.clone();
                 let my_label = my_avatar_label(backend, &my_id);
+                // Durably queue this send so it survives a restart and auto-flushes
+                // on reconnect. The disk entry carries the *clean* text +
+                // effect id; the wire body's effect marker is reconstructed at
+                // (re)dispatch time.
+                offline_persist(
+                    &vault_cell,
+                    &offline_queue::QueuedSend {
+                        temp_id: temp_id.clone(),
+                        account_id_hex: my_id.clone(),
+                        group_hex: group_hex.clone(),
+                        kind: offline_queue::QueuedKind::Text {
+                            text: text.clone(),
+                            reply_to: reply_to.clone(),
+                            effect: effect_id,
+                        },
+                        enqueued_at: offline_queue::now_secs(),
+                    },
+                );
                 let pending_row = pending_chat_message(&send, &my_id, &my_label);
-                with_inner_messages(&chats_messages, idx, |vm| push_message_grouped(vm, pending_row));
+                with_inner_messages(&chats_messages, idx, |vm| {
+                    push_message_grouped(vm, pending_row)
+                });
                 ui.set_composer_draft(s(""));
                 // Force-scroll to the new bubble. The MessagesArea watches this
                 // tick and animates viewport-y to the bottom — so the user sees
@@ -3578,8 +3941,7 @@ fn main() -> Result<(), slint::PlatformError> {
             //    any non-image file goes out as its own message. Chips clear
             //    immediately; a failed upload surfaces on its bubble (red, tap
             //    to retry) like any other send. Telegram caps an album at 10.
-            let staged_now: Vec<StagedFile> =
-                std::mem::take(&mut *staged_files.lock().unwrap());
+            let staged_now: Vec<StagedFile> = std::mem::take(&mut *staged_files.lock().unwrap());
             if !staged_now.is_empty() {
                 refresh_staged_ui(&ui, &[]);
                 let (images, others): (Vec<StagedFile>, Vec<StagedFile>) =
@@ -3594,12 +3956,14 @@ fn main() -> Result<(), slint::PlatformError> {
                             backend_cell.clone(),
                             group_ids.clone(),
                             pending_state.clone(),
+                            vault_cell.clone(),
                             group_hex.clone(),
                             f.file_name,
                             f.media_type,
                             f.bytes,
                             f.is_image,
                             f.preview,
+                            None,
                         );
                     } else {
                         spawn_album_send(
@@ -3607,8 +3971,10 @@ fn main() -> Result<(), slint::PlatformError> {
                             backend_cell.clone(),
                             group_ids.clone(),
                             pending_state.clone(),
+                            vault_cell.clone(),
                             group_hex.clone(),
                             chunk.to_vec(),
+                            None,
                         );
                     }
                 }
@@ -3618,12 +3984,14 @@ fn main() -> Result<(), slint::PlatformError> {
                         backend_cell.clone(),
                         group_ids.clone(),
                         pending_state.clone(),
+                        vault_cell.clone(),
                         group_hex.clone(),
                         f.file_name,
                         f.media_type,
                         f.bytes,
                         f.is_image,
                         f.preview,
+                        None,
                     );
                 }
             }
@@ -3642,6 +4010,7 @@ fn main() -> Result<(), slint::PlatformError> {
         let chats_messages = chats_messages.clone();
         let pending_state = pending_state.clone();
         let dispatch_send = dispatch_send.clone();
+        let vault_cell = vault_cell.clone();
         move |message_id| {
             let Some(ui) = weak.upgrade() else { return };
             let temp_id = message_id.to_string();
@@ -3679,8 +4048,68 @@ fn main() -> Result<(), slint::PlatformError> {
                 });
             }
             drop(guard);
-            let parent_id = send.reply_to.as_ref().map(|(id, _, _)| id.clone());
-            dispatch_send(group_hex, send.text, temp_id, parent_id);
+            // Re-dispatch. Plain text/reply goes through the normal send path; a
+            // media send can't (its bytes aren't in the overlay), so recover them
+            // from the durable queue and replay the upload under the same temp id.
+            if send.media.is_empty() {
+                offline_inflight_insert(&temp_id);
+                let parent_id = send.reply_to.as_ref().map(|(id, _, _)| id.clone());
+                dispatch_send(group_hex, send.text, temp_id, parent_id);
+            } else {
+                let entry = vault_cell
+                    .lock()
+                    .ok()
+                    .and_then(|g| g.clone())
+                    .and_then(|v| offline_queue::load_one(&v, &temp_id));
+                match entry.map(|e| e.kind) {
+                    Some(offline_queue::QueuedKind::Attachment(m)) => {
+                        offline_inflight_insert(&temp_id);
+                        spawn_attachment_send(
+                            weak.clone(),
+                            backend_cell.clone(),
+                            group_ids.clone(),
+                            pending_state.clone(),
+                            vault_cell.clone(),
+                            group_hex,
+                            m.file_name,
+                            m.media_type,
+                            m.bytes,
+                            m.is_image,
+                            None,
+                            Some(temp_id),
+                        );
+                    }
+                    Some(offline_queue::QueuedKind::Album(ms)) => {
+                        offline_inflight_insert(&temp_id);
+                        let files: Vec<StagedFile> = ms
+                            .into_iter()
+                            .map(|m| StagedFile {
+                                file_name: m.file_name,
+                                media_type: m.media_type,
+                                bytes: m.bytes,
+                                is_image: m.is_image,
+                                preview: None,
+                                thumb: None,
+                            })
+                            .collect();
+                        spawn_album_send(
+                            weak.clone(),
+                            backend_cell.clone(),
+                            group_ids.clone(),
+                            pending_state.clone(),
+                            vault_cell.clone(),
+                            group_hex,
+                            files,
+                            Some(temp_id),
+                        );
+                    }
+                    _ => {
+                        // No durable bytes to retry with (e.g. an entry from before
+                        // this feature). Leave the bubble as-is.
+                        eprintln!("[retry] no durable media for {temp_id}");
+                    }
+                }
+            }
         }
     });
 
@@ -3697,7 +4126,9 @@ fn main() -> Result<(), slint::PlatformError> {
         let staged_files = staged_files.clone();
         move || {
             let guard = backend_cell.lock().unwrap();
-            let Some(backend) = guard.as_ref() else { return };
+            let Some(backend) = guard.as_ref() else {
+                return;
+            };
             let tokio_handle = backend.tokio_handle();
             drop(guard);
 
@@ -3771,18 +4202,25 @@ fn main() -> Result<(), slint::PlatformError> {
     // Thread-safety: `ModelRc` is `!Send`, so we never carry it across the
     // tokio boundary — every closure that hops back to the UI re-fetches
     // the model via `ui.get_chats_messages()`.
+    // `replay_temp_id` is `None` for a fresh send (allocate an id, render the
+    // pending bubble, persist a durable queue entry) and `Some(id)` when the
+    // reconnect flush re-dispatches an already-queued attachment using bytes read
+    // back from disk — in which case the overlay entry/bubble may already
+    // exist and the durable entry is already on disk.
     #[allow(clippy::too_many_arguments)]
     fn spawn_attachment_send(
         weak: slint::Weak<DarkMatterLinux>,
         backend_cell: Arc<Mutex<Option<Arc<Backend>>>>,
         group_ids: Arc<Mutex<Vec<String>>>,
         pending_state: Arc<Mutex<PendingState>>,
+        vault_cell: Arc<Mutex<Option<Arc<Mutex<Vault>>>>>,
         group_hex: String,
         file_name: String,
         media_type: String,
         bytes: Vec<u8>,
         is_image: bool,
         local_preview: Option<PicturePixels>,
+        replay_temp_id: Option<String>,
     ) {
         let size_bytes = bytes.len() as u64;
         let weak2 = weak;
@@ -3792,6 +4230,7 @@ fn main() -> Result<(), slint::PlatformError> {
         let group_hex2 = group_hex;
         let file_name_u = file_name.clone();
         let media_type_u = media_type.clone();
+        let bytes_for_queue = bytes.clone();
         let _ = slint::invoke_from_event_loop(move || {
             let Some(ui) = weak2.upgrade() else { return };
             let chats_messages = ui.get_chats_messages();
@@ -3801,9 +4240,12 @@ fn main() -> Result<(), slint::PlatformError> {
             };
             drop(ids);
             let guard = backend_cell2.lock().unwrap();
-            let Some(backend) = guard.as_ref() else { return };
+            let Some(backend) = guard.as_ref() else {
+                return;
+            };
 
-            let temp_id = next_temp_id();
+            let is_replay = replay_temp_id.is_some();
+            let temp_id = replay_temp_id.unwrap_or_else(next_temp_id);
             let send = PendingSend {
                 temp_id: temp_id.clone(),
                 text: String::new(),
@@ -3820,15 +4262,47 @@ fn main() -> Result<(), slint::PlatformError> {
                     local_preview: local_preview.clone(),
                 }],
             };
-            {
-                let mut overlay = pending_state2.lock().unwrap();
-                overlay.add_send(&group_hex2, send.clone());
+            // Render the pending bubble + insert the overlay entry only if it isn't
+            // already present (a replay of an in-session offline failure keeps its
+            // existing bubble; a boot replay has none yet).
+            let already_present = pending_state2
+                .lock()
+                .unwrap()
+                .find_send(&group_hex2, &temp_id)
+                .is_some();
+            if !already_present {
+                {
+                    let mut overlay = pending_state2.lock().unwrap();
+                    overlay.add_send(&group_hex2, send.clone());
+                }
+                let my_id = backend.account().account_id_hex.clone();
+                let my_label = my_avatar_label(backend, &my_id);
+                let pending_row = pending_chat_message(&send, &my_id, &my_label);
+                with_inner_messages(&chats_messages, idx, |vm| {
+                    push_message_grouped(vm, pending_row)
+                });
+                ui.set_messages_scroll_tick(ui.get_messages_scroll_tick() + 1);
             }
-            let my_id = backend.account().account_id_hex.clone();
-            let my_label = my_avatar_label(backend, &my_id);
-            let pending_row = pending_chat_message(&send, &my_id, &my_label);
-            with_inner_messages(&chats_messages, idx, |vm| push_message_grouped(vm, pending_row));
-            ui.set_messages_scroll_tick(ui.get_messages_scroll_tick() + 1);
+            // Durably queue this attachment on first send so it survives a restart.
+            if !is_replay {
+                let my_id = backend.account().account_id_hex.clone();
+                offline_persist(
+                    &vault_cell,
+                    &offline_queue::QueuedSend {
+                        temp_id: temp_id.clone(),
+                        account_id_hex: my_id,
+                        group_hex: group_hex2.clone(),
+                        kind: offline_queue::QueuedKind::Attachment(offline_queue::QueuedMedia {
+                            file_name: file_name_u.clone(),
+                            media_type: media_type_u.clone(),
+                            bytes: bytes_for_queue,
+                            is_image,
+                        }),
+                        enqueued_at: offline_queue::now_secs(),
+                    },
+                );
+            }
+            offline_inflight_insert(&temp_id);
 
             let weak3 = weak2.clone();
             let backend_cell3 = backend_cell2.clone();
@@ -3851,10 +4325,14 @@ fn main() -> Result<(), slint::PlatformError> {
                     let group_hex = group_hex3.clone();
                     let temp_id = temp_id3.clone();
                     let local_preview = local_preview_done.clone();
+                    // This upload has resolved — drop the in-flight guard.
+                    offline_inflight_remove(&temp_id);
                     // Tokio worker — read the refreshed window HERE
-                    // so the invoke closure never touches sqlite.
-                    let all: Vec<AppMessageRecord> = if result.is_ok() {
-                        backend_cell
+                    // so the invoke closure never touches sqlite. On failure also
+                    // poll connectivity so an offline failure stays queued + pending
+                    // rather than flipping the bubble red.
+                    let (all, online): (Vec<AppMessageRecord>, bool) = if result.is_ok() {
+                        let all = backend_cell
                             .lock()
                             .unwrap()
                             .as_ref()
@@ -3862,17 +4340,22 @@ fn main() -> Result<(), slint::PlatformError> {
                                 b.messages(&group_hex, Some(msg_window_for(&group_hex)))
                                     .unwrap_or_default()
                             })
-                            .unwrap_or_default()
+                            .unwrap_or_default();
+                        (all, true)
                     } else {
-                        Vec::new()
+                        let online = backend_cell
+                            .lock()
+                            .unwrap()
+                            .as_ref()
+                            .map(|b| b.relay_health().0 > 0)
+                            .unwrap_or(false);
+                        (Vec::new(), online)
                     };
                     let _ = slint::invoke_from_event_loop(move || {
                         let Some(ui) = weak.upgrade() else { return };
                         let chats_messages = ui.get_chats_messages();
                         let ids = group_ids.lock().unwrap();
-                        let Some(idx) =
-                            ids.iter().position(|g| g == &group_hex)
-                        else {
+                        let Some(idx) = ids.iter().position(|g| g == &group_hex) else {
                             return;
                         };
                         drop(ids);
@@ -3883,57 +4366,45 @@ fn main() -> Result<(), slint::PlatformError> {
                                     .lock()
                                     .unwrap()
                                     .drop_send(&group_hex, &temp_id);
+                                offline_queue::remove(&temp_id);
                                 let guard = backend_cell.lock().unwrap();
-                                let Some(backend) = guard.as_ref() else { return };
+                                let Some(backend) = guard.as_ref() else {
+                                    return;
+                                };
                                 let real_id = upload
                                     .sent
                                     .as_ref()
                                     .and_then(|s| s.message_ids.first().cloned());
                                 if let (Some(id), Some(p)) =
                                     (real_id.as_ref(), local_preview.as_ref())
+                                    && is_image
                                 {
-                                    if is_image {
-                                        attachment_image_cache_put(
-                                            id.clone(),
-                                            p.clone(),
-                                        );
-                                    }
+                                    attachment_image_cache_put(id.clone(), p.clone());
                                 }
-                                let confirmed_row: Option<ChatMessage> = real_id
-                                    .as_deref()
-                                    .and_then(|id| {
-                                        let rec = all
-                                            .iter()
-                                            .find(|m| m.message_id_hex == id)
-                                            .cloned()?;
+                                let confirmed_row: Option<ChatMessage> =
+                                    real_id.as_deref().and_then(|id| {
+                                        let rec =
+                                            all.iter().find(|m| m.message_id_hex == id).cloned()?;
                                         let overlay = pending_state.lock().unwrap();
-                                        let my_id =
-                                            backend.account().account_id_hex.clone();
-                                        let my_label =
-                                            my_avatar_label(backend, &my_id);
+                                        let my_id = backend.account().account_id_hex.clone();
+                                        let my_label = my_avatar_label(backend, &my_id);
                                         Some(build_one_message_row(
-                                            &rec, &all, &my_id, &my_label,
-                                            &group_hex, &overlay, backend,
+                                            &rec, &all, &my_id, &my_label, &group_hex, &overlay,
+                                            backend,
                                         ))
                                     });
-                                let swapped = with_inner_messages(
-                                    &chats_messages,
-                                    idx,
-                                    |vm| {
-                                        let Some(pos) =
-                                            find_message_row(vm, &temp_id)
-                                        else {
-                                            return false;
-                                        };
-                                        if let Some(mut row) = confirmed_row {
-                                            preserve_grouping_flags(vm, pos, &mut row);
-                                            vm.set_row_data(pos, row);
-                                        } else {
-                                            vm.remove(pos);
-                                        }
-                                        true
-                                    },
-                                );
+                                let swapped = with_inner_messages(&chats_messages, idx, |vm| {
+                                    let Some(pos) = find_message_row(vm, &temp_id) else {
+                                        return false;
+                                    };
+                                    if let Some(mut row) = confirmed_row {
+                                        preserve_grouping_flags(vm, pos, &mut row);
+                                        vm.set_row_data(pos, row);
+                                    } else {
+                                        vm.remove(pos);
+                                    }
+                                    true
+                                });
                                 if swapped != Some(true) {
                                     let overlay = pending_state.lock().unwrap();
                                     rebuild_chat_messages_from(
@@ -3948,33 +4419,31 @@ fn main() -> Result<(), slint::PlatformError> {
                             }
                             Err(e) => {
                                 eprintln!("[attach] upload: {e:#}");
+                                if !online {
+                                    // Offline: keep the bubble pending + the entry
+                                    // queued for the reconnect flush.
+                                    eprintln!("[attach] offline — left queued for flush");
+                                    return;
+                                }
                                 let mut overlay = pending_state.lock().unwrap();
                                 overlay.mark_send_failed(&group_hex, &temp_id);
-                                let failed =
-                                    overlay.find_send(&group_hex, &temp_id);
+                                let failed = overlay.find_send(&group_hex, &temp_id);
                                 drop(overlay);
                                 if let Some(failed) = failed {
                                     let guard = backend_cell.lock().unwrap();
-                                    let Some(backend) = guard.as_ref() else { return };
-                                    let my_id =
-                                        backend.account().account_id_hex.clone();
+                                    let Some(backend) = guard.as_ref() else {
+                                        return;
+                                    };
+                                    let my_id = backend.account().account_id_hex.clone();
                                     let my_label = my_avatar_label(backend, &my_id);
-                                    let _ = with_inner_messages(
-                                        &chats_messages,
-                                        idx,
-                                        |vm| {
-                                            if let Some(pos) =
-                                                find_message_row(vm, &temp_id)
-                                            {
-                                                vm.set_row_data(
-                                                    pos,
-                                                    pending_chat_message(
-                                                        &failed, &my_id, &my_label,
-                                                    ),
-                                                );
-                                            }
-                                        },
-                                    );
+                                    let _ = with_inner_messages(&chats_messages, idx, |vm| {
+                                        if let Some(pos) = find_message_row(vm, &temp_id) {
+                                            vm.set_row_data(
+                                                pos,
+                                                pending_chat_message(&failed, &my_id, &my_label),
+                                            );
+                                        }
+                                    });
                                 }
                             }
                         }
@@ -3990,14 +4459,18 @@ fn main() -> Result<(), slint::PlatformError> {
     // attachment cache (per image, under `real_id#index`) so the confirmed grid
     // shows the same pixels without a re-download, then swap the row. Mirrors
     // `spawn_attachment_send`'s reconcile, generalized to N images.
+    // `replay_temp_id`: see `spawn_attachment_send` — `Some(id)` re-dispatches an
+    // already-queued album from disk on reconnect.
     #[allow(clippy::too_many_arguments)]
     fn spawn_album_send(
         weak: slint::Weak<DarkMatterLinux>,
         backend_cell: Arc<Mutex<Option<Arc<Backend>>>>,
         group_ids: Arc<Mutex<Vec<String>>>,
         pending_state: Arc<Mutex<PendingState>>,
+        vault_cell: Arc<Mutex<Option<Arc<Mutex<Vault>>>>>,
         group_hex: String,
         files: Vec<StagedFile>,
+        replay_temp_id: Option<String>,
     ) {
         let _ = slint::invoke_from_event_loop(move || {
             let Some(ui) = weak.upgrade() else { return };
@@ -4011,9 +4484,12 @@ fn main() -> Result<(), slint::PlatformError> {
                 return;
             };
             let guard = backend_cell.lock().unwrap();
-            let Some(backend) = guard.as_ref() else { return };
+            let Some(backend) = guard.as_ref() else {
+                return;
+            };
 
-            let temp_id = next_temp_id();
+            let is_replay = replay_temp_id.is_some();
+            let temp_id = replay_temp_id.unwrap_or_else(next_temp_id);
             let media: Vec<PendingMedia> = files
                 .iter()
                 .map(|f| PendingMedia {
@@ -4034,12 +4510,48 @@ fn main() -> Result<(), slint::PlatformError> {
                 media,
                 effect: 0,
             };
-            pending_state.lock().unwrap().add_send(&group_hex, send.clone());
-            let my_id = backend.account().account_id_hex.clone();
-            let my_label = my_avatar_label(backend, &my_id);
-            let pending_row = pending_chat_message(&send, &my_id, &my_label);
-            with_inner_messages(&chats_messages, idx, |vm| push_message_grouped(vm, pending_row));
-            ui.set_messages_scroll_tick(ui.get_messages_scroll_tick() + 1);
+            let already_present = pending_state
+                .lock()
+                .unwrap()
+                .find_send(&group_hex, &temp_id)
+                .is_some();
+            if !already_present {
+                pending_state
+                    .lock()
+                    .unwrap()
+                    .add_send(&group_hex, send.clone());
+                let my_id = backend.account().account_id_hex.clone();
+                let my_label = my_avatar_label(backend, &my_id);
+                let pending_row = pending_chat_message(&send, &my_id, &my_label);
+                with_inner_messages(&chats_messages, idx, |vm| {
+                    push_message_grouped(vm, pending_row)
+                });
+                ui.set_messages_scroll_tick(ui.get_messages_scroll_tick() + 1);
+            }
+            // Durably queue the album on first send (one entry, all images' bytes).
+            if !is_replay {
+                let my_id = backend.account().account_id_hex.clone();
+                let queued_media: Vec<offline_queue::QueuedMedia> = files
+                    .iter()
+                    .map(|f| offline_queue::QueuedMedia {
+                        file_name: f.file_name.clone(),
+                        media_type: f.media_type.clone(),
+                        bytes: f.bytes.clone(),
+                        is_image: true,
+                    })
+                    .collect();
+                offline_persist(
+                    &vault_cell,
+                    &offline_queue::QueuedSend {
+                        temp_id: temp_id.clone(),
+                        account_id_hex: my_id,
+                        group_hex: group_hex.clone(),
+                        kind: offline_queue::QueuedKind::Album(queued_media),
+                        enqueued_at: offline_queue::now_secs(),
+                    },
+                );
+            }
+            offline_inflight_insert(&temp_id);
 
             // Previews (kept in image order) seed the cache under the real id on
             // ack; `items` carry the dim "WxH" so receivers lay out the grid.
@@ -4066,8 +4578,9 @@ fn main() -> Result<(), slint::PlatformError> {
                 let pending_state = pending_state3.clone();
                 let group_hex = group_hex3.clone();
                 let temp_id = temp_id3.clone();
-                let all: Vec<AppMessageRecord> = if result.is_ok() {
-                    backend_cell
+                offline_inflight_remove(&temp_id);
+                let (all, online): (Vec<AppMessageRecord>, bool) = if result.is_ok() {
+                    let all = backend_cell
                         .lock()
                         .unwrap()
                         .as_ref()
@@ -4075,9 +4588,16 @@ fn main() -> Result<(), slint::PlatformError> {
                             b.messages(&group_hex, Some(msg_window_for(&group_hex)))
                                 .unwrap_or_default()
                         })
-                        .unwrap_or_default()
+                        .unwrap_or_default();
+                    (all, true)
                 } else {
-                    Vec::new()
+                    let online = backend_cell
+                        .lock()
+                        .unwrap()
+                        .as_ref()
+                        .map(|b| b.relay_health().0 > 0)
+                        .unwrap_or(false);
+                    (Vec::new(), online)
                 };
                 let _ = slint::invoke_from_event_loop(move || {
                     let Some(ui) = weak.upgrade() else { return };
@@ -4096,8 +4616,11 @@ fn main() -> Result<(), slint::PlatformError> {
                                 .lock()
                                 .unwrap()
                                 .drop_send(&group_hex, &temp_id);
+                            offline_queue::remove(&temp_id);
                             let guard = backend_cell.lock().unwrap();
-                            let Some(backend) = guard.as_ref() else { return };
+                            let Some(backend) = guard.as_ref() else {
+                                return;
+                            };
                             let real_id = upload
                                 .sent
                                 .as_ref()
@@ -4147,13 +4670,19 @@ fn main() -> Result<(), slint::PlatformError> {
                         }
                         Err(e) => {
                             eprintln!("[album] upload: {e:#}");
+                            if !online {
+                                eprintln!("[album] offline — left queued for flush");
+                                return;
+                            }
                             let mut overlay = pending_state.lock().unwrap();
                             overlay.mark_send_failed(&group_hex, &temp_id);
                             let failed = overlay.find_send(&group_hex, &temp_id);
                             drop(overlay);
                             if let Some(failed) = failed {
                                 let guard = backend_cell.lock().unwrap();
-                                let Some(backend) = guard.as_ref() else { return };
+                                let Some(backend) = guard.as_ref() else {
+                                    return;
+                                };
                                 let my_id = backend.account().account_id_hex.clone();
                                 let my_label = my_avatar_label(backend, &my_id);
                                 let _ = with_inner_messages(&chats_messages, idx, |vm| {
@@ -4196,8 +4725,7 @@ fn main() -> Result<(), slint::PlatformError> {
                     .and_then(|s| s.split('+').next())
                     .unwrap_or("png")
                     .to_string();
-                let file =
-                    staged_file_from_bytes(format!("pasted-image.{ext}"), media_type, bytes);
+                let file = staged_file_from_bytes(format!("pasted-image.{ext}"), media_type, bytes);
                 let _ = slint::invoke_from_event_loop(move || {
                     let Some(ui) = weak.upgrade() else { return };
                     let mut staged = staged_files.lock().unwrap();
@@ -4316,11 +4844,17 @@ fn main() -> Result<(), slint::PlatformError> {
 
             let idx = ui.get_active_chat() as usize;
             let Some(group_hex) = group_ids.lock().unwrap().get(idx).cloned() else {
-                attachment_in_flight().lock().ok().map(|mut s| s.remove(&mid));
+                attachment_in_flight()
+                    .lock()
+                    .ok()
+                    .map(|mut s| s.remove(&mid));
                 return;
             };
             let Some(backend) = backend_cell.lock().unwrap().clone() else {
-                attachment_in_flight().lock().ok().map(|mut s| s.remove(&mid));
+                attachment_in_flight()
+                    .lock()
+                    .ok()
+                    .map(|mut s| s.remove(&mid));
                 return;
             };
             // Unlocked vault for this session. Clones of this Arc ride into
@@ -4336,254 +4870,221 @@ fn main() -> Result<(), slint::PlatformError> {
             let pending_state = pending_state.clone();
             let b = backend.clone();
             backend.tokio_handle().spawn(async move {
-            let all = b.messages(&group_hex, Some(msg_window_for(&group_hex))).unwrap_or_default();
-            let Some(rec) = all.iter().find(|m| m.message_id_hex == mid).cloned() else {
-                attachment_in_flight().lock().ok().map(|mut s| s.remove(&mid));
-                return;
-            };
-            let Some(reference) = parse_media_reference_from_tags(&rec.tags, rec.source_epoch)
-            else {
-                attachment_in_flight().lock().ok().map(|mut s| s.remove(&mid));
-                return;
-            };
-            let is_image = mime_is_image(&reference.media_type);
-            let is_video = mime_is_video(&reference.media_type);
-            let is_audio = mime_is_audio(&reference.media_type);
-            let _ = slint::invoke_from_event_loop(move || {
-            let Some(ui) = weak.upgrade() else { return };
-            let chats_messages = ui.get_chats_messages();
-            {
-                let overlay = pending_state.lock().unwrap();
-                refresh_one_message_row_from(
-                    &b,
-                    &overlay,
-                    &chats_messages,
-                    idx,
-                    &group_hex,
-                    &mid,
-                    &all,
-                );
-            }
+                let all = b
+                    .messages(&group_hex, Some(msg_window_for(&group_hex)))
+                    .unwrap_or_default();
+                let Some(rec) = all.iter().find(|m| m.message_id_hex == mid).cloned() else {
+                    attachment_in_flight()
+                        .lock()
+                        .ok()
+                        .map(|mut s| s.remove(&mid));
+                    return;
+                };
+                let Some(reference) = parse_media_reference_from_tags(&rec.tags, rec.source_epoch)
+                else {
+                    attachment_in_flight()
+                        .lock()
+                        .ok()
+                        .map(|mut s| s.remove(&mid));
+                    return;
+                };
+                let is_image = mime_is_image(&reference.media_type);
+                let is_video = mime_is_video(&reference.media_type);
+                let is_audio = mime_is_audio(&reference.media_type);
+                let _ = slint::invoke_from_event_loop(move || {
+                    let Some(ui) = weak.upgrade() else { return };
+                    let chats_messages = ui.get_chats_messages();
+                    {
+                        let overlay = pending_state.lock().unwrap();
+                        refresh_one_message_row_from(
+                            &b,
+                            &overlay,
+                            &chats_messages,
+                            idx,
+                            &group_hex,
+                            &mid,
+                            &all,
+                        );
+                    }
 
-            // Audio → decrypt + play inline via rodio. No save dialog; the
-            // encrypted disk cache is read-through just like images/videos.
-            if is_audio {
-                attachment_in_flight().lock().ok().map(|mut s| s.remove(&mid));
-                let hash = reference.ciphertext_sha256.clone();
-                let b2 = b.clone();
-                let vault2 = vault.clone();
-                let weak2 = weak.clone();
-                let backend_cell2 = backend_cell.clone();
-                let group_ids2 = group_ids.clone();
-                let pending_state2 = pending_state.clone();
-                let group_hex2 = group_hex.clone();
-                let mid2 = mid.clone();
-                b.tokio_handle().spawn(async move {
-                    if let Some(bytes) = vault2.as_ref().and_then(|v| media_cache::get(v, &hash)) {
-                        let _ = slint::invoke_from_event_loop(move || {
-                            start_audio_playback(
-                                weak2, backend_cell2, group_ids2, pending_state2,
-                                group_hex2, mid2, bytes,
-                            );
+                    // Audio → decrypt + play inline via rodio. No save dialog; the
+                    // encrypted disk cache is read-through just like images/videos.
+                    if is_audio {
+                        attachment_in_flight()
+                            .lock()
+                            .ok()
+                            .map(|mut s| s.remove(&mid));
+                        let hash = reference.ciphertext_sha256.clone();
+                        let b2 = b.clone();
+                        let vault2 = vault.clone();
+                        let weak2 = weak.clone();
+                        let backend_cell2 = backend_cell.clone();
+                        let group_ids2 = group_ids.clone();
+                        let pending_state2 = pending_state.clone();
+                        let group_hex2 = group_hex.clone();
+                        let mid2 = mid.clone();
+                        b.tokio_handle().spawn(async move {
+                            if let Some(bytes) =
+                                vault2.as_ref().and_then(|v| media_cache::get(v, &hash))
+                            {
+                                let _ = slint::invoke_from_event_loop(move || {
+                                    start_audio_playback(
+                                        weak2,
+                                        backend_cell2,
+                                        group_ids2,
+                                        pending_state2,
+                                        group_hex2,
+                                        mid2,
+                                        bytes,
+                                    );
+                                });
+                                return;
+                            }
+                            let group_hex3 = group_hex2.clone();
+                            b2.download_media_async(&group_hex2, reference, move |result| {
+                                match result {
+                                    Ok(dl) => {
+                                        if let Some(v) = &vault2 {
+                                            media_cache::put(v, &hash, &dl.plaintext);
+                                        }
+                                        let _ = slint::invoke_from_event_loop(move || {
+                                            start_audio_playback(
+                                                weak2,
+                                                backend_cell2,
+                                                group_ids2,
+                                                pending_state2,
+                                                group_hex3,
+                                                mid2,
+                                                dl.plaintext,
+                                            );
+                                        });
+                                    }
+                                    Err(e) => {
+                                        eprintln!("[audio] download {mid2}: {e:#}");
+                                    }
+                                }
+                            });
                         });
                         return;
                     }
-                    let group_hex3 = group_hex2.clone();
-                    b2.download_media_async(&group_hex2, reference, move |result| {
-                        match result {
-                            Ok(dl) => {
-                                if let Some(v) = &vault2 {
-                                    media_cache::put(v, &hash, &dl.plaintext);
-                                }
-                                let _ = slint::invoke_from_event_loop(move || {
-                                    start_audio_playback(
-                                        weak2, backend_cell2, group_ids2, pending_state2,
-                                        group_hex3, mid2, dl.plaintext,
-                                    );
-                                });
-                            }
-                            Err(e) => {
-                                eprintln!("[audio] download {mid2}: {e:#}");
-                            }
-                        }
-                    });
-                });
-                return;
-            }
 
-            // Video → open the in-app libmpv viewer and start playback. The
-            // poster (first frame) + duration get cached during playback, so
-            // the dismiss handler can repaint the bubble tile afterwards.
-            if is_video {
-                attachment_in_flight().lock().ok().map(|mut s| s.remove(&mid));
-                stop_current_player();
-                *current_video_duration().lock().unwrap() = 0.0;
-                *current_video_target().lock().unwrap() =
-                    Some((group_hex.clone(), mid.clone()));
-                ui.set_video_viewer_has_frame(false);
-                ui.set_video_viewer_playing(false);
-                ui.set_video_viewer_progress(0.0);
-                ui.set_video_viewer_pos("0:00".into());
-                ui.set_video_viewer_dur("0:00".into());
-                ui.set_video_viewer_loading(true);
-                ui.set_video_viewer_open(true);
-                start_video_playback(
-                    weak.clone(),
-                    b.clone(),
-                    group_hex.clone(),
-                    mid.clone(),
-                    reference.clone(),
-                    vault.clone(),
-                );
-                return;
-            }
-
-            let tokio_handle = b.tokio_handle();
-
-            // After the (optional) save dialog resolves, kick off the actual
-            // download on the backend's tokio runtime.
-            let dispatch_download = {
-                let weak = weak.clone();
-                let backend_cell = backend_cell.clone();
-                let group_ids = group_ids.clone();
-                let pending_state = pending_state.clone();
-                let group_hex = group_hex.clone();
-                let mid = mid.clone();
-                let reference = reference.clone();
-                let vault = vault.clone();
-                move |target_path: Option<std::path::PathBuf>| {
-                    let guard = backend_cell.lock().unwrap();
-                    let Some(backend) = guard.as_ref() else {
-                        attachment_in_flight().lock().ok().map(|mut s| s.remove(&mid));
+                    // Video → open the in-app libmpv viewer and start playback. The
+                    // poster (first frame) + duration get cached during playback, so
+                    // the dismiss handler can repaint the bubble tile afterwards.
+                    if is_video {
+                        attachment_in_flight()
+                            .lock()
+                            .ok()
+                            .map(|mut s| s.remove(&mid));
+                        stop_current_player();
+                        *current_video_duration().lock().unwrap() = 0.0;
+                        *current_video_target().lock().unwrap() =
+                            Some((group_hex.clone(), mid.clone()));
+                        ui.set_video_viewer_has_frame(false);
+                        ui.set_video_viewer_playing(false);
+                        ui.set_video_viewer_progress(0.0);
+                        ui.set_video_viewer_pos("0:00".into());
+                        ui.set_video_viewer_dur("0:00".into());
+                        ui.set_video_viewer_loading(true);
+                        ui.set_video_viewer_open(true);
+                        start_video_playback(
+                            weak.clone(),
+                            b.clone(),
+                            group_hex.clone(),
+                            mid.clone(),
+                            reference.clone(),
+                            vault.clone(),
+                        );
                         return;
-                    };
-                    let weak = weak.clone();
-                    let backend_cell = backend_cell.clone();
-                    let group_ids = group_ids.clone();
-                    let pending_state = pending_state.clone();
-                    let group_hex = group_hex.clone();
-                    let mid = mid.clone();
-                    let group_hex_inner = group_hex.clone();
-                    let vault = vault.clone();
-                    let cache_hash = reference.ciphertext_sha256.clone();
-                    backend.download_media_async(
-                        &group_hex,
-                        reference.clone(),
-                        move |result| {
-                            let weak = weak.clone();
-                            let backend_cell = backend_cell.clone();
-                            let group_ids = group_ids.clone();
-                            let pending_state = pending_state.clone();
-                            let group_hex = group_hex_inner.clone();
-                            let mid = mid.clone();
-                            match result {
-                                Ok(dl) => {
-                                    if is_image {
-                                        // Persist the decrypted original bytes to
-                                        // the encrypted disk cache so this image
-                                        // survives a restart without another
-                                        // Blossom round-trip + decrypt.
-                                        if let Some(v) = &vault {
-                                            media_cache::put(
-                                                v,
-                                                &cache_hash,
-                                                &dl.plaintext,
-                                            );
-                                        }
-                                        match image::load_from_memory(&dl.plaintext) {
-                                            Ok(img) => {
-                                                let rgba = img.to_rgba8();
-                                                let pixels = PicturePixels {
-                                                    w: rgba.width(),
-                                                    h: rgba.height(),
-                                                    rgba: rgba.into_raw(),
-                                                };
-                                                attachment_image_cache_put(
-                                                    mid.clone(),
-                                                    pixels,
-                                                );
-                                            }
-                                            Err(e) => eprintln!(
-                                                "[attach] decode {mid}: {e:#}"
-                                            ),
-                                        }
-                                    } else if let Some(path) = &target_path {
-                                        if let Err(e) =
-                                            std::fs::write(path, &dl.plaintext)
-                                        {
-                                            eprintln!(
-                                                "[attach] write {}: {e:#}",
-                                                path.display()
-                                            );
-                                        }
-                                    }
-                                }
-                                Err(e) => eprintln!("[attach] download {mid}: {e:#}"),
-                            }
-                            // This completion already runs on the backend
-                            // runtime; the async refresh keeps the snapshot
-                            // read off the UI thread.
-                            attachment_in_flight()
-                                .lock()
-                                .ok()
-                                .map(|mut s| s.remove(&mid));
-                            let Some(backend) =
-                                backend_cell.lock().unwrap().clone()
-                            else {
-                                return;
-                            };
-                            refresh_one_message_row_async(
-                                &backend,
-                                weak,
-                                pending_state,
-                                group_ids,
-                                group_hex,
-                                mid,
-                            );
-                        },
-                    );
-                }
-            };
+                    }
 
-            if is_image {
-                // Read-through the encrypted disk cache before paying for a
-                // network round-trip. On a hit we decrypt + decode locally and
-                // repaint the row; on a miss we fall back to the live download
-                // (which write-throughs the cache for next time).
-                match vault.clone() {
-                    Some(vault) => {
-                        let hash = reference.ciphertext_sha256.clone();
+                    let tokio_handle = b.tokio_handle();
+
+                    // After the (optional) save dialog resolves, kick off the actual
+                    // download on the backend's tokio runtime.
+                    let dispatch_download = {
                         let weak = weak.clone();
                         let backend_cell = backend_cell.clone();
                         let group_ids = group_ids.clone();
                         let pending_state = pending_state.clone();
                         let group_hex = group_hex.clone();
                         let mid = mid.clone();
-                        tokio_handle.spawn(async move {
-                            let hit = media_cache::get(&vault, &hash).and_then(|plain| {
-                                image::load_from_memory(&plain).ok().map(|img| {
-                                    let rgba = img.to_rgba8();
-                                    PicturePixels {
-                                        w: rgba.width(),
-                                        h: rgba.height(),
-                                        rgba: rgba.into_raw(),
+                        let reference = reference.clone();
+                        let vault = vault.clone();
+                        move |target_path: Option<std::path::PathBuf>| {
+                            let guard = backend_cell.lock().unwrap();
+                            let Some(backend) = guard.as_ref() else {
+                                attachment_in_flight()
+                                    .lock()
+                                    .ok()
+                                    .map(|mut s| s.remove(&mid));
+                                return;
+                            };
+                            let weak = weak.clone();
+                            let backend_cell = backend_cell.clone();
+                            let group_ids = group_ids.clone();
+                            let pending_state = pending_state.clone();
+                            let group_hex = group_hex.clone();
+                            let mid = mid.clone();
+                            let group_hex_inner = group_hex.clone();
+                            let vault = vault.clone();
+                            let cache_hash = reference.ciphertext_sha256.clone();
+                            backend.download_media_async(
+                                &group_hex,
+                                reference.clone(),
+                                move |result| {
+                                    let weak = weak.clone();
+                                    let backend_cell = backend_cell.clone();
+                                    let group_ids = group_ids.clone();
+                                    let pending_state = pending_state.clone();
+                                    let group_hex = group_hex_inner.clone();
+                                    let mid = mid.clone();
+                                    match result {
+                                        Ok(dl) => {
+                                            if is_image {
+                                                // Persist the decrypted original bytes to
+                                                // the encrypted disk cache so this image
+                                                // survives a restart without another
+                                                // Blossom round-trip + decrypt.
+                                                if let Some(v) = &vault {
+                                                    media_cache::put(v, &cache_hash, &dl.plaintext);
+                                                }
+                                                match image::load_from_memory(&dl.plaintext) {
+                                                    Ok(img) => {
+                                                        let rgba = img.to_rgba8();
+                                                        let pixels = PicturePixels {
+                                                            w: rgba.width(),
+                                                            h: rgba.height(),
+                                                            rgba: rgba.into_raw(),
+                                                        };
+                                                        attachment_image_cache_put(
+                                                            mid.clone(),
+                                                            pixels,
+                                                        );
+                                                    }
+                                                    Err(e) => {
+                                                        eprintln!("[attach] decode {mid}: {e:#}")
+                                                    }
+                                                }
+                                            } else if let Some(path) = &target_path
+                                                && let Err(e) = std::fs::write(path, &dl.plaintext)
+                                            {
+                                                eprintln!(
+                                                    "[attach] write {}: {e:#}",
+                                                    path.display()
+                                                );
+                                            }
+                                        }
+                                        Err(e) => eprintln!("[attach] download {mid}: {e:#}"),
                                     }
-                                })
-                            });
-                            match hit {
-                                Some(pixels) => {
-                                    // Already on the backend runtime; both
-                                    // caches are plain process-wide mutexes,
-                                    // so no event-loop hop is needed before
-                                    // the async row refresh.
-                                    attachment_image_cache_put(mid.clone(), pixels);
+                                    // This completion already runs on the backend
+                                    // runtime; the async refresh keeps the snapshot
+                                    // read off the UI thread.
                                     attachment_in_flight()
                                         .lock()
                                         .ok()
                                         .map(|mut s| s.remove(&mid));
-                                    let Some(backend) =
-                                        backend_cell.lock().unwrap().clone()
-                                    else {
+                                    let Some(backend) = backend_cell.lock().unwrap().clone() else {
                                         return;
                                     };
                                     refresh_one_message_row_async(
@@ -4594,56 +5095,109 @@ fn main() -> Result<(), slint::PlatformError> {
                                         group_hex,
                                         mid,
                                     );
-                                }
-                                None => dispatch_download(None),
-                            }
-                        });
-                    }
-                    None => dispatch_download(None),
-                }
-            } else {
-                let default_name = reference.file_name.clone();
-                let weak_clear = weak.clone();
-                let group_ids_clear = group_ids.clone();
-                let backend_cell_clear = backend_cell.clone();
-                let pending_state_clear = pending_state.clone();
-                let group_hex_clear = group_hex.clone();
-                let mid_clear = mid.clone();
-                tokio_handle.spawn(async move {
-                    let chosen = tokio::task::spawn_blocking(move || {
-                        rfd::FileDialog::new()
-                            .set_title("Save attachment")
-                            .set_file_name(&default_name)
-                            .save_file()
-                    })
-                    .await
-                    .ok()
-                    .flatten();
-                    let _ = slint::invoke_from_event_loop(move || match chosen {
-                        Some(path) => dispatch_download(Some(path)),
-                        None => {
-                            attachment_in_flight()
-                                .lock()
-                                .ok()
-                                .map(|mut s| s.remove(&mid_clear));
-                            let Some(backend) =
-                                backend_cell_clear.lock().unwrap().clone()
-                            else {
-                                return;
-                            };
-                            refresh_one_message_row_async(
-                                &backend,
-                                weak_clear,
-                                pending_state_clear,
-                                group_ids_clear,
-                                group_hex_clear,
-                                mid_clear,
+                                },
                             );
                         }
-                    });
-                });
-            }
-            }); // end invoke_from_event_loop (UI-thread dispatch)
+                    };
+
+                    if is_image {
+                        // Read-through the encrypted disk cache before paying for a
+                        // network round-trip. On a hit we decrypt + decode locally and
+                        // repaint the row; on a miss we fall back to the live download
+                        // (which write-throughs the cache for next time).
+                        match vault.clone() {
+                            Some(vault) => {
+                                let hash = reference.ciphertext_sha256.clone();
+                                let weak = weak.clone();
+                                let backend_cell = backend_cell.clone();
+                                let group_ids = group_ids.clone();
+                                let pending_state = pending_state.clone();
+                                let group_hex = group_hex.clone();
+                                let mid = mid.clone();
+                                tokio_handle.spawn(async move {
+                                    let hit = media_cache::get(&vault, &hash).and_then(|plain| {
+                                        image::load_from_memory(&plain).ok().map(|img| {
+                                            let rgba = img.to_rgba8();
+                                            PicturePixels {
+                                                w: rgba.width(),
+                                                h: rgba.height(),
+                                                rgba: rgba.into_raw(),
+                                            }
+                                        })
+                                    });
+                                    match hit {
+                                        Some(pixels) => {
+                                            // Already on the backend runtime; both
+                                            // caches are plain process-wide mutexes,
+                                            // so no event-loop hop is needed before
+                                            // the async row refresh.
+                                            attachment_image_cache_put(mid.clone(), pixels);
+                                            attachment_in_flight()
+                                                .lock()
+                                                .ok()
+                                                .map(|mut s| s.remove(&mid));
+                                            let Some(backend) =
+                                                backend_cell.lock().unwrap().clone()
+                                            else {
+                                                return;
+                                            };
+                                            refresh_one_message_row_async(
+                                                &backend,
+                                                weak,
+                                                pending_state,
+                                                group_ids,
+                                                group_hex,
+                                                mid,
+                                            );
+                                        }
+                                        None => dispatch_download(None),
+                                    }
+                                });
+                            }
+                            None => dispatch_download(None),
+                        }
+                    } else {
+                        let default_name = reference.file_name.clone();
+                        let weak_clear = weak.clone();
+                        let group_ids_clear = group_ids.clone();
+                        let backend_cell_clear = backend_cell.clone();
+                        let pending_state_clear = pending_state.clone();
+                        let group_hex_clear = group_hex.clone();
+                        let mid_clear = mid.clone();
+                        tokio_handle.spawn(async move {
+                            let chosen = tokio::task::spawn_blocking(move || {
+                                rfd::FileDialog::new()
+                                    .set_title("Save attachment")
+                                    .set_file_name(&default_name)
+                                    .save_file()
+                            })
+                            .await
+                            .ok()
+                            .flatten();
+                            let _ = slint::invoke_from_event_loop(move || match chosen {
+                                Some(path) => dispatch_download(Some(path)),
+                                None => {
+                                    attachment_in_flight()
+                                        .lock()
+                                        .ok()
+                                        .map(|mut s| s.remove(&mid_clear));
+                                    let Some(backend) = backend_cell_clear.lock().unwrap().clone()
+                                    else {
+                                        return;
+                                    };
+                                    refresh_one_message_row_async(
+                                        &backend,
+                                        weak_clear,
+                                        pending_state_clear,
+                                        group_ids_clear,
+                                        group_hex_clear,
+                                        mid_clear,
+                                    );
+                                }
+                            });
+                        });
+                    }
+                }); // end invoke_from_event_loop (UI-thread dispatch)
             }); // end backend-runtime record resolution
         }
     });
@@ -4685,7 +5239,9 @@ fn main() -> Result<(), slint::PlatformError> {
             let Some(group_hex) = group_ids.lock().unwrap().get(idx).cloned() else {
                 return;
             };
-            let Some(backend) = backend_cell.lock().unwrap().clone() else { return };
+            let Some(backend) = backend_cell.lock().unwrap().clone() else {
+                return;
+            };
             let vault = vault_cell.lock().unwrap().clone();
             let weak2 = weak.clone();
             let backend_cell2 = backend_cell.clone();
@@ -4693,9 +5249,16 @@ fn main() -> Result<(), slint::PlatformError> {
             let pending_state2 = pending_state.clone();
             let b = backend.clone();
             backend.tokio_handle().spawn(async move {
-                let all = b.messages(&group_hex, Some(msg_window_for(&group_hex))).unwrap_or_default();
-                let Some(rec) = all.iter().find(|m| m.message_id_hex == mid).cloned() else { return };
-                let Some(reference) = parse_media_reference_from_tags(&rec.tags, rec.source_epoch) else { return };
+                let all = b
+                    .messages(&group_hex, Some(msg_window_for(&group_hex)))
+                    .unwrap_or_default();
+                let Some(rec) = all.iter().find(|m| m.message_id_hex == mid).cloned() else {
+                    return;
+                };
+                let Some(reference) = parse_media_reference_from_tags(&rec.tags, rec.source_epoch)
+                else {
+                    return;
+                };
                 let hash = reference.ciphertext_sha256.clone();
                 if let Some(bytes) = vault.as_ref().and_then(|v| media_cache::get(v, &hash)) {
                     let weak3 = weak2.clone();
@@ -4706,8 +5269,13 @@ fn main() -> Result<(), slint::PlatformError> {
                     let mid3 = mid.clone();
                     let _ = slint::invoke_from_event_loop(move || {
                         start_audio_playback(
-                            weak3, backend_cell3, group_ids3, pending_state3,
-                            group_hex3, mid3, bytes,
+                            weak3,
+                            backend_cell3,
+                            group_ids3,
+                            pending_state3,
+                            group_hex3,
+                            mid3,
+                            bytes,
                         );
                     });
                     return;
@@ -4720,21 +5288,24 @@ fn main() -> Result<(), slint::PlatformError> {
                 let mid4 = mid.clone();
                 let vault4 = vault.clone();
                 let hash4 = hash.clone();
-                b.download_media_async(&group_hex, reference, move |result| {
-                    match result {
-                        Ok(dl) => {
-                            if let Some(v) = &vault4 {
-                                media_cache::put(v, &hash4, &dl.plaintext);
-                            }
-                            let _ = slint::invoke_from_event_loop(move || {
-                                start_audio_playback(
-                                    weak4, backend_cell4, group_ids4, pending_state4,
-                                    group_hex4, mid4, dl.plaintext,
-                                );
-                            });
+                b.download_media_async(&group_hex, reference, move |result| match result {
+                    Ok(dl) => {
+                        if let Some(v) = &vault4 {
+                            media_cache::put(v, &hash4, &dl.plaintext);
                         }
-                        Err(e) => eprintln!("[audio] download {mid}: {e:#}"),
+                        let _ = slint::invoke_from_event_loop(move || {
+                            start_audio_playback(
+                                weak4,
+                                backend_cell4,
+                                group_ids4,
+                                pending_state4,
+                                group_hex4,
+                                mid4,
+                                dl.plaintext,
+                            );
+                        });
                     }
+                    Err(e) => eprintln!("[audio] download {mid}: {e:#}"),
                 });
             });
         }
@@ -4787,7 +5358,7 @@ fn main() -> Result<(), slint::PlatformError> {
                         let weak = weak_t.clone();
                         move || {
                             if let Some(ui) = weak.upgrade() {
-                                ui.set_composer_recording_secs(secs as i32);
+                                ui.set_composer_recording_secs(secs);
                             }
                         }
                     });
@@ -4820,6 +5391,7 @@ fn main() -> Result<(), slint::PlatformError> {
         let backend_cell = backend_cell.clone();
         let group_ids = group_ids.clone();
         let pending_state = pending_state.clone();
+        let vault_cell = vault_cell.clone();
         move || {
             let recorder = with_active_recorder(|r| r.take());
             let Some(recorder) = recorder else { return };
@@ -4842,20 +5414,26 @@ fn main() -> Result<(), slint::PlatformError> {
             }
             let Some(ui) = weak.upgrade() else { return };
             let idx = ui.get_active_chat() as usize;
-            let Some(group_hex) = group_ids.lock().unwrap().get(idx).cloned() else { return };
+            let Some(group_hex) = group_ids.lock().unwrap().get(idx).cloned() else {
+                return;
+            };
             let guard = backend_cell.lock().unwrap();
-            let Some(_backend) = guard.as_ref() else { return };
+            let Some(_backend) = guard.as_ref() else {
+                return;
+            };
             drop(guard);
             spawn_attachment_send(
                 weak.clone(),
                 backend_cell.clone(),
                 group_ids.clone(),
                 pending_state.clone(),
+                vault_cell.clone(),
                 group_hex,
                 "voice-message.wav".to_string(),
                 "audio/wav".to_string(),
                 bytes,
                 false,
+                None,
                 None,
             );
         }
@@ -4943,7 +5521,9 @@ fn main() -> Result<(), slint::PlatformError> {
             let Some(group_hex) = group_ids.lock().unwrap().get(idx).cloned() else {
                 return;
             };
-            let Some(backend) = backend_cell.lock().unwrap().clone() else { return };
+            let Some(backend) = backend_cell.lock().unwrap().clone() else {
+                return;
+            };
             // Window read on the backend runtime; the modal opens a beat
             // later instead of stalling the UI thread on sqlite.
             let weak = ui.as_weak();
@@ -5009,17 +5589,17 @@ fn main() -> Result<(), slint::PlatformError> {
                 ui.set_video_viewer_frame(slint::Image::default());
             }
             let target = current_video_target().lock().ok().and_then(|t| t.clone());
-            if let Some((group_hex, mid)) = target {
-                if let Some(backend) = backend_cell.lock().unwrap().clone() {
-                    refresh_one_message_row_async(
-                        &backend,
-                        weak.clone(),
-                        pending_state.clone(),
-                        group_ids.clone(),
-                        group_hex,
-                        mid,
-                    );
-                }
+            if let Some((group_hex, mid)) = target
+                && let Some(backend) = backend_cell.lock().unwrap().clone()
+            {
+                refresh_one_message_row_async(
+                    &backend,
+                    weak.clone(),
+                    pending_state.clone(),
+                    group_ids.clone(),
+                    group_hex,
+                    mid,
+                );
             }
             *current_video_target().lock().unwrap() = None;
         }
@@ -5039,10 +5619,10 @@ fn main() -> Result<(), slint::PlatformError> {
 
     ui.on_video_viewer_seek(move |fraction| {
         let dur = *current_video_duration().lock().unwrap();
-        if dur > 0.0 {
-            if let Some(player) = current_player().lock().unwrap().as_ref() {
-                player.seek((fraction as f64).clamp(0.0, 1.0) * dur);
-            }
+        if dur > 0.0
+            && let Some(player) = current_player().lock().unwrap().as_ref()
+        {
+            player.seek((fraction as f64).clamp(0.0, 1.0) * dur);
         }
     });
 
@@ -5287,7 +5867,9 @@ fn main() -> Result<(), slint::PlatformError> {
 
             // 2. Dispatch + reconcile (also surgical).
             let guard = backend_cell.lock().unwrap();
-            let Some(backend) = guard.as_ref() else { return };
+            let Some(backend) = guard.as_ref() else {
+                return;
+            };
             let weak_cb = weak.clone();
             let group_ids_cb = group_ids.clone();
             let pending_state_cb = pending_state.clone();
@@ -5532,7 +6114,9 @@ fn main() -> Result<(), slint::PlatformError> {
                 };
                 backend.upload_public_blob_async(bytes, content_type, move |result| {
                     let _ = slint::invoke_from_event_loop(move || {
-                        let Some(ui) = weak_done.upgrade() else { return };
+                        let Some(ui) = weak_done.upgrade() else {
+                            return;
+                        };
                         ui.set_profile_uploading(false);
                         match result {
                             Ok(url) => {
@@ -5593,13 +6177,12 @@ fn main() -> Result<(), slint::PlatformError> {
         let backend_cell = backend_cell.clone();
         move |url| {
             let url = url.as_str();
-            if let Some(reference) = url.strip_prefix("nostr:") {
-                if let Some(hex) = nostr_ref_to_hex(reference) {
-                    if let Some(ui) = weak.upgrade() {
-                        open_profile_modal(&ui, &backend_cell, &hex);
-                        return;
-                    }
-                }
+            if let Some(reference) = url.strip_prefix("nostr:")
+                && let Some(hex) = nostr_ref_to_hex(reference)
+                && let Some(ui) = weak.upgrade()
+            {
+                open_profile_modal(&ui, &backend_cell, &hex);
+                return;
             }
             open_external(url);
         }
@@ -5641,6 +6224,260 @@ fn main() -> Result<(), slint::PlatformError> {
                 if day.get() != today {
                     day.set(today);
                     refresh();
+                }
+            },
+        );
+    }
+
+    // ─── Durable offline send queue: flush + reconnect watcher ─────────────
+    //
+    // `flush_offline_queue` reconciles the encrypted on-disk queue with the UI:
+    // it renders a pending bubble for every queued send that isn't on screen yet
+    // (so messages composed offline are visible across restarts), and — when a
+    // relay is reachable — (re)dispatches each one through the normal send path.
+    // The disk entry is the source of truth for the bytes; the overlay is just
+    // what's drawn. Removal happens in the ack branch of each dispatch path.
+    let flush_offline_queue: Rc<dyn Fn()> = {
+        let weak = ui.as_weak();
+        let backend_cell = backend_cell.clone();
+        let group_ids = group_ids.clone();
+        let pending_state = pending_state.clone();
+        let vault_cell = vault_cell.clone();
+        let dispatch_send = dispatch_send.clone();
+        Rc::new(move || {
+            let Some(ui) = weak.upgrade() else { return };
+            let Some(vault) = vault_cell.lock().ok().and_then(|g| g.clone()) else {
+                return;
+            };
+            let Some(backend) = backend_cell.lock().unwrap().clone() else {
+                return;
+            };
+            let my_id = backend.account().account_id_hex.clone();
+            let my_label = my_avatar_label(&backend, &my_id);
+            let online = offline_last_connected().load(AtomicOrdering::Relaxed) > 0;
+            let chats_messages = ui.get_chats_messages();
+
+            for entry in offline_queue::load_all(&vault) {
+                // Only the active account's queue; other accounts' entries wait
+                // until that account is the displayed one.
+                if !entry.account_id_hex.eq_ignore_ascii_case(&my_id) {
+                    continue;
+                }
+                // Already going out (or being retried) — don't double-dispatch.
+                if offline_inflight_contains(&entry.temp_id) {
+                    continue;
+                }
+                let group_hex = entry.group_hex.clone();
+                let temp_id = entry.temp_id.clone();
+                let existing = pending_state
+                    .lock()
+                    .unwrap()
+                    .find_send(&group_hex, &temp_id);
+                let in_overlay = existing.is_some();
+                // A red (online hard-failure) bubble is manual-retry-only within a
+                // session — don't auto-flush it. (After a restart it isn't in the
+                // overlay yet, so it's retried fresh once, then re-reddens if it
+                // genuinely still fails.)
+                if existing.map(|s| s.failed).unwrap_or(false) {
+                    continue;
+                }
+
+                // Boot-dedup: a recovered text whose publish actually landed
+                // before the previous exit. Only meaningful for entries not yet
+                // shown this session (in-session offline failures are guaranteed
+                // rolled back by marmot, so never duplicates).
+                if !in_overlay
+                    && let offline_queue::QueuedKind::Text { text, effect, .. } = &entry.kind
+                {
+                    let bodies = vec![text.clone(), append_effect_marker(text, *effect)];
+                    if looks_already_sent(&backend, &group_hex, &my_id, &bodies, entry.enqueued_at)
+                    {
+                        offline_queue::remove(&temp_id);
+                        continue;
+                    }
+                }
+
+                // Reconstruct the overlay mirror so we can render the bubble.
+                let pending = match &entry.kind {
+                    offline_queue::QueuedKind::Text {
+                        text,
+                        reply_to,
+                        effect,
+                    } => PendingSend {
+                        temp_id: temp_id.clone(),
+                        text: text.clone(),
+                        failed: false,
+                        reply_to: reply_to.clone(),
+                        media: Vec::new(),
+                        effect: *effect,
+                    },
+                    offline_queue::QueuedKind::Attachment(m) => PendingSend {
+                        temp_id: temp_id.clone(),
+                        text: String::new(),
+                        failed: false,
+                        reply_to: None,
+                        media: vec![PendingMedia {
+                            file_name: m.file_name.clone(),
+                            media_type: m.media_type.clone(),
+                            size_bytes: m.bytes.len() as u64,
+                            is_image: m.is_image,
+                            is_video: mime_is_video(&m.media_type),
+                            is_audio: mime_is_audio(&m.media_type),
+                            local_preview: None,
+                        }],
+                        effect: 0,
+                    },
+                    offline_queue::QueuedKind::Album(ms) => PendingSend {
+                        temp_id: temp_id.clone(),
+                        text: String::new(),
+                        failed: false,
+                        reply_to: None,
+                        media: ms
+                            .iter()
+                            .map(|m| PendingMedia {
+                                file_name: m.file_name.clone(),
+                                media_type: m.media_type.clone(),
+                                size_bytes: m.bytes.len() as u64,
+                                is_image: m.is_image,
+                                is_video: false,
+                                is_audio: false,
+                                local_preview: None,
+                            })
+                            .collect(),
+                        effect: 0,
+                    },
+                };
+
+                // Render the pending bubble if it isn't already on screen.
+                if !in_overlay {
+                    pending_state
+                        .lock()
+                        .unwrap()
+                        .add_send(&group_hex, pending.clone());
+                    if let Some(idx) = group_ids
+                        .lock()
+                        .unwrap()
+                        .iter()
+                        .position(|g| g == &group_hex)
+                    {
+                        let row = pending_chat_message(&pending, &my_id, &my_label);
+                        with_inner_messages(&chats_messages, idx, |vm| {
+                            if find_message_row(vm, &temp_id).is_none() {
+                                push_message_grouped(vm, row);
+                            }
+                        });
+                    }
+                }
+
+                // Offline: leave it rendered + queued; the watcher re-runs this on
+                // reconnect.
+                if !online {
+                    continue;
+                }
+
+                // Guard against a second timer tick re-dispatching this entry: the
+                // media spawns only set the in-flight flag inside their deferred
+                // event-loop closure, so set it synchronously here too.
+                offline_inflight_insert(&temp_id);
+
+                // Online: (re)dispatch from the durable bytes. The overlay bubble
+                // already exists, so the media replays skip their own render.
+                match entry.kind {
+                    offline_queue::QueuedKind::Text {
+                        text,
+                        reply_to,
+                        effect,
+                    } => {
+                        let parent_id = reply_to.as_ref().map(|(id, _, _)| id.clone());
+                        dispatch_send(
+                            group_hex,
+                            append_effect_marker(&text, effect),
+                            temp_id,
+                            parent_id,
+                        );
+                    }
+                    offline_queue::QueuedKind::Attachment(m) => {
+                        spawn_attachment_send(
+                            weak.clone(),
+                            backend_cell.clone(),
+                            group_ids.clone(),
+                            pending_state.clone(),
+                            vault_cell.clone(),
+                            group_hex,
+                            m.file_name,
+                            m.media_type,
+                            m.bytes,
+                            m.is_image,
+                            None,
+                            Some(temp_id),
+                        );
+                    }
+                    offline_queue::QueuedKind::Album(ms) => {
+                        let files: Vec<StagedFile> = ms
+                            .into_iter()
+                            .map(|m| StagedFile {
+                                file_name: m.file_name,
+                                media_type: m.media_type,
+                                bytes: m.bytes,
+                                is_image: m.is_image,
+                                preview: None,
+                                thumb: None,
+                            })
+                            .collect();
+                        spawn_album_send(
+                            weak.clone(),
+                            backend_cell.clone(),
+                            group_ids.clone(),
+                            pending_state.clone(),
+                            vault_cell.clone(),
+                            group_hex,
+                            files,
+                            Some(temp_id),
+                        );
+                    }
+                }
+            }
+        })
+    };
+
+    // Background connectivity watcher: polls relay health (a blocking call, so it
+    // can't run on the UI thread) and asks the UI to flush on the first
+    // backend-ready tick and on every offline→online transition.
+    {
+        let backend_cell = backend_cell.clone();
+        std::thread::spawn(move || {
+            let mut prev_connected = 0usize;
+            let mut announced_ready = false;
+            loop {
+                if let Some(backend) = backend_cell.lock().unwrap().clone() {
+                    let connected = backend.relay_health().0;
+                    offline_last_connected().store(connected, AtomicOrdering::Relaxed);
+                    if !announced_ready {
+                        // First time the backend is up: render (and, if online,
+                        // flush) whatever was queued before this launch.
+                        announced_ready = true;
+                        offline_flush_requested().store(true, AtomicOrdering::Relaxed);
+                    } else if prev_connected == 0 && connected > 0 {
+                        offline_flush_requested().store(true, AtomicOrdering::Relaxed);
+                    }
+                    prev_connected = connected;
+                }
+                std::thread::sleep(std::time::Duration::from_secs(5));
+            }
+        });
+    }
+
+    // UI-thread consumer: drains the flush request flag the watcher sets. Held in
+    // a binding so the timer lives until `run()` returns.
+    let _offline_flush_timer = slint::Timer::default();
+    {
+        let flush = flush_offline_queue.clone();
+        _offline_flush_timer.start(
+            slint::TimerMode::Repeated,
+            std::time::Duration::from_secs(3),
+            move || {
+                if offline_flush_requested().swap(false, AtomicOrdering::Relaxed) {
+                    flush();
                 }
             },
         );
@@ -5768,7 +6605,9 @@ fn open_profile_modal(
     account_id_hex: &str,
 ) {
     let guard = backend_cell.lock().unwrap();
-    let Some(backend) = guard.as_ref() else { return };
+    let Some(backend) = guard.as_ref() else {
+        return;
+    };
     let id = account_id_hex.to_lowercase();
     let is_self = id.eq_ignore_ascii_case(&backend.account().account_id_hex);
     let npub = npub_for_account_id(&id).unwrap_or_else(|_| id.clone());
@@ -5835,7 +6674,9 @@ fn open_profile_modal(
                     }
                     ui.set_peer_profile_loading(false);
                     let guard = backend_cell.lock().unwrap();
-                    let Some(backend) = guard.as_ref() else { return };
+                    let Some(backend) = guard.as_ref() else {
+                        return;
+                    };
                     match profile {
                         Some(p) => {
                             apply_peer_profile(&ui, backend, &id_done, &npub_short_done, Some(&p))
@@ -6533,10 +7374,10 @@ fn spawn_video_player(weak: Weak<DarkMatterLinux>, mid: String, bytes: Vec<u8>) 
         move |st: mpv::PlayerState| {
             if st.duration > 0.0 {
                 *current_video_duration().lock().unwrap() = st.duration;
-                if !dur_saved.swap(true, Ordering::AcqRel) {
-                    if let Ok(mut m) = video_meta().lock() {
-                        m.insert(mid.clone(), fmt_dur(st.duration));
-                    }
+                if !dur_saved.swap(true, Ordering::AcqRel)
+                    && let Ok(mut m) = video_meta().lock()
+                {
+                    m.insert(mid.clone(), fmt_dur(st.duration));
                 }
             }
             let progress = if st.duration > 0.0 {
@@ -6627,10 +7468,10 @@ fn start_audio_playback(
                 cache.insert(mid.clone(), progress);
             }
         }
-        if st.duration > 0.0 {
-            if let Ok(mut m) = audio_meta().lock() {
-                m.insert(mid.clone(), fmt_dur(st.duration));
-            }
+        if st.duration > 0.0
+            && let Ok(mut m) = audio_meta().lock()
+        {
+            m.insert(mid.clone(), fmt_dur(st.duration));
         }
         let finished = st.finished;
         let mid_i = mid.clone();
@@ -6657,19 +7498,18 @@ fn start_audio_playback(
                     let ids = group_ids_i.lock().unwrap();
                     ids.get(idx).cloned()
                 };
-                if let Some(g) = group_opt {
-                    if g == group_hex_i {
-                        if let Some(backend) = backend_cell_i.lock().unwrap().clone() {
-                            refresh_one_message_row_async(
-                                &backend,
-                                weak_i,
-                                pending_state_i,
-                                group_ids_i,
-                                group_hex_i,
-                                mid_i,
-                            );
-                        }
-                    }
+                if let Some(g) = group_opt
+                    && g == group_hex_i
+                    && let Some(backend) = backend_cell_i.lock().unwrap().clone()
+                {
+                    refresh_one_message_row_async(
+                        &backend,
+                        weak_i,
+                        pending_state_i,
+                        group_ids_i,
+                        group_hex_i,
+                        mid_i,
+                    );
                 }
             }
         });
@@ -6784,7 +7624,11 @@ fn album_layout(aspects: &[f32], max_w: f32, sp: f32) -> (Vec<(f32, f32, f32, f3
                 let mut x = 0.0_f32;
                 for j in 0..k {
                     // Last cell absorbs rounding so the row fills exactly.
-                    let w = if j == k - 1 { max_w - x } else { h * ar[idx + j] };
+                    let w = if j == k - 1 {
+                        max_w - x
+                    } else {
+                        h * ar[idx + j]
+                    };
                     rects.push((x, y, w, h));
                     x += w + sp;
                 }
@@ -6794,7 +7638,7 @@ fn album_layout(aspects: &[f32], max_w: f32, sp: f32) -> (Vec<(f32, f32, f32, f3
             (rects, (y - sp).max(0.0))
         }
     };
-    if total_h > ALBUM_MAX_H && total_h > 0.0 {
+    if total_h > ALBUM_MAX_H {
         let scale = ALBUM_MAX_H / total_h;
         for r in out.iter_mut() {
             r.0 *= scale;
@@ -6809,11 +7653,7 @@ fn album_layout(aspects: &[f32], max_w: f32, sp: f32) -> (Vec<(f32, f32, f32, f3
 
 /// Album width for a bubble (outgoing bubbles are narrower than incoming).
 fn album_box_w(outgoing: bool) -> f32 {
-    if outgoing {
-        360.0
-    } else {
-        380.0
-    }
+    if outgoing { 360.0 } else { 380.0 }
 }
 
 /// Build the grid cells for a confirmed album message: geometry from each
@@ -7028,7 +7868,10 @@ fn autoload_album_cells(
                     .and_then(|plain| decode_avatar_pixels(&plain).ok())
                 {
                     attachment_image_cache_put(key.clone(), px);
-                    attachment_in_flight().lock().ok().map(|mut s| s.remove(&key));
+                    attachment_in_flight()
+                        .lock()
+                        .ok()
+                        .map(|mut s| s.remove(&key));
                     refresh_one_message_row_async(
                         &backend,
                         weak,
@@ -7058,7 +7901,10 @@ fn autoload_album_cells(
                     if let Some(px) = pixels {
                         attachment_image_cache_put(key.clone(), px);
                     }
-                    attachment_in_flight().lock().ok().map(|mut s| s.remove(&key));
+                    attachment_in_flight()
+                        .lock()
+                        .ok()
+                        .map(|mut s| s.remove(&key));
                     if ok {
                         refresh_one_message_row_async(
                             &backend_cb,
@@ -7124,11 +7970,7 @@ fn refresh_staged_ui(ui: &DarkMatterLinux, staged: &[StagedFile]) {
             name: f.file_name.clone().into(),
             size_label: human_bytes(f.bytes.len() as u64).into(),
             is_image: f.is_image,
-            thumb: f
-                .thumb
-                .as_ref()
-                .map(image_from_pixels)
-                .unwrap_or_default(),
+            thumb: f.thumb.as_ref().map(image_from_pixels).unwrap_or_default(),
             has_thumb: f.thumb.is_some(),
         })
         .collect();
@@ -7214,10 +8056,10 @@ fn set_rail_badges(ui: &DarkMatterLinux, chats: &ModelRc<ChatMeta>) {
     let mut chats_badge = 0;
     if let Some(vm) = chats.as_any().downcast_ref::<VecModel<ChatMeta>>() {
         for i in 0..vm.row_count() {
-            if let Some(chat) = vm.row_data(i) {
-                if chat.is_chat_request {
-                    chats_badge += 1;
-                }
+            if let Some(chat) = vm.row_data(i)
+                && chat.is_chat_request
+            {
+                chats_badge += 1;
             }
         }
     }
@@ -7296,7 +8138,8 @@ fn local_animal_avatar_image(npub: &str, name: &str) -> Option<slint::Image> {
     .ok()?;
     let img = image::load_from_memory(&png).ok()?.into_rgba8();
     let (w, h) = img.dimensions();
-    let buffer = slint::SharedPixelBuffer::<slint::Rgba8Pixel>::clone_from_slice(img.as_raw(), w, h);
+    let buffer =
+        slint::SharedPixelBuffer::<slint::Rgba8Pixel>::clone_from_slice(img.as_raw(), w, h);
     Some(slint::Image::from_rgba8(buffer))
 }
 
@@ -7304,11 +8147,46 @@ fn local_animal_avatar_image(npub: &str, name: &str) -> Option<slint::Image> {
 /// accounts, e.g. "Spooky Bear".
 fn random_profile_name() -> String {
     const ADJECTIVES: &[&str] = &[
-        "Spooky", "Cosmic", "Dapper", "Fuzzy", "Sleepy", "Sneaky", "Mighty", "Velvet",
-        "Turbo", "Witty", "Zesty", "Plucky", "Quirky", "Nimble", "Frosty", "Mellow",
-        "Peppy", "Rusty", "Stormy", "Sunny", "Dusty", "Misty", "Jolly", "Groovy",
-        "Snazzy", "Breezy", "Cheeky", "Daring", "Electric", "Golden", "Icy", "Lucky",
-        "Magnetic", "Neon", "Prickly", "Quantum", "Silent", "Vivid", "Wandering", "Wobbly",
+        "Spooky",
+        "Cosmic",
+        "Dapper",
+        "Fuzzy",
+        "Sleepy",
+        "Sneaky",
+        "Mighty",
+        "Velvet",
+        "Turbo",
+        "Witty",
+        "Zesty",
+        "Plucky",
+        "Quirky",
+        "Nimble",
+        "Frosty",
+        "Mellow",
+        "Peppy",
+        "Rusty",
+        "Stormy",
+        "Sunny",
+        "Dusty",
+        "Misty",
+        "Jolly",
+        "Groovy",
+        "Snazzy",
+        "Breezy",
+        "Cheeky",
+        "Daring",
+        "Electric",
+        "Golden",
+        "Icy",
+        "Lucky",
+        "Magnetic",
+        "Neon",
+        "Prickly",
+        "Quantum",
+        "Silent",
+        "Vivid",
+        "Wandering",
+        "Wobbly",
     ];
     // Animals come from the SVG table so every name that can be generated is
     // guaranteed to have starter-avatar art.
@@ -7462,19 +8340,14 @@ fn profile_from_ui(ui: &DarkMatterLinux) -> UserProfileMetadata {
 
 /// Replace one row inside the outer chats-messages model. The outer model
 /// holds `ModelRc<ChatMessage>` per chat; we swap in a fresh VecModel.
-fn replace_message_row(
-    outer: &ModelRc<ModelRc<ChatMessage>>,
-    idx: usize,
-    msgs: Vec<ChatMessage>,
-) {
+fn replace_message_row(outer: &ModelRc<ModelRc<ChatMessage>>, idx: usize, msgs: Vec<ChatMessage>) {
     let inner: ModelRc<ChatMessage> = ModelRc::new(VecModel::from(msgs));
     if let Some(vm) = outer
         .as_any()
         .downcast_ref::<VecModel<ModelRc<ChatMessage>>>()
+        && idx < vm.row_count()
     {
-        if idx < vm.row_count() {
-            vm.set_row_data(idx, inner);
-        }
+        vm.set_row_data(idx, inner);
     }
 }
 
@@ -7494,7 +8367,9 @@ fn refresh_stamps_everywhere(
     let guard = backend_cell.lock().unwrap();
     // Pre-login there's nothing on screen to repaint; boot applies the
     // formats before the first population.
-    let Some(backend) = guard.as_ref() else { return };
+    let Some(backend) = guard.as_ref() else {
+        return;
+    };
     refresh_chats_async(ui, backend, group_ids, |_, _, _| {});
     refresh_archived_async(ui, backend, archived_group_ids);
     let idx = ui.get_active_chat() as usize;
@@ -7571,7 +8446,9 @@ fn refresh_chats_async(
     let b = backend.clone();
     let group_ids = group_ids.clone();
     backend.tokio_handle().spawn(async move {
-        let Some(snap) = fetch_chat_list_snapshot(&b) else { return };
+        let Some(snap) = fetch_chat_list_snapshot(&b) else {
+            return;
+        };
         let _ = slint::invoke_from_event_loop(move || {
             let Some(ui) = weak.upgrade() else { return };
             let chats = ui.get_chats();
@@ -7663,8 +8540,8 @@ fn refresh_chats_from(
             &[]
         };
         let reactions = aggregate_reactions(msgs, &my_id);
-        let edits = aggregate_edits(&msgs);
-        let profiles = build_sender_profiles(backend, &msgs, &my_id);
+        let edits = aggregate_edits(msgs);
+        let profiles = build_sender_profiles(backend, msgs, &my_id);
         let is_group = backend.group_member_count(&record.group_id_hex) > 2;
         let by_id: HashMap<&str, &AppMessageRecord> = msgs
             .iter()
@@ -7679,7 +8556,9 @@ fn refresh_chats_from(
                     .cloned()
                     .unwrap_or_default();
                 let e = edits.get(&m.message_id_hex).cloned();
-                chat_message_from_with_reactions(m, &by_id, &my_id, &my_label, r, e, &profiles, is_group, false)
+                chat_message_from_with_reactions(
+                    m, &by_id, &my_id, &my_label, r, e, &profiles, is_group, false,
+                )
             })
             .collect();
         messages_outer.push(ModelRc::new(VecModel::from(row)));
@@ -7716,7 +8595,9 @@ fn merge_chat_list_rows_async(
     let b = backend.clone();
     let group_ids = group_ids.clone();
     backend.tokio_handle().spawn(async move {
-        let Some(snap) = fetch_chat_list_snapshot(&b) else { return };
+        let Some(snap) = fetch_chat_list_snapshot(&b) else {
+            return;
+        };
         let _ = slint::invoke_from_event_loop(move || {
             let Some(ui) = weak.upgrade() else { return };
             let chats = ui.get_chats();
@@ -7840,7 +8721,11 @@ fn refresh_accounts_model(ui: &DarkMatterLinux, backend: &Arc<Backend>) {
                     // useless in a list of accounts; use the npub tail. Keep
                     // the avatar key consistent with `my_avatar_label`.
                     let unnamed = name.is_empty() || name == "You";
-                    let display = if unnamed { shorten_npub(npub) } else { name.clone() };
+                    let display = if unnamed {
+                        shorten_npub(npub)
+                    } else {
+                        name.clone()
+                    };
                     let av_key = if unnamed { id.clone() } else { name.clone() };
                     let (col_a, col_b, init) = avatar_for(&av_key);
                     let (picture, has_picture) = bind_cached_picture(pic.as_deref());
@@ -7873,9 +8758,15 @@ fn refresh_accounts_model(ui: &DarkMatterLinux, backend: &Arc<Backend>) {
             b_for_fetch.tokio_handle().spawn(async move {
                 let mut any_cached = false;
                 for url in missing {
-                    let Ok(resp) = reqwest::get(&url).await else { continue };
-                    let Ok(bytes) = resp.bytes().await else { continue };
-                    let Ok(pixels) = decode_avatar_pixels(&bytes) else { continue };
+                    let Ok(resp) = reqwest::get(&url).await else {
+                        continue;
+                    };
+                    let Ok(bytes) = resp.bytes().await else {
+                        continue;
+                    };
+                    let Ok(pixels) = decode_avatar_pixels(&bytes) else {
+                        continue;
+                    };
                     picture_cache_put(url, pixels);
                     any_cached = true;
                 }
@@ -8018,31 +8909,28 @@ fn install_chat_watcher(
             // backend ready → there is a latest message → it's incoming →
             // recent enough (not backlog) → a visible chat message → its id
             // changed since we last saw this chat → not the on-screen chat.
-            if notif.enabled.load(std::sync::atomic::Ordering::Relaxed) {
-                if let Some(b) = guard.as_ref() {
-                    if let Some(m) = b.latest_message(&id) {
-                        let incoming = !m.sender.eq_ignore_ascii_case(&my_id);
-                        let recent = m.recorded_at.saturating_add(NOTIF_SKEW_SECS) >= since_secs;
-                        if incoming
-                            && recent
-                            && !notif.is_muted(&id)
-                            && is_visible_chat_message(&m)
-                            && notif.note_latest(&id, &m.message_id_hex)
-                        {
-                            let viewing = ui.get_active_page() == Page::Chats as i32
-                                && ui.get_active_chat() == pos as i32;
-                            if !viewing {
-                                let preview =
-                                    notif.preview.load(std::sync::atomic::Ordering::Relaxed);
-                                let sound =
-                                    notif.sound.load(std::sync::atomic::Ordering::Relaxed);
-                                let body = notification_body(b, &m, &id, preview);
-                                // dbus IO — keep it off the UI thread.
-                                std::thread::spawn(move || {
-                                    notify::show(&chat_name, &body, sound);
-                                });
-                            }
-                        }
+            if notif.enabled.load(std::sync::atomic::Ordering::Relaxed)
+                && let Some(b) = guard.as_ref()
+                && let Some(m) = b.latest_message(&id)
+            {
+                let incoming = !m.sender.eq_ignore_ascii_case(&my_id);
+                let recent = m.recorded_at.saturating_add(NOTIF_SKEW_SECS) >= since_secs;
+                if incoming
+                    && recent
+                    && !notif.is_muted(&id)
+                    && is_visible_chat_message(&m)
+                    && notif.note_latest(&id, &m.message_id_hex)
+                {
+                    let viewing = ui.get_active_page() == Page::Chats as i32
+                        && ui.get_active_chat() == pos as i32;
+                    if !viewing {
+                        let preview = notif.preview.load(std::sync::atomic::Ordering::Relaxed);
+                        let sound = notif.sound.load(std::sync::atomic::Ordering::Relaxed);
+                        let body = notification_body(b, &m, &id, preview);
+                        // dbus IO — keep it off the UI thread.
+                        std::thread::spawn(move || {
+                            notify::show(&chat_name, &body, sound);
+                        });
                     }
                 }
             }
@@ -8116,8 +9004,15 @@ fn chat_meta_from(
     let (preview, stamp) = match last_message {
         Some(m) => {
             let mine = m.sender.eq_ignore_ascii_case(my_account_id_hex);
-            let prefix = if mine { "You: ".to_string() } else { String::new() };
-            (format!("{prefix}{}", m.plaintext), format_chat_stamp(m.recorded_at))
+            let prefix = if mine {
+                "You: ".to_string()
+            } else {
+                String::new()
+            };
+            (
+                format!("{prefix}{}", m.plaintext),
+                format_chat_stamp(m.recorded_at),
+            )
         }
         None => (record.profile.description.clone(), String::new()),
     };
@@ -8166,6 +9061,10 @@ fn is_visible_chat_message(record: &AppMessageRecord) -> bool {
     true
 }
 
+// Builds a confirmed message row; legitimately needs the full record context
+// (record, id map, self identity/label, reactions, effect-gating), so the arg
+// count exceeds clippy's default threshold.
+#[allow(clippy::too_many_arguments)]
 fn chat_message_from_with_reactions(
     record: &AppMessageRecord,
     records_by_id: &HashMap<&str, &AppMessageRecord>,
@@ -8216,7 +9115,11 @@ fn chat_message_from_with_reactions(
             .cloned()
             .unwrap_or_else(|| (record.sender.clone(), None))
     };
-    let key = if outgoing { my_label } else { sender_name.as_str() };
+    let key = if outgoing {
+        my_label
+    } else {
+        sender_name.as_str()
+    };
     let (a, b, init) = avatar_for(key);
     let (picture, has_picture) = bind_cached_picture(picture_url.as_deref());
     let (reply_id, reply_author, reply_text) =
@@ -8316,7 +9219,9 @@ fn chat_message_from_with_reactions(
             .map(|id| id == &record.message_id_hex)
             .unwrap_or(false)
             && with_active_player(|p| {
-                p.as_ref().map(|player| player.state().playing).unwrap_or(false)
+                p.as_ref()
+                    .map(|player| player.state().playing)
+                    .unwrap_or(false)
             });
         let progress = audio_progress()
             .lock()
@@ -8343,10 +9248,8 @@ fn chat_message_from_with_reactions(
 
     // Jumbo only for a bare emoji body — a reply/attachment/album wants its
     // normal bubble chrome around the block.
-    let jumbo_emoji = !has_attachment
-        && !is_album
-        && reply_id.is_empty()
-        && jumbo_emoji_count(display_text) > 0;
+    let jumbo_emoji =
+        !has_attachment && !is_album && reply_id.is_empty() && jumbo_emoji_count(display_text) > 0;
 
     ChatMessage {
         text: s(display_text),
@@ -8431,7 +9334,10 @@ fn reply_preview_for(
             } else {
                 avatar_for(&p.sender).2
             };
-            (author, truncate_preview(split_effect_marker(&p.plaintext).0, 160))
+            (
+                author,
+                truncate_preview(split_effect_marker(&p.plaintext).0, 160),
+            )
         }
         None => (String::new(), String::new()),
     };
@@ -8474,11 +9380,7 @@ fn pending_chat_message(
     } else {
         "sending…".to_string()
     };
-    let (reply_id, reply_author, reply_text) = pending
-        .reply_to
-        .clone()
-        .map(|(id, author, text)| (id, author, text))
-        .unwrap_or_default();
+    let (reply_id, reply_author, reply_text) = pending.reply_to.clone().unwrap_or_default();
     let bubble_max = 440.0_f32;
     let lines = build_message_lines(&pending.text, bubble_max);
 
@@ -8542,24 +9444,13 @@ fn pending_chat_message(
     };
 
     // Optimistic video / audio bubble flags.
-    let att_is_video = has_attachment
-        && pending
-            .media
-            .first()
-            .map(|m| m.is_video)
-            .unwrap_or(false);
+    let att_is_video = has_attachment && pending.media.first().map(|m| m.is_video).unwrap_or(false);
     let att_is_audio = has_attachment
         && !att_is_video
-        && pending
-            .media
-            .first()
-            .map(|m| m.is_audio)
-            .unwrap_or(false);
+        && pending.media.first().map(|m| m.is_audio).unwrap_or(false);
 
-    let jumbo_emoji = !has_attachment
-        && !is_album
-        && reply_id.is_empty()
-        && jumbo_emoji_count(&pending.text) > 0;
+    let jumbo_emoji =
+        !has_attachment && !is_album && reply_id.is_empty() && jumbo_emoji_count(&pending.text) > 0;
 
     ChatMessage {
         text: s(&pending.text),
@@ -8702,8 +9593,12 @@ fn apply_reaction_to_model_row(
     op: &PendingReactionOp,
 ) {
     let _ = with_inner_messages(chats_messages, idx, |vm| {
-        let Some(pos) = find_message_row(vm, target_id) else { return };
-        let Some(mut row) = vm.row_data(pos) else { return };
+        let Some(pos) = find_message_row(vm, target_id) else {
+            return;
+        };
+        let Some(mut row) = vm.row_data(pos) else {
+            return;
+        };
         let mut chips: Vec<Reaction> = (0..row.reactions.row_count())
             .filter_map(|i| row.reactions.row_data(i))
             .collect();
@@ -8892,7 +9787,9 @@ fn build_one_message_row(
         .iter()
         .map(|m| (m.message_id_hex.as_str(), m))
         .collect();
-    chat_message_from_with_reactions(record, &by_id, my_id, my_label, r, e, &profiles, is_group, true)
+    chat_message_from_with_reactions(
+        record, &by_id, my_id, my_label, r, e, &profiles, is_group, true,
+    )
 }
 
 /// Rebuild one chat's message row from `(backend snapshot ∪ pending overlay)`.
@@ -8956,19 +9853,22 @@ fn grouping_keys(msgs: &[AppMessageRecord], my_id: &str, pending_count: usize) -
 fn push_message_grouped(vm: &VecModel<ChatMessage>, mut row: ChatMessage) {
     let n = vm.row_count();
     let mut grouped = false;
-    if n > 0 {
-        if let Some(mut prev) = vm.row_data(n - 1) {
-            let same = (row.outgoing && prev.outgoing)
-                || (!row.outgoing
-                    && !prev.outgoing
-                    && !row.sender_id.is_empty()
-                    && prev.sender_id.as_str().eq_ignore_ascii_case(row.sender_id.as_str()));
-            if same {
-                grouped = true;
-                prev.last_in_group = false;
-                prev.show_avatar = false;
-                vm.set_row_data(n - 1, prev);
-            }
+    if n > 0
+        && let Some(mut prev) = vm.row_data(n - 1)
+    {
+        let same = (row.outgoing && prev.outgoing)
+            || (!row.outgoing
+                && !prev.outgoing
+                && !row.sender_id.is_empty()
+                && prev
+                    .sender_id
+                    .as_str()
+                    .eq_ignore_ascii_case(row.sender_id.as_str()));
+        if same {
+            grouped = true;
+            prev.last_in_group = false;
+            prev.show_avatar = false;
+            vm.set_row_data(n - 1, prev);
         }
     }
     row.first_in_group = !grouped;
@@ -9015,9 +9915,9 @@ fn rebuild_chat_messages_from(
     let t_msgs = t0.elapsed();
     let mut reactions = aggregate_reactions(msgs, &my_id);
     apply_reaction_overlay(&mut reactions, group_hex, pending);
-    let mut edits = aggregate_edits(&msgs);
+    let mut edits = aggregate_edits(msgs);
     apply_edit_overlay(&mut edits, group_hex, pending);
-    let profiles = build_sender_profiles(backend, &msgs, &my_id);
+    let profiles = build_sender_profiles(backend, msgs, &my_id);
     let t_profiles = t0.elapsed();
     let is_group = backend.group_member_count(group_hex) > 2;
     let by_id: HashMap<&str, &AppMessageRecord> = msgs
@@ -9035,7 +9935,9 @@ fn rebuild_chat_messages_from(
                 .cloned()
                 .unwrap_or_default();
             let e = edits.get(&m.message_id_hex).cloned();
-            chat_message_from_with_reactions(m, &by_id, &my_id, &my_label, r, e, &profiles, is_group, false)
+            chat_message_from_with_reactions(
+                m, &by_id, &my_id, &my_label, r, e, &profiles, is_group, false,
+            )
         })
         .collect();
 
@@ -9046,7 +9948,7 @@ fn rebuild_chat_messages_from(
         }
     }
 
-    let keys = grouping_keys(&msgs, &my_id, pending_count);
+    let keys = grouping_keys(msgs, &my_id, pending_count);
     apply_grouping(&mut rows, &keys);
     let t_rows = t0.elapsed();
 
@@ -9260,10 +10162,14 @@ fn qr_image(text: &str) -> slint::Image {
     const SCALE: usize = 3;
     let n = code.width();
     let side = (n + 2 * QUIET) * SCALE;
-    let mut buf =
-        slint::SharedPixelBuffer::<slint::Rgba8Pixel>::new(side as u32, side as u32);
+    let mut buf = slint::SharedPixelBuffer::<slint::Rgba8Pixel>::new(side as u32, side as u32);
     let px = buf.make_mut_slice();
-    px.fill(slint::Rgba8Pixel { r: 255, g: 255, b: 255, a: 255 });
+    px.fill(slint::Rgba8Pixel {
+        r: 255,
+        g: 255,
+        b: 255,
+        a: 255,
+    });
     let modules = code.to_colors();
     for y in 0..n {
         for x in 0..n {
@@ -9272,8 +10178,12 @@ fn qr_image(text: &str) -> slint::Image {
             }
             let (x0, y0) = ((QUIET + x) * SCALE, (QUIET + y) * SCALE);
             for row in y0..y0 + SCALE {
-                px[row * side + x0..row * side + x0 + SCALE]
-                    .fill(slint::Rgba8Pixel { r: 0, g: 0, b: 0, a: 255 });
+                px[row * side + x0..row * side + x0 + SCALE].fill(slint::Rgba8Pixel {
+                    r: 0,
+                    g: 0,
+                    b: 0,
+                    a: 255,
+                });
             }
         }
     }
@@ -9303,7 +10213,11 @@ fn avatar_for(key: &str) -> (Color, Color, String) {
 }
 
 fn short_hex(s: &str) -> String {
-    if s.len() <= 6 { s.to_string() } else { s[..6].to_string() }
+    if s.len() <= 6 {
+        s.to_string()
+    } else {
+        s[..6].to_string()
+    }
 }
 
 // ─── Emoji catalog ──────────────────────────────────────────────────────
@@ -9377,7 +10291,11 @@ fn effect_emoji(id: i32) -> Option<&'static str> {
     EFFECTS.iter().find(|e| e.0 == id).map(|e| e.2)
 }
 fn effect_id_from_key(key: &str) -> i32 {
-    EFFECTS.iter().find(|e| e.1 == key).map(|e| e.0).unwrap_or(0)
+    EFFECTS
+        .iter()
+        .find(|e| e.1 == key)
+        .map(|e| e.0)
+        .unwrap_or(0)
 }
 
 /// Resolve an effect's emoji to its (x, y) tile in the Twemoji sheet, tolerating
@@ -9564,10 +10482,7 @@ fn md_run_text(text: &str, style: MdStyle, link: &Option<String>) -> MessageRun 
         italic: style.italic,
         strike: style.strike,
         code: style.code,
-        link: link
-            .as_deref()
-            .map(SharedString::from)
-            .unwrap_or_default(),
+        link: link.as_deref().map(SharedString::from).unwrap_or_default(),
         fx: style.fx as i32,
         // Assigned in a second pass over the finished runs (md_assign_phases).
         phase: 0.0,
@@ -9709,19 +10624,39 @@ fn md_walk_inlines(
             Inline::Text(s) => md_push_text(out, s, style, &link, positions, true),
             Inline::SoftBreak | Inline::HardBreak => out.push(MdTok::Break),
             Inline::Code(s) => {
-                let st = MdStyle { code: true, ..style };
+                let st = MdStyle {
+                    code: true,
+                    ..style
+                };
                 md_push_text(out, s, st, &link, positions, false);
             }
-            Inline::Emph(c) => {
-                md_walk_inlines(out, c, MdStyle { italic: true, ..style }, link.clone(), positions)
-            }
-            Inline::Strong(c) => {
-                md_walk_inlines(out, c, MdStyle { bold: true, ..style }, link.clone(), positions)
-            }
+            Inline::Emph(c) => md_walk_inlines(
+                out,
+                c,
+                MdStyle {
+                    italic: true,
+                    ..style
+                },
+                link.clone(),
+                positions,
+            ),
+            Inline::Strong(c) => md_walk_inlines(
+                out,
+                c,
+                MdStyle {
+                    bold: true,
+                    ..style
+                },
+                link.clone(),
+                positions,
+            ),
             Inline::Strikethrough(c) => md_walk_inlines(
                 out,
                 c,
-                MdStyle { strike: true, ..style },
+                MdStyle {
+                    strike: true,
+                    ..style
+                },
                 link.clone(),
                 positions,
             ),
@@ -9742,7 +10677,10 @@ fn md_walk_inlines(
                 md_push_text(out, url, style, &Some(url.clone()), positions, false)
             }
             Inline::Math(s) => {
-                let st = MdStyle { code: true, ..style };
+                let st = MdStyle {
+                    code: true,
+                    ..style
+                };
                 md_push_text(out, s, st, &link, positions, false);
             }
             Inline::NostrMention(e) => md_push_nostr(out, e, style, true),
@@ -9899,7 +10837,10 @@ fn md_emit_table_row(
         md_walk_inlines(
             &mut toks,
             &cell.inlines,
-            MdStyle { bold: header, ..Default::default() },
+            MdStyle {
+                bold: header,
+                ..Default::default()
+            },
             None,
             positions,
         );
@@ -9909,7 +10850,9 @@ fn md_emit_table_row(
             link: None,
         });
     }
-    md_wrap(out, toks, max_width, base_fs, ctx.indent, 1.0, ctx.quote, false);
+    md_wrap(
+        out, toks, max_width, base_fs, ctx.indent, 1.0, ctx.quote, false,
+    );
 }
 
 /// Render the items of a list, placing each item's marker on its first line and
@@ -9987,14 +10930,19 @@ fn md_walk_blocks(
             Block::Paragraph { inlines } => {
                 let mut toks = Vec::new();
                 md_walk_inlines(&mut toks, inlines, MdStyle::default(), None, positions);
-                md_wrap(out, toks, max_width, base_fs, ctx.indent, 1.0, ctx.quote, false);
+                md_wrap(
+                    out, toks, max_width, base_fs, ctx.indent, 1.0, ctx.quote, false,
+                );
             }
             Block::Heading { level, inlines } => {
                 let mut toks = Vec::new();
                 md_walk_inlines(
                     &mut toks,
                     inlines,
-                    MdStyle { bold: true, ..Default::default() },
+                    MdStyle {
+                        bold: true,
+                        ..Default::default()
+                    },
                     None,
                     positions,
                 );
@@ -10019,7 +10967,10 @@ fn md_walk_blocks(
             }),
             Block::CodeBlock { content, .. } => {
                 let body = content.strip_suffix('\n').unwrap_or(content);
-                let st = MdStyle { code: true, ..Default::default() };
+                let st = MdStyle {
+                    code: true,
+                    ..Default::default()
+                };
                 for line in body.split('\n') {
                     if line.is_empty() {
                         out.push(MdLine {
@@ -10034,7 +10985,9 @@ fn md_walk_blocks(
                     }
                     let mut toks = Vec::new();
                     md_push_text(&mut toks, line, st, &None, positions, false);
-                    md_wrap(out, toks, max_width, base_fs, ctx.indent, 1.0, ctx.quote, true);
+                    md_wrap(
+                        out, toks, max_width, base_fs, ctx.indent, 1.0, ctx.quote, true,
+                    );
                 }
             }
             Block::BlockQuote { blocks } => {
@@ -10045,7 +10998,9 @@ fn md_walk_blocks(
                 md_walk_blocks(out, blocks, inner, max_width, base_fs, positions);
             }
             Block::List { kind, tight, items } => {
-                md_walk_list(out, *kind, *tight, items, ctx, max_width, base_fs, positions);
+                md_walk_list(
+                    out, *kind, *tight, items, ctx, max_width, base_fs, positions,
+                );
             }
             Block::Table { header, rows, .. } => {
                 md_emit_table_row(out, header, true, ctx, max_width, base_fs, positions);
@@ -10055,11 +11010,16 @@ fn md_walk_blocks(
             }
             Block::MathBlock { content } => {
                 let body = content.strip_suffix('\n').unwrap_or(content);
-                let st = MdStyle { code: true, ..Default::default() };
+                let st = MdStyle {
+                    code: true,
+                    ..Default::default()
+                };
                 for line in body.split('\n') {
                     let mut toks = Vec::new();
                     md_push_text(&mut toks, line, st, &None, positions, false);
-                    md_wrap(out, toks, max_width, base_fs, ctx.indent, 1.0, ctx.quote, true);
+                    md_wrap(
+                        out, toks, max_width, base_fs, ctx.indent, 1.0, ctx.quote, true,
+                    );
                 }
             }
         }
@@ -10093,7 +11053,10 @@ fn tokenize_message_lines(text: &str, max_width: f32, base_fs: f32) -> Vec<Messa
     md_walk_blocks(
         &mut lines,
         &doc.blocks,
-        MdCtx { indent: 0.0, quote: 0 },
+        MdCtx {
+            indent: 0.0,
+            quote: 0,
+        },
         max_width,
         base_fs,
         positions,
@@ -10203,7 +11166,8 @@ fn commit_mention(
     let npub = npub_for_account_id(member.member_id.as_str())
         .unwrap_or_else(|_| member.member_id.to_string());
     let mut draft = ui.get_composer_draft().to_string();
-    if at > end || end > draft.len() || !draft.is_char_boundary(at) || !draft.is_char_boundary(end) {
+    if at > end || end > draft.len() || !draft.is_char_boundary(at) || !draft.is_char_boundary(end)
+    {
         return;
     }
     let insert = format!("@{npub} ");
@@ -10465,7 +11429,7 @@ fn pick_image_target(types: &[&str]) -> Option<String> {
     if has_text {
         return None;
     }
-    if types.iter().any(|t| *t == "image/png") {
+    if types.contains(&"image/png") {
         return Some("image/png".to_string());
     }
     types
@@ -10493,10 +11457,7 @@ fn paste_image_from_clipboard() -> Option<(Vec<u8>, String)> {
                     // clipboard, so no image target (or text intent) is a
                     // final no — don't fall through to arboard.
                     let mime = pick_image_target(&types)?;
-                    return match paste_via_command(
-                        "wl-paste",
-                        &["--no-newline", "--type", &mime],
-                    ) {
+                    return match paste_via_command("wl-paste", &["--no-newline", "--type", &mime]) {
                         Ok(bytes) if !bytes.is_empty() => {
                             eprintln!(
                                 "[clipboard] image via wl-paste ({mime}, {} bytes)",
@@ -10515,8 +11476,7 @@ fn paste_image_from_clipboard() -> Option<(Vec<u8>, String)> {
             }
         }
         if std::env::var_os("DISPLAY").is_some() {
-            match paste_via_command("xclip", &["-selection", "clipboard", "-t", "TARGETS", "-o"])
-            {
+            match paste_via_command("xclip", &["-selection", "clipboard", "-t", "TARGETS", "-o"]) {
                 Ok(out) => {
                     let listing = String::from_utf8_lossy(&out).into_owned();
                     let types: Vec<&str> = listing.lines().map(str::trim).collect();
@@ -10630,8 +11590,7 @@ fn refresh_kp_local_async(ui: &DarkMatterLinux, backend: &Arc<Backend>) {
             ui.set_kp_published(published);
             let rows: Vec<KeyPackageInfo> = local.iter().map(kp_to_ui).collect();
             ui.set_key_packages(ModelRc::new(VecModel::from(rows)));
-            let relays: Vec<SharedString> =
-                relays.into_iter().map(SharedString::from).collect();
+            let relays: Vec<SharedString> = relays.into_iter().map(SharedString::from).collect();
             ui.set_kp_relays(ModelRc::new(VecModel::from(relays)));
         });
     });
@@ -10711,7 +11670,7 @@ fn refresh_network_post_boot(backend: &Arc<Backend>, ui: &DarkMatterLinux) {
     });
 }
 
-/// `Mon DD · HH:MM` (local time) for KP timestamps. Returns "" for zero (unknown).
+// `Mon DD · HH:MM` (local time) for KP timestamps. Returns "" for zero (unknown).
 // ─── User-selectable stamp formats ──────────────────────────────────────
 // Mirrors `Settings::{time_format,date_format}` as process-wide atomics so
 // the formatters (called per row in rebuild loops) never touch disk. Synced
@@ -10864,8 +11823,10 @@ fn refresh_contacts_async(
         let _ = slint::invoke_from_event_loop(move || {
             let Some(ui) = weak.upgrade() else { return };
             let contacts = ui.get_contacts();
-            let rows: Vec<Contact> =
-                records.iter().map(|r| contact_from(r, &nicknames)).collect();
+            let rows: Vec<Contact> = records
+                .iter()
+                .map(|r| contact_from(r, &nicknames))
+                .collect();
             if let Some(vm) = contacts.as_any().downcast_ref::<VecModel<Contact>>() {
                 vm.set_vec(rows);
             }
@@ -10888,7 +11849,11 @@ fn contact_from(
         .get(&record.account_id_hex)
         .cloned()
         .unwrap_or_default();
-    let display = if nickname.is_empty() { published.clone() } else { nickname.clone() };
+    let display = if nickname.is_empty() {
+        published.clone()
+    } else {
+        nickname.clone()
+    };
     // Avatar identity stays tied to the *published* name so a private
     // nickname doesn't shift the gradient/initials the user already knows
     // from chat views (which don't apply nicknames).
@@ -11162,7 +12127,11 @@ fn push_group_members_to_ui_from(
 /// Spawn async avatar fetches for the open chat's incoming senders. When a
 /// picture decodes, every bubble from that sender (keyed by `sender-id`) gets
 /// the image bound in place — no full rebuild. Mirrors the members pipeline.
-fn spawn_message_avatar_fetches(ui: &DarkMatterLinux, backend: &Backend, msgs: &[AppMessageRecord]) {
+fn spawn_message_avatar_fetches(
+    ui: &DarkMatterLinux,
+    backend: &Backend,
+    msgs: &[AppMessageRecord],
+) {
     let my_id = backend.account().account_id_hex.clone();
     let profiles = build_sender_profiles(backend, msgs, &my_id);
     let mut seen = std::collections::HashSet::new();
@@ -11210,7 +12179,9 @@ fn update_bubble_pictures(ui: &DarkMatterLinux, sender_id: &str, pixels: &Pictur
     };
     let img = rgba_to_slint_image(pixels);
     for i in 0..vm.row_count() {
-        let Some(mut row) = vm.row_data(i) else { continue };
+        let Some(mut row) = vm.row_data(i) else {
+            continue;
+        };
         if row.outgoing || row.sender_id.as_str() != sender_id {
             continue;
         }
@@ -11236,10 +12207,7 @@ fn spawn_chat_list_avatar_fetches(ui: &DarkMatterLinux, backend: &Arc<Backend>) 
                 continue;
             };
             let (_, url) = b.account_name_and_picture(&peer);
-            let Some(url) = url
-                .map(|u| u.trim().to_string())
-                .filter(|u| !u.is_empty())
-            else {
+            let Some(url) = url.map(|u| u.trim().to_string()).filter(|u| !u.is_empty()) else {
                 continue;
             };
             if picture_cache_has(&url) {
@@ -11269,7 +12237,9 @@ fn update_chat_picture(ui: &DarkMatterLinux, npub: &str, pixels: &PicturePixels)
     };
     let img = rgba_to_slint_image(pixels);
     for i in 0..vm.row_count() {
-        let Some(mut row) = vm.row_data(i) else { continue };
+        let Some(mut row) = vm.row_data(i) else {
+            continue;
+        };
         if row.npub.as_str() != npub {
             continue;
         }
@@ -11328,7 +12298,9 @@ fn update_contact_picture(ui: &DarkMatterLinux, account_id: &str, pixels: &Pictu
     };
     let img = rgba_to_slint_image(pixels);
     for i in 0..vm.row_count() {
-        let Some(mut row) = vm.row_data(i) else { continue };
+        let Some(mut row) = vm.row_data(i) else {
+            continue;
+        };
         if !row.account_id.as_str().eq_ignore_ascii_case(account_id) {
             continue;
         }
@@ -11388,7 +12360,9 @@ fn update_archived_picture(ui: &DarkMatterLinux, group_id: &str, pixels: &Pictur
     };
     let img = rgba_to_slint_image(pixels);
     for i in 0..vm.row_count() {
-        let Some(mut row) = vm.row_data(i) else { continue };
+        let Some(mut row) = vm.row_data(i) else {
+            continue;
+        };
         if row.group_id.as_str() != group_id {
             continue;
         }
@@ -11424,7 +12398,9 @@ fn update_member_picture(ui: &DarkMatterLinux, npub_short: &str, pixels: &Pictur
         return;
     };
     for i in 0..vm.row_count() {
-        let Some(mut row) = vm.row_data(i) else { continue };
+        let Some(mut row) = vm.row_data(i) else {
+            continue;
+        };
         if row.npub_short.as_str() != npub_short {
             continue;
         }
@@ -11479,9 +12455,7 @@ fn group_member_from(
     admins: &[String],
     viewer_is_admin: bool,
 ) -> (GroupMember, Option<String>) {
-    let is_self = record
-        .member_id_hex
-        .eq_ignore_ascii_case(my_account_id_hex);
+    let is_self = record.member_id_hex.eq_ignore_ascii_case(my_account_id_hex);
     let is_admin = admins
         .iter()
         .any(|a| a.eq_ignore_ascii_case(&record.member_id_hex));
@@ -11491,12 +12465,13 @@ fn group_member_from(
     let can_demote = viewer_is_admin && is_admin && !is_self;
     let can_self_demote = viewer_is_admin && is_admin && is_self;
     let mut name = backend.account_display_name(&record.member_id_hex);
-    if let Some(label) = record.account.as_ref().filter(|s| !s.is_empty()) {
-        if name.starts_with("0x") {
-            name = label.clone();
-        }
+    if let Some(label) = record.account.as_ref().filter(|s| !s.is_empty())
+        && name.starts_with("0x")
+    {
+        name = label.clone();
     }
-    let npub = npub_for_account_id(&record.member_id_hex).unwrap_or_else(|_| record.member_id_hex.clone());
+    let npub =
+        npub_for_account_id(&record.member_id_hex).unwrap_or_else(|_| record.member_id_hex.clone());
     let (a, b, init) = avatar_for(&name);
     let picture_url = backend
         .account_picture_url(&record.member_id_hex)
@@ -11540,7 +12515,11 @@ fn decode_avatar_pixels(bytes: &[u8]) -> Result<PicturePixels, image::ImageError
     };
     let img = img.to_rgba8();
     let (w, h) = img.dimensions();
-    Ok(PicturePixels { w, h, rgba: img.into_raw() })
+    Ok(PicturePixels {
+        w,
+        h,
+        rgba: img.into_raw(),
+    })
 }
 
 fn rgba_to_slint_image(pixels: &PicturePixels) -> slint::Image {
@@ -11609,7 +12588,9 @@ fn refresh_archived_async(
     let b = backend.clone();
     let archived_group_ids = archived_group_ids.clone();
     backend.tokio_handle().spawn(async move {
-        let Some(snap) = fetch_archived_snapshot(&b) else { return };
+        let Some(snap) = fetch_archived_snapshot(&b) else {
+            return;
+        };
         let _ = slint::invoke_from_event_loop(move || {
             let Some(ui) = weak.upgrade() else { return };
             let archived = ui.get_archived_chats();
@@ -11634,8 +12615,15 @@ fn archived_from(
     let (last_msg, last_date) = match last_message {
         Some(m) => {
             let mine = m.sender.eq_ignore_ascii_case(my_account_id_hex);
-            let prefix = if mine { "You: ".to_string() } else { String::new() };
-            (format!("{prefix}{}", m.plaintext), format_chat_stamp(m.recorded_at))
+            let prefix = if mine {
+                "You: ".to_string()
+            } else {
+                String::new()
+            };
+            (
+                format!("{prefix}{}", m.plaintext),
+                format_chat_stamp(m.recorded_at),
+            )
         }
         None => (record.profile.description.clone(), String::new()),
     };
@@ -11703,7 +12691,9 @@ fn install_message_watcher(
         // This callback runs on the backend runtime. Read the window snapshot
         // HERE — the event-loop closure below must never touch sqlite (it can
         // stall behind sync writes or a slow disk and freeze the UI).
-        let Some(b) = backend_cell.lock().unwrap().clone() else { return };
+        let Some(b) = backend_cell.lock().unwrap().clone() else {
+            return;
+        };
         let all = b
             .messages(&group_hex_inner, Some(msg_window_for(&group_hex_inner)))
             .unwrap_or_default();
@@ -11719,14 +12709,18 @@ fn install_message_watcher(
                     // append it surgically — no full rebuild.
                     let my_id = b.account().account_id_hex.clone();
                     let my_label = my_avatar_label(&b, &my_id);
-                    let Some(rec) = all
-                        .iter()
-                        .find(|m| m.message_id_hex == msg_id)
-                        .cloned()
-                    else {
+                    let Some(rec) = all.iter().find(|m| m.message_id_hex == msg_id).cloned() else {
                         return;
                     };
-                    let row = build_one_message_row(&rec, &all, &my_id, &my_label, &group_hex_inner, &overlay, &b);
+                    let row = build_one_message_row(
+                        &rec,
+                        &all,
+                        &my_id,
+                        &my_label,
+                        &group_hex_inner,
+                        &overlay,
+                        &b,
+                    );
                     let pushed = with_inner_messages(&chats_messages, chat_idx, |vm| {
                         if find_message_row(vm, &msg_id).is_none() {
                             push_message_grouped(vm, row);
@@ -11747,7 +12741,9 @@ fn install_message_watcher(
                     // Reaction, delete, or edit — surgical refresh of the
                     // target row. For an edit the snapshot now carries the
                     // kind-1009, so the rebuilt row picks up the new text.
-                    let Some(target) = target_id_for_reaction else { return };
+                    let Some(target) = target_id_for_reaction else {
+                        return;
+                    };
                     refresh_one_message_row_from(
                         &b,
                         &overlay,

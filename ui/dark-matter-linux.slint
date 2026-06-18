@@ -30,7 +30,7 @@ import { LoginScreen } from "login/login-screen.slint";
 import { SplashScreen } from "splash.slint";
 import { EmojiPicker } from "emoji-picker.slint";
 import { MessageContextMenu } from "primitives/context-menu.slint";
-import { EmojiEntry, EmojiSheet, Linkout, ProfileSink, EffectCatalog } from "tokens.slint";
+import { EmojiEntry, EmojiSheet, Linkout, ProfileSink, EffectCatalog, ErrorCopy } from "tokens.slint";
 import { EditVersion } from "tokens.slint";
 import { AuditLogEntry } from "tokens.slint";
 import { StagedAttachment } from "tokens.slint";
@@ -43,6 +43,9 @@ export { Linkout }
 export { ProfileSink }
 // Message-effect catalog + armed selection, read/cleared by Rust on send.
 export { EffectCatalog }
+// User-facing error/status copy. Rust reads these `@tr()` properties on the UI
+// thread to localize the strings it sets on status fields / the error banner.
+export { ErrorCopy }
 
 export component DarkMatterLinux inherits Window {
     title: "darkmatter";

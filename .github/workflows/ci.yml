@@ -1,0 +1,82 @@
+# CI: runs on every push to master and every PR. A fast formatting gate and a
+# clippy gate run on x86_64 Linux, then a debug build of all four target
+# platforms via the reusable build workflow.
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+# A new push to a branch/PR cancels the in-flight run for that ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Formatting needs no compilation, system deps, or cache — keep it as its own
+  # tiny job so it fails in seconds instead of riding behind the clippy build.
+  fmt:
+    name: fmt
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+  clippy:
+    name: clippy
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            pkg-config libmpv-dev libfontconfig-dev libasound2-dev libdbus-1-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      # Caches the registry/git deps and the opt-level-3 dependency build.
+      # cache-on-failure keeps that warm even when clippy fails (the common PR
+      # case), so the next push doesn't recompile the whole dep tree from cold.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: clippy
+          cache-on-failure: true
+
+      # rust-cache (above) cleans workspace-member artifacts before saving, so
+      # the ~345k-line generated dm-ui Slint crate (~25s to compile) is NOT in
+      # that cache and would recompile every run. This content-addressed cache
+      # restores it directly. The key covers everything that changes its output
+      # (UI/lang/dm-ui sources, the locked dep ABIs, and the toolchain), so a hit
+      # means the inputs are identical; cargo's own fingerprint check is the
+      # backstop if anything is stale. Defined AFTER rust-cache so its restore
+      # overlays rust-cache's target/ and its save runs before rust-cache cleans.
+      - name: Record toolchain version
+        shell: bash
+        run: echo "RUSTC_VER=$(rustc -V | tr ' .()' '----')" >> "$GITHUB_ENV"
+      - name: Cache compiled dm-ui (Slint UI) crate
+        uses: actions/cache@v4
+        with:
+          path: |
+            target/debug/build/dm-ui-*
+            target/debug/deps/libdm_ui-*
+            target/debug/deps/dm_ui-*
+            target/debug/.fingerprint/dm-ui-*
+          key: dmui-clippy-${{ env.RUSTC_VER }}-${{ hashFiles('ui/**', 'lang/**', 'dm-ui/**', 'Cargo.lock') }}
+
+      - name: Clippy
+        run: cargo clippy --locked --all-targets -- -D warnings
+
+  build:
+    name: build
+    uses: ./.github/workflows/_build.yml
+    with:
+      release: false

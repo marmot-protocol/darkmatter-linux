@@ -75,7 +75,7 @@ msgstr "Chat archivieren"
 #: ui/archived/archived-page.slint:37
 msgctxt "ArchivedPage"
 msgid "Chats you archive are kept here, out of your main list."
-msgstr ""
+msgstr "Archivierte Chats werden hier aufbewahrt, abseits deiner Hauptliste."
 
 #: ui/archived/archived-sidebar.slint:10
 msgctxt "ArchivedSidebar"
@@ -107,17 +107,17 @@ msgstr "RELAYS"
 #: ui/chat-list.slint:29
 msgctxt "ChatListPanel"
 msgid "SYNCING…"
-msgstr ""
+msgstr "SYNCHRONISIERE…"
 
 #: ui/chat-list.slint:30
 msgctxt "ChatListPanel"
 msgid "SYNCED"
-msgstr ""
+msgstr "SYNCHRONISIERT"
 
 #: ui/chat-list.slint:30
 msgctxt "ChatListPanel"
 msgid "AGO"
-msgstr ""
+msgstr "VOR"
 
 #: ui/contacts/contact-detail.slint:26
 msgctxt "ContactDetail"
@@ -132,7 +132,7 @@ msgstr "HINZUGEFÜGT {}  ·  {} RELAYS"
 #: ui/contacts/contact-detail.slint:77
 msgctxt "ContactDetail"
 msgid "aka {}"
-msgstr ""
+msgstr "alias {}"
 
 #: ui/contacts/contact-detail.slint:83
 msgctxt "ContactDetail"
@@ -142,7 +142,7 @@ msgstr "✓ VERIFIZIERT"
 #: ui/contacts/contact-detail.slint:90
 msgctxt "ContactDetail"
 msgid "Nickname"
-msgstr ""
+msgstr "Spitzname"
 
 #: ui/contacts/contact-detail.slint:97
 msgctxt "ContactDetail"
@@ -243,7 +243,7 @@ msgstr "Kontakt entfernen"
 #: ui/contacts/contacts-page.slint:37
 msgctxt "ContactsPage"
 msgid "People you start chats with will show up here."
-msgstr ""
+msgstr "Personen, mit denen du Chats startest, erscheinen hier."
 
 #: ui/contacts/contacts-sidebar.slint:10
 msgctxt "ContactsSidebar"
@@ -272,6 +272,8 @@ msgid ""
 "This declines the invite from {}. It can't be restored unless they invite "
 "you again."
 msgstr ""
+"Damit lehnst du die Einladung von {} ab. Sie kann nur wiederhergestellt "
+"werden, wenn sie dich erneut einladen."
 
 #: ui/dark-matter-linux.slint:984
 #, fuzzy
@@ -292,7 +294,7 @@ msgstr "keine Treffer"
 #: ui/get-started.slint:173
 msgctxt "GetStartedScreen"
 msgid "Welcome to darkmatter"
-msgstr ""
+msgstr "Willkommen bei darkmatter"
 
 #: ui/get-started.slint:180
 msgctxt "GetStartedScreen"
@@ -300,6 +302,8 @@ msgid ""
 "Three quick steps and you're ready to message — end-to-end encrypted, no "
 "servers in the middle."
 msgstr ""
+"Drei schnelle Schritte und du kannst loslegen — Ende-zu-Ende-verschlüsselt, "
+"ohne Server dazwischen."
 
 #: ui/get-started.slint:191
 #, fuzzy
@@ -311,6 +315,8 @@ msgstr "Verbinde mit Relays…"
 msgctxt "GetStartedScreen"
 msgid "Relays carry your encrypted messages. Add at least one to get online."
 msgstr ""
+"Relays übertragen deine verschlüsselten Nachrichten. Füge mindestens eines "
+"hinzu, um online zu gehen."
 
 #: ui/get-started.slint:208
 #, fuzzy
@@ -339,7 +345,7 @@ msgstr "Hinzufügen"
 #: ui/get-started.slint:272
 msgctxt "GetStartedScreen"
 msgid "SUGGESTED"
-msgstr ""
+msgstr "VORGESCHLAGEN"
 
 #: ui/get-started.slint:326
 #, fuzzy
@@ -350,7 +356,7 @@ msgstr "Noch keine Schlüsselpakete"
 #: ui/get-started.slint:327
 msgctxt "GetStartedScreen"
 msgid "This is what lets other people start an encrypted chat with you."
-msgstr ""
+msgstr "Damit können andere einen verschlüsselten Chat mit dir starten."
 
 #: ui/get-started.slint:339
 #, fuzzy
@@ -373,7 +379,7 @@ msgstr "Schlüsselpaket"
 #: ui/get-started.slint:363
 msgctxt "GetStartedScreen"
 msgid "Add a relay first."
-msgstr ""
+msgstr "Füge zuerst ein Relay hinzu."
 
 #: ui/get-started.slint:382
 #, fuzzy
@@ -384,12 +390,12 @@ msgstr "Neuen Chat starten"
 #: ui/get-started.slint:383
 msgctxt "GetStartedScreen"
 msgid "Invite someone by their npub and say hello."
-msgstr ""
+msgstr "Lade jemanden über seinen npub ein und sag Hallo."
 
 #: ui/get-started.slint:389
 msgctxt "GetStartedScreen"
 msgid "New chat"
-msgstr ""
+msgstr "Neuer Chat"
 
 #: ui/keys/device-row.slint:8
 msgctxt "DeviceRow"
@@ -557,7 +563,7 @@ msgstr "Dein Profil"
 #: ui/left-rail/left-rail.slint:233
 msgctxt "LeftRail"
 msgid "Chats"
-msgstr ""
+msgstr "Chats"
 
 #: ui/left-rail/left-rail.slint:246
 #, fuzzy
@@ -574,22 +580,22 @@ msgstr "Archivieren"
 #: ui/left-rail/left-rail.slint:268
 msgctxt "LeftRail"
 msgid "Keys"
-msgstr ""
+msgstr "Schlüssel"
 
 #: ui/left-rail/left-rail.slint:281
 msgctxt "LeftRail"
 msgid "New chat"
-msgstr ""
+msgstr "Neuer Chat"
 
 #: ui/left-rail/left-rail.slint:303
 msgctxt "LeftRail"
 msgid "Settings"
-msgstr ""
+msgstr "Einstellungen"
 
 #: ui/left-rail/left-rail.slint:316
 msgctxt "LeftRail"
 msgid "Accounts"
-msgstr ""
+msgstr "Konten"
 
 #: ui/login/login-screen.slint:183
 msgctxt "LoginScreen"
@@ -599,12 +605,12 @@ msgstr "Bei deiner Nostr-Identität anmelden"
 #: ui/login/login-screen.slint:185
 msgctxt "LoginScreen"
 msgid "Import a key & set a password"
-msgstr ""
+msgstr "Schlüssel importieren & Passwort festlegen"
 
 #: ui/login/login-screen.slint:187
 msgctxt "LoginScreen"
 msgid "Enter your password to unlock"
-msgstr ""
+msgstr "Gib dein Passwort zum Entsperren ein"
 
 #: ui/login/login-screen.slint:188
 msgctxt "LoginScreen"
@@ -624,7 +630,7 @@ msgstr "Neuen Schlüssel generieren"
 #: ui/login/login-screen.slint:238
 msgctxt "LoginScreen"
 msgid "Import a backup"
-msgstr ""
+msgstr "Backup importieren"
 
 #: ui/login/login-screen.slint:255
 msgctxt "LoginScreen"
@@ -634,22 +640,22 @@ msgstr "Dein Schlüssel verlässt nie dieses Gerät."
 #: ui/login/login-screen.slint:274 ui/login/login-screen.slint:492
 msgctxt "LoginScreen"
 msgid "VAULT PASSWORD"
-msgstr ""
+msgstr "TRESOR-PASSWORT"
 
 #: ui/login/login-screen.slint:275 ui/login/login-screen.slint:493
 msgctxt "LoginScreen"
 msgid "Choose a password"
-msgstr ""
+msgstr "Wähle ein Passwort"
 
 #: ui/login/login-screen.slint:281 ui/login/login-screen.slint:499
 msgctxt "LoginScreen"
 msgid "CONFIRM PASSWORD"
-msgstr ""
+msgstr "PASSWORT BESTÄTIGEN"
 
 #: ui/login/login-screen.slint:282 ui/login/login-screen.slint:500
 msgctxt "LoginScreen"
 msgid "Re-enter password"
-msgstr ""
+msgstr "Passwort erneut eingeben"
 
 #: ui/login/login-screen.slint:300 ui/login/login-screen.slint:518
 msgctxt "LoginScreen"
@@ -669,7 +675,7 @@ msgstr "Weiter"
 #: ui/login/login-screen.slint:355
 msgctxt "LoginScreen"
 msgid "YOUR DISPLAY NAME"
-msgstr ""
+msgstr "DEIN ANZEIGENAME"
 
 #: ui/login/login-screen.slint:392
 msgctxt "LoginScreen"
@@ -677,14 +683,13 @@ msgid "Back up your nsec before saving"
 msgstr "Sichere deinen nsec vor dem Speichern"
 
 #: ui/login/login-screen.slint:398
-#, fuzzy
 msgctxt "LoginScreen"
 msgid ""
 "Sealed with your password on this device. Keep your own copy of the nsec too "
 "— lose both and this identity is gone."
 msgstr ""
-"Speichern legt ihn im OS-Schlüsselbund ab. Bewahre auch eine eigene Kopie "
-"auf — verlierst du ihn, ist die Identität weg."
+"Auf diesem Gerät mit deinem Passwort versiegelt. Bewahre auch eine eigene "
+"Kopie des nsec auf — verlierst du beides, ist diese Identität weg."
 
 #: ui/login/login-screen.slint:467
 msgctxt "LoginScreen"
@@ -704,28 +709,27 @@ msgstr "Speichere…"
 #: ui/login/login-screen.slint:525
 msgctxt "LoginScreen"
 msgid "Create vault"
-msgstr ""
+msgstr "Tresor erstellen"
 
 #: ui/login/login-screen.slint:544
 msgctxt "LoginScreen"
 msgid "Enter your password"
-msgstr ""
+msgstr "Gib dein Passwort ein"
 
 #: ui/login/login-screen.slint:563
 msgctxt "LoginScreen"
 msgid "Use another key"
-msgstr ""
+msgstr "Anderen Schlüssel verwenden"
 
 #: ui/login/login-screen.slint:570
 msgctxt "LoginScreen"
 msgid "Unlocking…"
-msgstr ""
+msgstr "Entsperre…"
 
 #: ui/login/login-screen.slint:570
-#, fuzzy
 msgctxt "LoginScreen"
 msgid "Unlock"
-msgstr "Blockieren"
+msgstr "Entsperren"
 
 #: ui/main-pane/add-member-card.slint:15
 #, fuzzy
@@ -742,7 +746,7 @@ msgstr "Speichere…"
 #: ui/main-pane/add-member-card.slint:53
 msgctxt "AddMemberCard"
 msgid "Invite"
-msgstr ""
+msgstr "Einladen"
 
 #: ui/main-pane/chat-header.slint:91
 msgctxt "ChatHeader"
@@ -784,7 +788,7 @@ msgstr "Sitzung zu starten."
 #: ui/main-pane/composer.slint:89
 msgctxt "Composer"
 msgid "Editing message  ·  Enter to save"
-msgstr ""
+msgstr "Nachricht bearbeiten  ·  Enter zum Speichern"
 
 #: ui/main-pane/composer.slint:142
 msgctxt "Composer"
@@ -805,7 +809,7 @@ msgstr "Letzte Nachricht"
 #: ui/main-pane/composer.slint:423
 msgctxt "Composer"
 msgid "{}s"
-msgstr ""
+msgstr "{}s"
 
 #: ui/main-pane/composer.slint:433
 msgctxt "Composer"
@@ -841,12 +845,12 @@ msgstr "DU"
 #: ui/main-pane/group-member-row.slint:60
 msgctxt "GroupMemberRow"
 msgid "ADMIN"
-msgstr ""
+msgstr "ADMIN"
 
 #: ui/main-pane/group-member-row.slint:87
 msgctxt "GroupMemberRow"
 msgid "Make admin"
-msgstr ""
+msgstr "Zum Admin machen"
 
 #: ui/main-pane/group-member-row.slint:107
 #, fuzzy
@@ -857,7 +861,7 @@ msgstr "Kontakt entfernen"
 #: ui/main-pane/group-member-row.slint:127
 msgctxt "GroupMemberRow"
 msgid "Step down"
-msgstr ""
+msgstr "Admin-Rolle abgeben"
 
 #: ui/main-pane/group-members-header.slint:18
 #, fuzzy
@@ -933,7 +937,7 @@ msgstr "SITZUNG HERGESTELLT"
 #: ui/main-pane/mention-picker.slint:65
 msgctxt "MentionPicker"
 msgid "(you)"
-msgstr ""
+msgstr "(du)"
 
 #: ui/messages.slint:148
 #, fuzzy
@@ -944,7 +948,7 @@ msgstr "Letzte Nachricht"
 #: ui/modals/account-switcher-modal.slint:14
 msgctxt "AccountSwitcherModal"
 msgid "Accounts"
-msgstr ""
+msgstr "Konten"
 
 #: ui/modals/account-switcher-modal.slint:15
 msgctxt "AccountSwitcherModal"
@@ -952,11 +956,13 @@ msgid ""
 "All accounts stay connected. Switching only changes which one you're looking "
 "at."
 msgstr ""
+"Alle Konten bleiben verbunden. Beim Wechseln ändert sich nur, welches du "
+"gerade ansiehst."
 
 #: ui/modals/account-switcher-modal.slint:16
 msgctxt "AccountSwitcherModal"
 msgid "Close"
-msgstr ""
+msgstr "Schließen"
 
 #: ui/modals/account-switcher-modal.slint:17
 #, fuzzy
@@ -982,6 +988,9 @@ msgid ""
 "Paste another secret key, or generate a fresh one. It's sealed into the same "
 "vault and stays signed in alongside your other accounts."
 msgstr ""
+"Füge einen weiteren geheimen Schlüssel ein oder generiere einen neuen. Er "
+"wird im selben Tresor versiegelt und bleibt neben deinen anderen Konten "
+"angemeldet."
 
 #: ui/modals/add-account-modal.slint:17
 #, fuzzy
@@ -998,7 +1007,7 @@ msgstr "Speichere…"
 #: ui/modals/add-account-modal.slint:23
 msgctxt "AddAccountModal"
 msgid "SECRET KEY (NSEC)"
-msgstr ""
+msgstr "GEHEIMER SCHLÜSSEL (NSEC)"
 
 #: ui/modals/add-account-modal.slint:34
 #, fuzzy
@@ -1018,6 +1027,9 @@ msgid ""
 "This key was just generated and exists nowhere else yet. Copy it somewhere "
 "safe before adding it — there is no recovery."
 msgstr ""
+"Dieser Schlüssel wurde gerade generiert und existiert noch nirgendwo sonst. "
+"Kopiere ihn an einen sicheren Ort, bevor du ihn hinzufügst — es gibt keine "
+"Wiederherstellung."
 
 #: ui/modals/add-contact-modal.slint:11 ui/modals/add-contact-modal.slint:14
 #, fuzzy
@@ -1031,6 +1043,8 @@ msgid ""
 "Paste their npub or hex public key. They'll appear in your contacts on every "
 "device."
 msgstr ""
+"Füge ihren npub oder hexadezimalen öffentlichen Schlüssel ein. Sie erscheinen "
+"auf jedem Gerät in deinen Kontakten."
 
 #: ui/modals/add-contact-modal.slint:13
 #, fuzzy
@@ -1047,12 +1061,12 @@ msgstr "Speichere…"
 #: ui/modals/add-contact-modal.slint:20
 msgctxt "AddContactModal"
 msgid "PUBLIC KEY"
-msgstr ""
+msgstr "ÖFFENTLICHER SCHLÜSSEL"
 
 #: ui/modals/backup-create-modal.slint:13
 msgctxt "BackupCreateModal"
 msgid "Create backup"
-msgstr ""
+msgstr "Backup erstellen"
 
 #: ui/modals/backup-create-modal.slint:14
 msgctxt "BackupCreateModal"
@@ -1060,6 +1074,8 @@ msgid ""
 "Pack everything — accounts, chats, settings — into one encrypted file, "
 "sealed with your vault password. The media cache is left out."
 msgstr ""
+"Packe alles — Konten, Chats, Einstellungen — in eine verschlüsselte Datei, "
+"versiegelt mit deinem Tresor-Passwort. Der Medien-Cache wird ausgelassen."
 
 #: ui/modals/backup-create-modal.slint:15
 #, fuzzy
@@ -1070,7 +1086,7 @@ msgstr "Abbrechen"
 #: ui/modals/backup-create-modal.slint:16
 msgctxt "BackupCreateModal"
 msgid "Choose location…"
-msgstr ""
+msgstr "Speicherort wählen…"
 
 #: ui/modals/backup-create-modal.slint:17
 #, fuzzy
@@ -1081,12 +1097,12 @@ msgstr "Speichere…"
 #: ui/modals/backup-create-modal.slint:21
 msgctxt "BackupCreateModal"
 msgid "VAULT PASSWORD"
-msgstr ""
+msgstr "TRESOR-PASSWORT"
 
 #: ui/modals/backup-create-modal.slint:22
 msgctxt "BackupCreateModal"
 msgid "Confirm your vault password"
-msgstr ""
+msgstr "Bestätige dein Tresor-Passwort"
 
 #: ui/modals/command-palette.slint:80
 msgctxt "CommandPalette"
@@ -1102,17 +1118,17 @@ msgstr "Keine Treffer"
 #: ui/modals/command-palette.slint:262
 msgctxt "command palette footer"
 msgid "Navigate"
-msgstr ""
+msgstr "Navigieren"
 
 #: ui/modals/command-palette.slint:273
 msgctxt "command palette footer"
 msgid "Select"
-msgstr ""
+msgstr "Auswählen"
 
 #: ui/modals/command-palette.slint:284
 msgctxt "command palette footer"
 msgid "Close"
-msgstr ""
+msgstr "Schließen"
 
 #: ui/modals/confirm-modal.slint:12
 #, fuzzy
@@ -1123,7 +1139,7 @@ msgstr "Abbrechen"
 #: ui/modals/edit-history-modal.slint:12
 msgctxt "EditHistoryModal"
 msgid "Edit history"
-msgstr ""
+msgstr "Bearbeitungsverlauf"
 
 #: ui/modals/image-viewer-modal.slint:76
 #, fuzzy
@@ -1134,7 +1150,7 @@ msgstr "Speichere…"
 #: ui/modals/import-backup-modal.slint:22
 msgctxt "ImportBackupModal"
 msgid "Import backup"
-msgstr ""
+msgstr "Backup importieren"
 
 #: ui/modals/import-backup-modal.slint:24
 msgctxt "ImportBackupModal"
@@ -1142,6 +1158,8 @@ msgid ""
 "Restore everything from an encrypted backup. Use the password the backup was "
 "created with."
 msgstr ""
+"Stelle alles aus einem verschlüsselten Backup wieder her. Verwende das "
+"Passwort, mit dem das Backup erstellt wurde."
 
 #: ui/modals/import-backup-modal.slint:25
 msgctxt "ImportBackupModal"
@@ -1149,6 +1167,8 @@ msgid ""
 "Merge the accounts from an encrypted backup into this install. Use the "
 "password the backup was created with."
 msgstr ""
+"Füge die Konten aus einem verschlüsselten Backup in diese Installation ein. "
+"Verwende das Passwort, mit dem das Backup erstellt wurde."
 
 #: ui/modals/import-backup-modal.slint:26
 #, fuzzy
@@ -1159,12 +1179,12 @@ msgstr "Abbrechen"
 #: ui/modals/import-backup-modal.slint:27
 msgctxt "ImportBackupModal"
 msgid "Restore"
-msgstr ""
+msgstr "Wiederherstellen"
 
 #: ui/modals/import-backup-modal.slint:27
 msgctxt "ImportBackupModal"
 msgid "Import"
-msgstr ""
+msgstr "Importieren"
 
 #: ui/modals/import-backup-modal.slint:28
 #, fuzzy
@@ -1181,27 +1201,27 @@ msgstr "Speichere…"
 #: ui/modals/import-backup-modal.slint:35
 msgctxt "ImportBackupModal"
 msgid "BACKUP FILE"
-msgstr ""
+msgstr "BACKUP-DATEI"
 
 #: ui/modals/import-backup-modal.slint:45
 msgctxt "ImportBackupModal"
 msgid "Choose file…"
-msgstr ""
+msgstr "Datei wählen…"
 
 #: ui/modals/import-backup-modal.slint:54
 msgctxt "ImportBackupModal"
 msgid "No file selected"
-msgstr ""
+msgstr "Keine Datei ausgewählt"
 
 #: ui/modals/import-backup-modal.slint:66
 msgctxt "ImportBackupModal"
 msgid "BACKUP PASSWORD"
-msgstr ""
+msgstr "BACKUP-PASSWORT"
 
 #: ui/modals/import-backup-modal.slint:67
 msgctxt "ImportBackupModal"
 msgid "Password the backup was sealed with"
-msgstr ""
+msgstr "Passwort, mit dem das Backup versiegelt wurde"
 
 #: ui/modals/language-picker-modal.slint:53
 msgctxt "LanguagePickerModal"
@@ -1211,7 +1231,7 @@ msgstr "Oberflächensprache"
 #: ui/modals/nickname-modal.slint:13
 msgctxt "NicknameModal"
 msgid "Nickname"
-msgstr ""
+msgstr "Spitzname"
 
 #: ui/modals/nickname-modal.slint:14
 msgctxt "NicknameModal"
@@ -1219,6 +1239,8 @@ msgid ""
 "A private name for {}. Only you see it — leave empty to use their published "
 "name."
 msgstr ""
+"Ein privater Name für {}. Nur du siehst ihn — leer lassen, um den "
+"veröffentlichten Namen zu verwenden."
 
 #: ui/modals/nickname-modal.slint:15
 #, fuzzy
@@ -1235,7 +1257,7 @@ msgstr "Speichern"
 #: ui/modals/nickname-modal.slint:20
 msgctxt "NicknameModal"
 msgid "NICKNAME"
-msgstr ""
+msgstr "SPITZNAME"
 
 #. or failed kind-0 fetch hides the action entirely.
 #: ui/modals/profile-modal.slint:38
@@ -1253,12 +1275,12 @@ msgstr "Speichere…"
 #: ui/modals/profile-modal.slint:193
 msgctxt "ProfileModal"
 msgid "Copied ✓"
-msgstr ""
+msgstr "Kopiert ✓"
 
 #: ui/modals/profile-modal.slint:226
 msgctxt "ProfileModal"
 msgid "✓ In your contacts"
-msgstr ""
+msgstr "✓ In deinen Kontakten"
 
 #: ui/modals/profile-modal.slint:287
 #, fuzzy
@@ -1269,12 +1291,12 @@ msgstr "Verbinde mit Relays…"
 #: ui/modals/profile-modal.slint:294
 msgctxt "ProfileModal"
 msgid "No profile found on relays."
-msgstr ""
+msgstr "Kein Profil auf den Relays gefunden."
 
 #: ui/modals/start-new-chat-modal.slint:14
 msgctxt "StartNewChatModal"
 msgid "New chat or group"
-msgstr ""
+msgstr "Neuer Chat oder neue Gruppe"
 
 #: ui/modals/start-new-chat-modal.slint:15
 msgctxt "StartNewChatModal"
@@ -1282,6 +1304,8 @@ msgid ""
 "Paste one npub for a direct chat, or several (one per line) plus a group "
 "name."
 msgstr ""
+"Füge einen npub für einen Direktchat ein oder mehrere (einen pro Zeile) plus "
+"einen Gruppennamen."
 
 #: ui/modals/start-new-chat-modal.slint:16
 msgctxt "StartNewChatModal"
@@ -1291,7 +1315,7 @@ msgstr "Abbrechen"
 #: ui/modals/start-new-chat-modal.slint:17
 msgctxt "StartNewChatModal"
 msgid "Create"
-msgstr ""
+msgstr "Erstellen"
 
 #: ui/modals/start-new-chat-modal.slint:18
 #, fuzzy
@@ -1302,12 +1326,12 @@ msgstr "Speichere…"
 #: ui/modals/start-new-chat-modal.slint:24
 msgctxt "StartNewChatModal"
 msgid "GROUP NAME (OPTIONAL)"
-msgstr ""
+msgstr "GRUPPENNAME (OPTIONAL)"
 
 #: ui/modals/start-new-chat-modal.slint:25
 msgctxt "StartNewChatModal"
 msgid "e.g. friday-crew"
-msgstr ""
+msgstr "z. B. freitags-crew"
 
 #: ui/modals/start-new-chat-modal.slint:34
 #, fuzzy
@@ -1324,12 +1348,12 @@ msgstr "Speichere…"
 #: ui/primitives/context-menu.slint:154
 msgctxt "MessageContextMenu"
 msgid "Add reaction"
-msgstr ""
+msgstr "Reaktion hinzufügen"
 
 #: ui/primitives/context-menu.slint:161
 msgctxt "MessageContextMenu"
 msgid "Reply"
-msgstr ""
+msgstr "Antworten"
 
 #: ui/primitives/context-menu.slint:168
 #, fuzzy
@@ -1355,7 +1379,7 @@ msgstr "fehlgeschlagen · tippen zum Wiederholen"
 #: ui/primitives/message-bubble.slint:638
 msgctxt "MessageBubble"
 msgid "decrypting…"
-msgstr ""
+msgstr "entschlüssele…"
 
 #: ui/primitives/message-bubble.slint:640
 #, fuzzy
@@ -1366,12 +1390,12 @@ msgstr "fehlgeschlagen · tippen zum Wiederholen"
 #: ui/primitives/message-bubble.slint:641
 msgctxt "MessageBubble"
 msgid "tap to load"
-msgstr ""
+msgstr "tippen zum Laden"
 
 #: ui/primitives/message-bubble.slint:800
 msgctxt "MessageBubble"
 msgid "edited"
-msgstr ""
+msgstr "bearbeitet"
 
 #: ui/primitives/outgoing-row.slint:172 ui/primitives/outgoing-row.slint:183
 msgctxt "OutgoingRow"
@@ -1393,7 +1417,7 @@ msgstr "Speichere…"
 #: ui/profile/profile-page.slint:102
 msgctxt "PictureField"
 msgid "Upload"
-msgstr ""
+msgstr "Hochladen"
 
 #: ui/profile/profile-page.slint:179
 #, fuzzy
@@ -1444,7 +1468,7 @@ msgstr "(kein Anzeigename)"
 #: ui/profile/profile-page.slint:394
 msgctxt "ProfilePage"
 msgid "no handle yet"
-msgstr ""
+msgstr "noch kein Handle"
 
 #: ui/profile/profile-page.slint:431
 msgctxt "ProfilePage"
@@ -1524,12 +1548,12 @@ msgstr "Bild"
 #: ui/profile/profile-page.slint:535
 msgctxt "ProfilePage"
 msgid "Not set"
-msgstr ""
+msgstr "Nicht festgelegt"
 
 #: ui/profile/profile-page.slint:535
 msgctxt "ProfilePage"
 msgid "Set"
-msgstr ""
+msgstr "Festgelegt"
 
 #: ui/profile/wallet-address-row.slint:10
 msgctxt "WalletAddressRow"
@@ -1555,7 +1579,7 @@ msgstr "Über"
 #: ui/settings/about-pane.slint:95
 msgctxt "AboutPane"
 msgid "Encrypted group chat on Nostr"
-msgstr ""
+msgstr "Verschlüsselter Gruppenchat über Nostr"
 
 #: ui/settings/about-pane.slint:172
 #, fuzzy
@@ -1566,7 +1590,7 @@ msgstr "Ende-zu-Ende-verschlüsselt mit"
 #: ui/settings/about-pane.slint:183
 msgctxt "AboutPane"
 msgid "WHAT IT IS"
-msgstr ""
+msgstr "WAS ES IST"
 
 #: ui/settings/about-pane.slint:194
 msgctxt "AboutPane"
@@ -1575,16 +1599,19 @@ msgid ""
 "encrypted with MLS before they leave your machine, routed over Nostr relays, "
 "and decrypted only for the people in the room."
 msgstr ""
+"Dark Matter ist ein nativer Desktop-Client für private Gruppenchats. "
+"Nachrichten werden mit MLS verschlüsselt, bevor sie dein Gerät verlassen, "
+"über Nostr-Relays geleitet und nur für die Personen im Raum entschlüsselt."
 
 #: ui/settings/about-pane.slint:201
 msgctxt "AboutPane"
 msgid "Your keys stay on this device — we never see them."
-msgstr ""
+msgstr "Deine Schlüssel bleiben auf diesem Gerät — wir sehen sie nie."
 
 #: ui/settings/about-pane.slint:212
 msgctxt "AboutPane"
 msgid "UNDER THE HOOD"
-msgstr ""
+msgstr "UNTER DER HAUBE"
 
 #: ui/settings/about-pane.slint:216
 #, fuzzy
@@ -1595,27 +1622,28 @@ msgstr "Ende-zu-Ende-verschlüsselt mit"
 #: ui/settings/about-pane.slint:217
 msgctxt "AboutPane"
 msgid "MLS group keys; no server in the trust path."
-msgstr ""
+msgstr "MLS-Gruppenschlüssel; kein Server im Vertrauenspfad."
 
 #: ui/settings/about-pane.slint:221
 msgctxt "AboutPane"
 msgid "Decentralized network"
-msgstr ""
+msgstr "Dezentrales Netzwerk"
 
 #: ui/settings/about-pane.slint:222
 msgctxt "AboutPane"
 msgid "Connect to Nostr relays you choose."
-msgstr ""
+msgstr "Verbinde dich mit Nostr-Relays deiner Wahl."
 
 #: ui/settings/about-pane.slint:226
 msgctxt "AboutPane"
 msgid "Local key custody"
-msgstr ""
+msgstr "Lokale Schlüsselverwahrung"
 
 #: ui/settings/about-pane.slint:227
 msgctxt "AboutPane"
 msgid "Private material lives in your OS keychain or encrypted store."
 msgstr ""
+"Private Daten bleiben in deinem OS-Schlüsselbund oder verschlüsselten Speicher."
 
 #: ui/settings/about-pane.slint:235
 #, fuzzy
@@ -1626,12 +1654,12 @@ msgstr "BEARBEITEN"
 #: ui/settings/about-pane.slint:239
 msgctxt "AboutPane"
 msgid "Built with"
-msgstr ""
+msgstr "Erstellt mit"
 
 #: ui/settings/about-pane.slint:247
 msgctxt "AboutPane"
 msgid "Made with marmots, math, and a little purple liquid."
-msgstr ""
+msgstr "Gemacht mit Murmeltieren, Mathematik und etwas lila Flüssigkeit."
 
 #: ui/settings/advanced-pane.slint:80
 msgctxt "AdvancedPane"
@@ -1647,37 +1675,38 @@ msgstr "Entwickler-Flags"
 #: ui/settings/advanced-pane.slint:86
 msgctxt "AdvancedPane"
 msgid "SECURITY & PRIVACY"
-msgstr ""
+msgstr "SICHERHEIT & DATENSCHUTZ"
 
 #: ui/settings/advanced-pane.slint:89
 msgctxt "AdvancedPane"
 msgid "Share anonymous app telemetry"
-msgstr ""
+msgstr "Anonyme App-Telemetrie teilen"
 
 #: ui/settings/advanced-pane.slint:90
 msgctxt "AdvancedPane"
 msgid "Share relay connection telemetry."
-msgstr ""
+msgstr "Telemetrie zu Relay-Verbindungen teilen."
 
 #: ui/settings/advanced-pane.slint:97
 msgctxt "AdvancedPane"
 msgid "Audit logs"
-msgstr ""
+msgstr "Audit-Protokolle"
 
 #: ui/settings/advanced-pane.slint:98
 msgctxt "AdvancedPane"
 msgid "Create and send group audit log files. Applies immediately."
 msgstr ""
+"Gruppen-Audit-Protokolldateien erstellen und senden. Wird sofort angewendet."
 
 #: ui/settings/advanced-pane.slint:117
 msgctxt "AdvancedPane"
 msgid "AUDIT LOG FILES"
-msgstr ""
+msgstr "AUDIT-PROTOKOLLDATEIEN"
 
 #: ui/settings/advanced-pane.slint:125
 msgctxt "AdvancedPane"
 msgid "No audit log files on disk."
-msgstr ""
+msgstr "Keine Audit-Protokolldateien auf dem Datenträger."
 
 #: ui/settings/advanced-pane.slint:142
 #, fuzzy
@@ -1691,6 +1720,8 @@ msgid ""
 "Deleting the file being recorded rotates it — recording continues in a fresh "
 "file."
 msgstr ""
+"Das Löschen der gerade aufgezeichneten Datei rotiert sie — die Aufzeichnung "
+"wird in einer neuen Datei fortgesetzt."
 
 #: ui/settings/advanced-pane.slint:156
 msgctxt "AdvancedPane"
@@ -1721,22 +1752,22 @@ msgstr "Minze"
 #: ui/settings/appearance-pane.slint:24
 msgctxt "AppearancePane"
 msgid "Ocean"
-msgstr ""
+msgstr "Ozean"
 
 #: ui/settings/appearance-pane.slint:25
 msgctxt "AppearancePane"
 msgid "Berry"
-msgstr ""
+msgstr "Beere"
 
 #: ui/settings/appearance-pane.slint:26
 msgctxt "AppearancePane"
 msgid "Coral"
-msgstr ""
+msgstr "Koralle"
 
 #: ui/settings/appearance-pane.slint:27
 msgctxt "AppearancePane"
 msgid "Lavender"
-msgstr ""
+msgstr "Lavendel"
 
 #: ui/settings/appearance-pane.slint:31
 msgctxt "AppearancePane"
@@ -1756,7 +1787,7 @@ msgstr "Thema"
 #: ui/settings/appearance-pane.slint:41
 msgctxt "AppearancePane"
 msgid "Pick the whole app's look."
-msgstr ""
+msgstr "Wähle das Aussehen der gesamten App."
 
 #: ui/settings/appearance-pane.slint:48
 msgctxt "AppearancePane"
@@ -1766,17 +1797,17 @@ msgstr "Akzentfarbe"
 #: ui/settings/appearance-pane.slint:60
 msgctxt "AppearancePane"
 msgid "MESSAGES"
-msgstr ""
+msgstr "NACHRICHTEN"
 
 #: ui/settings/appearance-pane.slint:63
 msgctxt "AppearancePane"
 msgid "Own messages on the right"
-msgstr ""
+msgstr "Eigene Nachrichten rechts"
 
 #: ui/settings/appearance-pane.slint:64
 msgctxt "AppearancePane"
 msgid "Place your sent messages on the right side."
-msgstr ""
+msgstr "Platziere deine gesendeten Nachrichten auf der rechten Seite."
 
 #: ui/settings/debug-pane.slint:14
 msgctxt "DebugPane"
@@ -1856,12 +1887,12 @@ msgstr "Zeitformat"
 #: ui/settings/general-pane.slint:61
 msgctxt "GeneralPane"
 msgid "24-hour"
-msgstr ""
+msgstr "24-Stunden"
 
 #: ui/settings/general-pane.slint:67
 msgctxt "GeneralPane"
 msgid "12-hour"
-msgstr ""
+msgstr "12-Stunden"
 
 #: ui/settings/general-pane.slint:74
 msgctxt "GeneralPane"
@@ -1937,7 +1968,7 @@ msgstr "Starte darkmatter neu, um Relay-Änderungen anzuwenden."
 #: ui/settings/network-pane.slint:254
 msgctxt "NetworkPane"
 msgid "Republish relay list"
-msgstr ""
+msgstr "Relay-Liste erneut veröffentlichen"
 
 #: ui/settings/network-pane.slint:260
 msgctxt "NetworkPane"
@@ -1945,6 +1976,8 @@ msgid ""
 "Re-broadcasts your relay lists to every relay above. Use this if peers can't "
 "find you."
 msgstr ""
+"Sendet deine Relay-Listen erneut an jedes Relay oben. Verwende dies, wenn "
+"Kontakte dich nicht finden können."
 
 #: ui/settings/notifications-pane.slint:22
 #, fuzzy
@@ -1955,12 +1988,12 @@ msgstr "Benachrichtigungen"
 #: ui/settings/notifications-pane.slint:23
 msgctxt "NotificationsPane"
 msgid "DESKTOP ALERTS"
-msgstr ""
+msgstr "DESKTOP-BENACHRICHTIGUNGEN"
 
 #: ui/settings/notifications-pane.slint:28
 msgctxt "NotificationsPane"
 msgid "INCOMING MESSAGES"
-msgstr ""
+msgstr "EINGEHENDE NACHRICHTEN"
 
 #: ui/settings/notifications-pane.slint:31
 #, fuzzy
@@ -1971,22 +2004,22 @@ msgstr "Benachrichtigungen"
 #: ui/settings/notifications-pane.slint:32
 msgctxt "NotificationsPane"
 msgid "Alert me about messages in chats I'm not viewing."
-msgstr ""
+msgstr "Benachrichtige mich über Nachrichten in Chats, die ich nicht ansehe."
 
 #: ui/settings/notifications-pane.slint:39
 msgctxt "NotificationsPane"
 msgid "Play a sound"
-msgstr ""
+msgstr "Ton abspielen"
 
 #: ui/settings/notifications-pane.slint:47
 msgctxt "NotificationsPane"
 msgid "Show message preview"
-msgstr ""
+msgstr "Nachrichtenvorschau anzeigen"
 
 #: ui/settings/notifications-pane.slint:48
 msgctxt "NotificationsPane"
 msgid "Off shows only \"New message\" without the text."
-msgstr ""
+msgstr "Aus zeigt nur „Neue Nachricht“ ohne den Text."
 
 #: ui/settings/settings-sidebar.slint:33
 msgctxt "SettingsSidebar"
@@ -2042,22 +2075,22 @@ msgstr "Speicher"
 #: ui/settings/storage-pane.slint:29
 msgctxt "StoragePane"
 msgid "ON THIS DEVICE"
-msgstr ""
+msgstr "AUF DIESEM GERÄT"
 
 #: ui/settings/storage-pane.slint:34
 msgctxt "StoragePane"
 msgid "MEDIA CACHE"
-msgstr ""
+msgstr "MEDIEN-CACHE"
 
 #: ui/settings/storage-pane.slint:37
 msgctxt "StoragePane"
 msgid "Cached attachments"
-msgstr ""
+msgstr "Zwischengespeicherte Anhänge"
 
 #: ui/settings/storage-pane.slint:38
 msgctxt "StoragePane"
 msgid "Decrypted images and files, sealed with your vault key."
-msgstr ""
+msgstr "Entschlüsselte Bilder und Dateien, versiegelt mit deinem Tresor-Schlüssel."
 
 #: ui/settings/storage-pane.slint:42
 #, fuzzy
@@ -2068,52 +2101,52 @@ msgstr "Speichere…"
 #: ui/settings/storage-pane.slint:42
 msgctxt "StoragePane"
 msgid "Clear cache"
-msgstr ""
+msgstr "Cache leeren"
 
 #: ui/settings/storage-pane.slint:51
 msgctxt "StoragePane"
 msgid "SECRET VAULT"
-msgstr ""
+msgstr "GEHEIMER TRESOR"
 
 #: ui/settings/storage-pane.slint:54
 msgctxt "StoragePane"
 msgid "Vault location"
-msgstr ""
+msgstr "Tresor-Speicherort"
 
 #: ui/settings/storage-pane.slint:58
 msgctxt "StoragePane"
 msgid "Open folder"
-msgstr ""
+msgstr "Ordner öffnen"
 
 #: ui/settings/storage-pane.slint:63
 msgctxt "StoragePane"
 msgid "Back up everything"
-msgstr ""
+msgstr "Alles sichern"
 
 #: ui/settings/storage-pane.slint:64
 msgctxt "StoragePane"
 msgid "Pack accounts, chats, and settings into one encrypted file."
-msgstr ""
+msgstr "Packe Konten, Chats und Einstellungen in eine verschlüsselte Datei."
 
 #: ui/settings/storage-pane.slint:67
 msgctxt "StoragePane"
 msgid "Create backup…"
-msgstr ""
+msgstr "Backup erstellen…"
 
 #: ui/settings/storage-pane.slint:72
 msgctxt "StoragePane"
 msgid "Import a backup"
-msgstr ""
+msgstr "Backup importieren"
 
 #: ui/settings/storage-pane.slint:73
 msgctxt "StoragePane"
 msgid "Merge the accounts from a backup file into this install."
-msgstr ""
+msgstr "Füge die Konten aus einer Backup-Datei in diese Installation ein."
 
 #: ui/settings/storage-pane.slint:76
 msgctxt "StoragePane"
 msgid "Import…"
-msgstr ""
+msgstr "Importieren…"
 
 #: ui/settings/theme-picker.slint:44
 #, fuzzy
@@ -2135,7 +2168,7 @@ msgstr "Retro-Modus"
 #: ui/settings/theme-picker.slint:44
 msgctxt "ThemePicker"
 msgid "Terminal"
-msgstr ""
+msgstr "Terminal"
 
 #: ui/shells/side-panel.slint:14
 msgctxt "SidePanel"
@@ -2160,7 +2193,7 @@ msgstr "ONLINE"
 #: ui/status-bar.slint:42
 msgctxt "StatusBar"
 msgid "CONNECTING"
-msgstr ""
+msgstr "VERBINDE"
 
 #: ui/status-bar.slint:42
 #, fuzzy

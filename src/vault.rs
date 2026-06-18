@@ -349,6 +349,23 @@ fn derive_key(password: &str, salt: &[u8; SALT_LEN]) -> Result<Zeroizing<[u8; 32
     derive_key_with_params(password, salt, ARGON_M_COST, ARGON_T_COST, ARGON_P_COST)
 }
 
+/// Reject Argon2 cost parameters read from an untrusted envelope before they
+/// reach the deriver. The ceilings are far above what we ever seal with
+/// (`ARGON_*_COST`) yet bound the worst-case allocation/CPU so a crafted or
+/// corrupt file can't turn unlock into a denial of service. `m_cost` is the
+/// dominant one — it's the Argon2 memory in KiB, so the cap is ~1 GiB.
+fn check_kdf_cost(m_cost: u32, t_cost: u32, p_cost: u32) -> Result<(), VaultError> {
+    const MAX_M_COST: u32 = 1 << 20; // 1 GiB of Argon2 memory.
+    const MAX_T_COST: u32 = 64;
+    const MAX_P_COST: u32 = 64;
+    if m_cost > MAX_M_COST || t_cost > MAX_T_COST || p_cost > MAX_P_COST {
+        return Err(VaultError::Corrupt(format!(
+            "kdf cost out of range (m={m_cost} t={t_cost} p={p_cost})"
+        )));
+    }
+    Ok(())
+}
+
 fn derive_key_with_params(
     password: &str,
     salt: &[u8],
@@ -370,13 +387,14 @@ fn random_bytes(buf: &mut [u8]) -> Result<(), VaultError> {
     getrandom::getrandom(buf).map_err(|e| VaultError::Crypto(format!("rng: {e}")))
 }
 
+/// `(salt, recovered plaintext, derived Argon2id key)` — the parts of an opened
+/// envelope.
+type OpenedEnvelope = ([u8; SALT_LEN], Vec<u8>, Zeroizing<[u8; 32]>);
+
 /// Parse and decrypt a `VaultEnvelope` JSON blob, returning the salt, the
 /// recovered plaintext, and the derived Argon2id key. The single decrypt path
 /// behind [`Vault::open_path`] and the generic [`open_with_password`].
-fn open_envelope_keyed(
-    bytes: &[u8],
-    password: &str,
-) -> Result<([u8; SALT_LEN], Vec<u8>, Zeroizing<[u8; 32]>), VaultError> {
+fn open_envelope_keyed(bytes: &[u8], password: &str) -> Result<OpenedEnvelope, VaultError> {
     let env: VaultEnvelope =
         serde_json::from_slice(bytes).map_err(|e| VaultError::Corrupt(e.to_string()))?;
     if env.version != VAULT_VERSION {
@@ -388,19 +406,36 @@ fn open_envelope_keyed(
     if env.kdf.algo != "argon2id" {
         return Err(VaultError::Corrupt(format!("unknown kdf {}", env.kdf.algo)));
     }
-    let salt_vec =
-        hex::decode(&env.kdf.salt_hex).map_err(|e| VaultError::Corrupt(format!("salt hex: {e}")))?;
+    let salt_vec = hex::decode(&env.kdf.salt_hex)
+        .map_err(|e| VaultError::Corrupt(format!("salt hex: {e}")))?;
     let salt: [u8; SALT_LEN] = salt_vec
         .as_slice()
         .try_into()
         .map_err(|_| VaultError::Corrupt("bad salt length".into()))?;
-    let nonce =
+    let nonce_vec =
         hex::decode(&env.nonce_hex).map_err(|e| VaultError::Corrupt(format!("nonce hex: {e}")))?;
+    // A malformed envelope must not panic `XNonce::from_slice` (which requires
+    // exactly NONCE_LEN bytes) — turn a bad length into a clean Corrupt error,
+    // mirroring the salt check above.
+    let nonce: [u8; NONCE_LEN] = nonce_vec
+        .as_slice()
+        .try_into()
+        .map_err(|_| VaultError::Corrupt("bad nonce length".into()))?;
     let ciphertext = hex::decode(&env.ciphertext_hex)
         .map_err(|e| VaultError::Corrupt(format!("ciphertext hex: {e}")))?;
 
-    let key =
-        derive_key_with_params(password, &salt, env.kdf.m_cost, env.kdf.t_cost, env.kdf.p_cost)?;
+    // The KDF parameters ride in the (unauthenticated) envelope, so a hostile or
+    // corrupt file could ask for an absurd Argon2 cost to wedge unlock/import in
+    // a multi-gigabyte allocation. Reject anything past a generous ceiling before
+    // deriving — legitimate vaults are sealed at ARGON_*_COST.
+    check_kdf_cost(env.kdf.m_cost, env.kdf.t_cost, env.kdf.p_cost)?;
+    let key = derive_key_with_params(
+        password,
+        &salt,
+        env.kdf.m_cost,
+        env.kdf.t_cost,
+        env.kdf.p_cost,
+    )?;
     let cipher = XChaCha20Poly1305::new(Key::from_slice(&*key));
     let plaintext = cipher
         .decrypt(XNonce::from_slice(&nonce), ciphertext.as_ref())
@@ -516,6 +551,7 @@ mod tests {
         let _guard = crate::DM_HOME_TEST_LOCK
             .lock()
             .unwrap_or_else(|e| e.into_inner());
+        let prev = std::env::var_os("DM_HOME");
         let dir = std::env::temp_dir().join(format!("dm-vault-test-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
@@ -524,8 +560,19 @@ mod tests {
         unsafe {
             std::env::set_var("DM_HOME", &dir);
         }
-        f();
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(f));
+        // Restore DM_HOME (even on panic) so a later test doesn't inherit a path
+        // that points at the temp dir we're about to delete.
+        unsafe {
+            match &prev {
+                Some(v) => std::env::set_var("DM_HOME", v),
+                None => std::env::remove_var("DM_HOME"),
+            }
+        }
         let _ = std::fs::remove_dir_all(&dir);
+        if let Err(e) = r {
+            std::panic::resume_unwind(e);
+        }
     }
 
     #[test]

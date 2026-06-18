@@ -75,7 +75,7 @@ msgstr "チャットをアーカイブ"
 #: ui/archived/archived-page.slint:37
 msgctxt "ArchivedPage"
 msgid "Chats you archive are kept here, out of your main list."
-msgstr ""
+msgstr "アーカイブしたチャットは、メインのリストから外してここに保管されます。"
 
 #: ui/archived/archived-sidebar.slint:10
 msgctxt "ArchivedSidebar"
@@ -107,17 +107,17 @@ msgstr "リレー"
 #: ui/chat-list.slint:29
 msgctxt "ChatListPanel"
 msgid "SYNCING…"
-msgstr ""
+msgstr "同期中…"
 
 #: ui/chat-list.slint:30
 msgctxt "ChatListPanel"
 msgid "SYNCED"
-msgstr ""
+msgstr "同期済み"
 
 #: ui/chat-list.slint:30
 msgctxt "ChatListPanel"
 msgid "AGO"
-msgstr ""
+msgstr "前"
 
 #: ui/contacts/contact-detail.slint:26
 msgctxt "ContactDetail"
@@ -132,7 +132,7 @@ msgstr "追加 {}  ·  {} リレー"
 #: ui/contacts/contact-detail.slint:77
 msgctxt "ContactDetail"
 msgid "aka {}"
-msgstr ""
+msgstr "別名 {}"
 
 #: ui/contacts/contact-detail.slint:83
 msgctxt "ContactDetail"
@@ -142,7 +142,7 @@ msgstr "✓ 確認済み"
 #: ui/contacts/contact-detail.slint:90
 msgctxt "ContactDetail"
 msgid "Nickname"
-msgstr ""
+msgstr "ニックネーム"
 
 #: ui/contacts/contact-detail.slint:97
 msgctxt "ContactDetail"
@@ -243,7 +243,7 @@ msgstr "連絡先を削除"
 #: ui/contacts/contacts-page.slint:37
 msgctxt "ContactsPage"
 msgid "People you start chats with will show up here."
-msgstr ""
+msgstr "チャットを始めた相手がここに表示されます。"
 
 #: ui/contacts/contacts-sidebar.slint:10
 msgctxt "ContactsSidebar"
@@ -272,6 +272,8 @@ msgid ""
 "This declines the invite from {}. It can't be restored unless they invite "
 "you again."
 msgstr ""
+"{} からの招待を辞退します。相手がもう一度招待しない限り、元に戻すことはできま"
+"せん。"
 
 #: ui/dark-matter-linux.slint:984
 #, fuzzy
@@ -292,7 +294,7 @@ msgstr "一致なし"
 #: ui/get-started.slint:173
 msgctxt "GetStartedScreen"
 msgid "Welcome to darkmatter"
-msgstr ""
+msgstr "darkmatter へようこそ"
 
 #: ui/get-started.slint:180
 msgctxt "GetStartedScreen"
@@ -300,6 +302,8 @@ msgid ""
 "Three quick steps and you're ready to message — end-to-end encrypted, no "
 "servers in the middle."
 msgstr ""
+"3つの簡単なステップでメッセージを始められます。エンドツーエンドで暗号化され、"
+"間にサーバーは入りません。"
 
 #: ui/get-started.slint:191
 #, fuzzy
@@ -310,7 +314,7 @@ msgstr "リレーに接続中…"
 #: ui/get-started.slint:192
 msgctxt "GetStartedScreen"
 msgid "Relays carry your encrypted messages. Add at least one to get online."
-msgstr ""
+msgstr "リレーは暗号化されたメッセージを中継します。オンラインにするには少なくとも1つ追加してください。"
 
 #: ui/get-started.slint:208
 #, fuzzy
@@ -339,7 +343,7 @@ msgstr "追加"
 #: ui/get-started.slint:272
 msgctxt "GetStartedScreen"
 msgid "SUGGESTED"
-msgstr ""
+msgstr "おすすめ"
 
 #: ui/get-started.slint:326
 #, fuzzy
@@ -350,7 +354,7 @@ msgstr "キーパッケージがありません"
 #: ui/get-started.slint:327
 msgctxt "GetStartedScreen"
 msgid "This is what lets other people start an encrypted chat with you."
-msgstr ""
+msgstr "これにより、他の人があなたと暗号化されたチャットを始められます。"
 
 #: ui/get-started.slint:339
 #, fuzzy
@@ -373,7 +377,7 @@ msgstr "キーパッケージ"
 #: ui/get-started.slint:363
 msgctxt "GetStartedScreen"
 msgid "Add a relay first."
-msgstr ""
+msgstr "先にリレーを追加してください。"
 
 #: ui/get-started.slint:382
 #, fuzzy
@@ -384,12 +388,12 @@ msgstr "新しいチャットを開始"
 #: ui/get-started.slint:383
 msgctxt "GetStartedScreen"
 msgid "Invite someone by their npub and say hello."
-msgstr ""
+msgstr "npub で誰かを招待して、挨拶してみましょう。"
 
 #: ui/get-started.slint:389
 msgctxt "GetStartedScreen"
 msgid "New chat"
-msgstr ""
+msgstr "新しいチャット"
 
 #: ui/keys/device-row.slint:8
 msgctxt "DeviceRow"
@@ -500,7 +504,6 @@ msgctxt "KeysPage"
 msgid "{n} relay"
 msgid_plural "{n} relays"
 msgstr[0] "{n} リレー"
-msgstr[1] "{n} リレー"
 
 #: ui/keys/keys-page.slint:161
 msgctxt "KeysPage"
@@ -556,7 +559,7 @@ msgstr "あなたのプロフィール"
 #: ui/left-rail/left-rail.slint:233
 msgctxt "LeftRail"
 msgid "Chats"
-msgstr ""
+msgstr "チャット"
 
 #: ui/left-rail/left-rail.slint:246
 #, fuzzy
@@ -573,22 +576,22 @@ msgstr "アーカイブ"
 #: ui/left-rail/left-rail.slint:268
 msgctxt "LeftRail"
 msgid "Keys"
-msgstr ""
+msgstr "鍵"
 
 #: ui/left-rail/left-rail.slint:281
 msgctxt "LeftRail"
 msgid "New chat"
-msgstr ""
+msgstr "新しいチャット"
 
 #: ui/left-rail/left-rail.slint:303
 msgctxt "LeftRail"
 msgid "Settings"
-msgstr ""
+msgstr "設定"
 
 #: ui/left-rail/left-rail.slint:316
 msgctxt "LeftRail"
 msgid "Accounts"
-msgstr ""
+msgstr "アカウント"
 
 #: ui/login/login-screen.slint:183
 msgctxt "LoginScreen"
@@ -598,12 +601,12 @@ msgstr "Nostr ID でサインイン"
 #: ui/login/login-screen.slint:185
 msgctxt "LoginScreen"
 msgid "Import a key & set a password"
-msgstr ""
+msgstr "鍵をインポートしてパスワードを設定"
 
 #: ui/login/login-screen.slint:187
 msgctxt "LoginScreen"
 msgid "Enter your password to unlock"
-msgstr ""
+msgstr "パスワードを入力してロックを解除"
 
 #: ui/login/login-screen.slint:188
 msgctxt "LoginScreen"
@@ -623,7 +626,7 @@ msgstr "新しい鍵を生成"
 #: ui/login/login-screen.slint:238
 msgctxt "LoginScreen"
 msgid "Import a backup"
-msgstr ""
+msgstr "バックアップをインポート"
 
 #: ui/login/login-screen.slint:255
 msgctxt "LoginScreen"
@@ -633,22 +636,22 @@ msgstr "鍵がこのデバイス外に出ることはありません。"
 #: ui/login/login-screen.slint:274 ui/login/login-screen.slint:492
 msgctxt "LoginScreen"
 msgid "VAULT PASSWORD"
-msgstr ""
+msgstr "保管庫のパスワード"
 
 #: ui/login/login-screen.slint:275 ui/login/login-screen.slint:493
 msgctxt "LoginScreen"
 msgid "Choose a password"
-msgstr ""
+msgstr "パスワードを設定"
 
 #: ui/login/login-screen.slint:281 ui/login/login-screen.slint:499
 msgctxt "LoginScreen"
 msgid "CONFIRM PASSWORD"
-msgstr ""
+msgstr "パスワードの確認"
 
 #: ui/login/login-screen.slint:282 ui/login/login-screen.slint:500
 msgctxt "LoginScreen"
 msgid "Re-enter password"
-msgstr ""
+msgstr "パスワードを再入力"
 
 #: ui/login/login-screen.slint:300 ui/login/login-screen.slint:518
 msgctxt "LoginScreen"
@@ -668,7 +671,7 @@ msgstr "続行"
 #: ui/login/login-screen.slint:355
 msgctxt "LoginScreen"
 msgid "YOUR DISPLAY NAME"
-msgstr ""
+msgstr "表示名"
 
 #: ui/login/login-screen.slint:392
 msgctxt "LoginScreen"
@@ -676,14 +679,13 @@ msgid "Back up your nsec before saving"
 msgstr "保存前に nsec をバックアップ"
 
 #: ui/login/login-screen.slint:398
-#, fuzzy
 msgctxt "LoginScreen"
 msgid ""
 "Sealed with your password on this device. Keep your own copy of the nsec too "
 "— lose both and this identity is gone."
 msgstr ""
-"保存すると OS のキーリングに格納されます。自分でもコピーを保管してください。"
-"失うとこの ID は復元できません。"
+"このデバイスでパスワードにより封印されます。nsec のコピーも自分で保管してくだ"
+"さい。両方を失うとこの ID は失われます。"
 
 #: ui/login/login-screen.slint:467
 msgctxt "LoginScreen"
@@ -703,28 +705,27 @@ msgstr "保存中…"
 #: ui/login/login-screen.slint:525
 msgctxt "LoginScreen"
 msgid "Create vault"
-msgstr ""
+msgstr "保管庫を作成"
 
 #: ui/login/login-screen.slint:544
 msgctxt "LoginScreen"
 msgid "Enter your password"
-msgstr ""
+msgstr "パスワードを入力"
 
 #: ui/login/login-screen.slint:563
 msgctxt "LoginScreen"
 msgid "Use another key"
-msgstr ""
+msgstr "別の鍵を使う"
 
 #: ui/login/login-screen.slint:570
 msgctxt "LoginScreen"
 msgid "Unlocking…"
-msgstr ""
+msgstr "ロック解除中…"
 
 #: ui/login/login-screen.slint:570
-#, fuzzy
 msgctxt "LoginScreen"
 msgid "Unlock"
-msgstr "ブロック"
+msgstr "ロック解除"
 
 #: ui/main-pane/add-member-card.slint:15
 #, fuzzy
@@ -741,14 +742,13 @@ msgstr "保存中…"
 #: ui/main-pane/add-member-card.slint:53
 msgctxt "AddMemberCard"
 msgid "Invite"
-msgstr ""
+msgstr "招待"
 
 #: ui/main-pane/chat-header.slint:91
 msgctxt "ChatHeader"
 msgid "1 member"
 msgid_plural "{n} members"
-msgstr[0] "1 メンバー"
-msgstr[1] "{n} メンバー"
+msgstr[0] "{n} メンバー"
 
 #: ui/main-pane/chat-header.slint:147
 msgctxt "ChatHeader"
@@ -783,7 +783,7 @@ msgstr "セッションを開始。"
 #: ui/main-pane/composer.slint:89
 msgctxt "Composer"
 msgid "Editing message  ·  Enter to save"
-msgstr ""
+msgstr "メッセージを編集中  ·  Enter で保存"
 
 #: ui/main-pane/composer.slint:142
 msgctxt "Composer"
@@ -804,7 +804,7 @@ msgstr "最後のメッセージ"
 #: ui/main-pane/composer.slint:423
 msgctxt "Composer"
 msgid "{}s"
-msgstr ""
+msgstr "{}秒"
 
 #: ui/main-pane/composer.slint:433
 msgctxt "Composer"
@@ -840,12 +840,12 @@ msgstr "あなた"
 #: ui/main-pane/group-member-row.slint:60
 msgctxt "GroupMemberRow"
 msgid "ADMIN"
-msgstr ""
+msgstr "管理者"
 
 #: ui/main-pane/group-member-row.slint:87
 msgctxt "GroupMemberRow"
 msgid "Make admin"
-msgstr ""
+msgstr "管理者にする"
 
 #: ui/main-pane/group-member-row.slint:107
 #, fuzzy
@@ -856,7 +856,7 @@ msgstr "連絡先を削除"
 #: ui/main-pane/group-member-row.slint:127
 msgctxt "GroupMemberRow"
 msgid "Step down"
-msgstr ""
+msgstr "管理者を辞める"
 
 #: ui/main-pane/group-members-header.slint:18
 #, fuzzy
@@ -869,8 +869,7 @@ msgstr "メンバー"
 msgctxt "GroupMembersHeader"
 msgid "1 in this group"
 msgid_plural "{n} in this group"
-msgstr[0] "このグループに 1 人"
-msgstr[1] "このグループに {n} 人"
+msgstr[0] "このグループに {n} 人"
 
 #: ui/main-pane/group-members-panel.slint:73
 msgctxt "GroupMembersPanel"
@@ -932,7 +931,7 @@ msgstr "セッション確立"
 #: ui/main-pane/mention-picker.slint:65
 msgctxt "MentionPicker"
 msgid "(you)"
-msgstr ""
+msgstr "(あなた)"
 
 #: ui/messages.slint:148
 #, fuzzy
@@ -943,7 +942,7 @@ msgstr "最後のメッセージ"
 #: ui/modals/account-switcher-modal.slint:14
 msgctxt "AccountSwitcherModal"
 msgid "Accounts"
-msgstr ""
+msgstr "アカウント"
 
 #: ui/modals/account-switcher-modal.slint:15
 msgctxt "AccountSwitcherModal"
@@ -951,11 +950,13 @@ msgid ""
 "All accounts stay connected. Switching only changes which one you're looking "
 "at."
 msgstr ""
+"すべてのアカウントは接続されたままです。切り替えても、表示するアカウントが変わ"
+"るだけです。"
 
 #: ui/modals/account-switcher-modal.slint:16
 msgctxt "AccountSwitcherModal"
 msgid "Close"
-msgstr ""
+msgstr "閉じる"
 
 #: ui/modals/account-switcher-modal.slint:17
 #, fuzzy
@@ -981,6 +982,8 @@ msgid ""
 "Paste another secret key, or generate a fresh one. It's sealed into the same "
 "vault and stays signed in alongside your other accounts."
 msgstr ""
+"別の秘密鍵を貼り付けるか、新しく生成してください。同じ保管庫に封入され、他のア"
+"カウントと並んでサインインしたままになります。"
 
 #: ui/modals/add-account-modal.slint:17
 #, fuzzy
@@ -997,7 +1000,7 @@ msgstr "保存中…"
 #: ui/modals/add-account-modal.slint:23
 msgctxt "AddAccountModal"
 msgid "SECRET KEY (NSEC)"
-msgstr ""
+msgstr "秘密鍵 (nsec)"
 
 #: ui/modals/add-account-modal.slint:34
 #, fuzzy
@@ -1017,6 +1020,8 @@ msgid ""
 "This key was just generated and exists nowhere else yet. Copy it somewhere "
 "safe before adding it — there is no recovery."
 msgstr ""
+"この鍵は今生成されたばかりで、まだ他のどこにも存在しません。追加する前に安全な"
+"場所にコピーしてください。復元はできません。"
 
 #: ui/modals/add-contact-modal.slint:11 ui/modals/add-contact-modal.slint:14
 #, fuzzy
@@ -1030,6 +1035,8 @@ msgid ""
 "Paste their npub or hex public key. They'll appear in your contacts on every "
 "device."
 msgstr ""
+"相手の npub または16進数の公開鍵を貼り付けてください。すべてのデバイスの連絡先"
+"に表示されます。"
 
 #: ui/modals/add-contact-modal.slint:13
 #, fuzzy
@@ -1046,12 +1053,12 @@ msgstr "保存中…"
 #: ui/modals/add-contact-modal.slint:20
 msgctxt "AddContactModal"
 msgid "PUBLIC KEY"
-msgstr ""
+msgstr "公開鍵"
 
 #: ui/modals/backup-create-modal.slint:13
 msgctxt "BackupCreateModal"
 msgid "Create backup"
-msgstr ""
+msgstr "バックアップを作成"
 
 #: ui/modals/backup-create-modal.slint:14
 msgctxt "BackupCreateModal"
@@ -1059,6 +1066,8 @@ msgid ""
 "Pack everything — accounts, chats, settings — into one encrypted file, "
 "sealed with your vault password. The media cache is left out."
 msgstr ""
+"アカウント、チャット、設定のすべてを、保管庫のパスワードで封入した1つの暗号化"
+"ファイルにまとめます。メディアキャッシュは含まれません。"
 
 #: ui/modals/backup-create-modal.slint:15
 #, fuzzy
@@ -1069,7 +1078,7 @@ msgstr "キャンセル"
 #: ui/modals/backup-create-modal.slint:16
 msgctxt "BackupCreateModal"
 msgid "Choose location…"
-msgstr ""
+msgstr "保存先を選択…"
 
 #: ui/modals/backup-create-modal.slint:17
 #, fuzzy
@@ -1080,12 +1089,12 @@ msgstr "保存中…"
 #: ui/modals/backup-create-modal.slint:21
 msgctxt "BackupCreateModal"
 msgid "VAULT PASSWORD"
-msgstr ""
+msgstr "保管庫のパスワード"
 
 #: ui/modals/backup-create-modal.slint:22
 msgctxt "BackupCreateModal"
 msgid "Confirm your vault password"
-msgstr ""
+msgstr "保管庫のパスワードを確認"
 
 #: ui/modals/command-palette.slint:80
 msgctxt "CommandPalette"
@@ -1101,17 +1110,17 @@ msgstr "一致なし"
 #: ui/modals/command-palette.slint:262
 msgctxt "command palette footer"
 msgid "Navigate"
-msgstr ""
+msgstr "移動"
 
 #: ui/modals/command-palette.slint:273
 msgctxt "command palette footer"
 msgid "Select"
-msgstr ""
+msgstr "選択"
 
 #: ui/modals/command-palette.slint:284
 msgctxt "command palette footer"
 msgid "Close"
-msgstr ""
+msgstr "閉じる"
 
 #: ui/modals/confirm-modal.slint:12
 #, fuzzy
@@ -1122,7 +1131,7 @@ msgstr "キャンセル"
 #: ui/modals/edit-history-modal.slint:12
 msgctxt "EditHistoryModal"
 msgid "Edit history"
-msgstr ""
+msgstr "編集履歴"
 
 #: ui/modals/image-viewer-modal.slint:76
 #, fuzzy
@@ -1133,7 +1142,7 @@ msgstr "保存中…"
 #: ui/modals/import-backup-modal.slint:22
 msgctxt "ImportBackupModal"
 msgid "Import backup"
-msgstr ""
+msgstr "バックアップをインポート"
 
 #: ui/modals/import-backup-modal.slint:24
 msgctxt "ImportBackupModal"
@@ -1141,6 +1150,8 @@ msgid ""
 "Restore everything from an encrypted backup. Use the password the backup was "
 "created with."
 msgstr ""
+"暗号化されたバックアップからすべてを復元します。バックアップ作成時のパスワード"
+"を使用してください。"
 
 #: ui/modals/import-backup-modal.slint:25
 msgctxt "ImportBackupModal"
@@ -1148,6 +1159,8 @@ msgid ""
 "Merge the accounts from an encrypted backup into this install. Use the "
 "password the backup was created with."
 msgstr ""
+"暗号化されたバックアップのアカウントをこのインストールに統合します。バックアッ"
+"プ作成時のパスワードを使用してください。"
 
 #: ui/modals/import-backup-modal.slint:26
 #, fuzzy
@@ -1158,12 +1171,12 @@ msgstr "キャンセル"
 #: ui/modals/import-backup-modal.slint:27
 msgctxt "ImportBackupModal"
 msgid "Restore"
-msgstr ""
+msgstr "復元"
 
 #: ui/modals/import-backup-modal.slint:27
 msgctxt "ImportBackupModal"
 msgid "Import"
-msgstr ""
+msgstr "インポート"
 
 #: ui/modals/import-backup-modal.slint:28
 #, fuzzy
@@ -1180,27 +1193,27 @@ msgstr "保存中…"
 #: ui/modals/import-backup-modal.slint:35
 msgctxt "ImportBackupModal"
 msgid "BACKUP FILE"
-msgstr ""
+msgstr "バックアップファイル"
 
 #: ui/modals/import-backup-modal.slint:45
 msgctxt "ImportBackupModal"
 msgid "Choose file…"
-msgstr ""
+msgstr "ファイルを選択…"
 
 #: ui/modals/import-backup-modal.slint:54
 msgctxt "ImportBackupModal"
 msgid "No file selected"
-msgstr ""
+msgstr "ファイルが選択されていません"
 
 #: ui/modals/import-backup-modal.slint:66
 msgctxt "ImportBackupModal"
 msgid "BACKUP PASSWORD"
-msgstr ""
+msgstr "バックアップのパスワード"
 
 #: ui/modals/import-backup-modal.slint:67
 msgctxt "ImportBackupModal"
 msgid "Password the backup was sealed with"
-msgstr ""
+msgstr "バックアップを封入したパスワード"
 
 #: ui/modals/language-picker-modal.slint:53
 msgctxt "LanguagePickerModal"
@@ -1210,7 +1223,7 @@ msgstr "インターフェース言語"
 #: ui/modals/nickname-modal.slint:13
 msgctxt "NicknameModal"
 msgid "Nickname"
-msgstr ""
+msgstr "ニックネーム"
 
 #: ui/modals/nickname-modal.slint:14
 msgctxt "NicknameModal"
@@ -1218,6 +1231,8 @@ msgid ""
 "A private name for {}. Only you see it — leave empty to use their published "
 "name."
 msgstr ""
+"{} 用の非公開の名前です。あなただけに表示されます。空欄にすると相手の公開名が"
+"使われます。"
 
 #: ui/modals/nickname-modal.slint:15
 #, fuzzy
@@ -1234,7 +1249,7 @@ msgstr "保存"
 #: ui/modals/nickname-modal.slint:20
 msgctxt "NicknameModal"
 msgid "NICKNAME"
-msgstr ""
+msgstr "ニックネーム"
 
 #. or failed kind-0 fetch hides the action entirely.
 #: ui/modals/profile-modal.slint:38
@@ -1252,12 +1267,12 @@ msgstr "保存中…"
 #: ui/modals/profile-modal.slint:193
 msgctxt "ProfileModal"
 msgid "Copied ✓"
-msgstr ""
+msgstr "コピーしました ✓"
 
 #: ui/modals/profile-modal.slint:226
 msgctxt "ProfileModal"
 msgid "✓ In your contacts"
-msgstr ""
+msgstr "✓ 連絡先に登録済み"
 
 #: ui/modals/profile-modal.slint:287
 #, fuzzy
@@ -1268,12 +1283,12 @@ msgstr "リレーに接続中…"
 #: ui/modals/profile-modal.slint:294
 msgctxt "ProfileModal"
 msgid "No profile found on relays."
-msgstr ""
+msgstr "リレー上にプロフィールが見つかりません。"
 
 #: ui/modals/start-new-chat-modal.slint:14
 msgctxt "StartNewChatModal"
 msgid "New chat or group"
-msgstr ""
+msgstr "新しいチャットまたはグループ"
 
 #: ui/modals/start-new-chat-modal.slint:15
 msgctxt "StartNewChatModal"
@@ -1281,6 +1296,8 @@ msgid ""
 "Paste one npub for a direct chat, or several (one per line) plus a group "
 "name."
 msgstr ""
+"ダイレクトチャットには npub を1つ、グループには複数（1行に1つ）とグループ名を"
+"貼り付けてください。"
 
 #: ui/modals/start-new-chat-modal.slint:16
 msgctxt "StartNewChatModal"
@@ -1290,7 +1307,7 @@ msgstr "キャンセル"
 #: ui/modals/start-new-chat-modal.slint:17
 msgctxt "StartNewChatModal"
 msgid "Create"
-msgstr ""
+msgstr "作成"
 
 #: ui/modals/start-new-chat-modal.slint:18
 #, fuzzy
@@ -1301,12 +1318,12 @@ msgstr "保存中…"
 #: ui/modals/start-new-chat-modal.slint:24
 msgctxt "StartNewChatModal"
 msgid "GROUP NAME (OPTIONAL)"
-msgstr ""
+msgstr "グループ名（任意）"
 
 #: ui/modals/start-new-chat-modal.slint:25
 msgctxt "StartNewChatModal"
 msgid "e.g. friday-crew"
-msgstr ""
+msgstr "例: friday-crew"
 
 #: ui/modals/start-new-chat-modal.slint:34
 #, fuzzy
@@ -1323,12 +1340,12 @@ msgstr "保存中…"
 #: ui/primitives/context-menu.slint:154
 msgctxt "MessageContextMenu"
 msgid "Add reaction"
-msgstr ""
+msgstr "リアクションを追加"
 
 #: ui/primitives/context-menu.slint:161
 msgctxt "MessageContextMenu"
 msgid "Reply"
-msgstr ""
+msgstr "返信"
 
 #: ui/primitives/context-menu.slint:168
 #, fuzzy
@@ -1354,7 +1371,7 @@ msgstr "失敗 · タップして再試行"
 #: ui/primitives/message-bubble.slint:638
 msgctxt "MessageBubble"
 msgid "decrypting…"
-msgstr ""
+msgstr "復号中…"
 
 #: ui/primitives/message-bubble.slint:640
 #, fuzzy
@@ -1365,12 +1382,12 @@ msgstr "失敗 · タップして再試行"
 #: ui/primitives/message-bubble.slint:641
 msgctxt "MessageBubble"
 msgid "tap to load"
-msgstr ""
+msgstr "タップして読み込む"
 
 #: ui/primitives/message-bubble.slint:800
 msgctxt "MessageBubble"
 msgid "edited"
-msgstr ""
+msgstr "編集済み"
 
 #: ui/primitives/outgoing-row.slint:172 ui/primitives/outgoing-row.slint:183
 msgctxt "OutgoingRow"
@@ -1392,7 +1409,7 @@ msgstr "保存中…"
 #: ui/profile/profile-page.slint:102
 msgctxt "PictureField"
 msgid "Upload"
-msgstr ""
+msgstr "アップロード"
 
 #: ui/profile/profile-page.slint:179
 #, fuzzy
@@ -1443,7 +1460,7 @@ msgstr "(表示名なし)"
 #: ui/profile/profile-page.slint:394
 msgctxt "ProfilePage"
 msgid "no handle yet"
-msgstr ""
+msgstr "ハンドルはまだありません"
 
 #: ui/profile/profile-page.slint:431
 msgctxt "ProfilePage"
@@ -1523,12 +1540,12 @@ msgstr "画像"
 #: ui/profile/profile-page.slint:535
 msgctxt "ProfilePage"
 msgid "Not set"
-msgstr ""
+msgstr "未設定"
 
 #: ui/profile/profile-page.slint:535
 msgctxt "ProfilePage"
 msgid "Set"
-msgstr ""
+msgstr "設定する"
 
 #: ui/profile/wallet-address-row.slint:10
 msgctxt "WalletAddressRow"
@@ -1554,7 +1571,7 @@ msgstr "自己紹介"
 #: ui/settings/about-pane.slint:95
 msgctxt "AboutPane"
 msgid "Encrypted group chat on Nostr"
-msgstr ""
+msgstr "Nostr 上の暗号化グループチャット"
 
 #: ui/settings/about-pane.slint:172
 #, fuzzy
@@ -1565,7 +1582,7 @@ msgstr "エンドツーエンド暗号化:"
 #: ui/settings/about-pane.slint:183
 msgctxt "AboutPane"
 msgid "WHAT IT IS"
-msgstr ""
+msgstr "概要"
 
 #: ui/settings/about-pane.slint:194
 msgctxt "AboutPane"
@@ -1574,16 +1591,19 @@ msgid ""
 "encrypted with MLS before they leave your machine, routed over Nostr relays, "
 "and decrypted only for the people in the room."
 msgstr ""
+"Dark Matter は、プライベートなグループチャットのためのネイティブデスクトップク"
+"ライアントです。メッセージはあなたのマシンを離れる前に MLS で暗号化され、"
+"Nostr リレーを経由して送られ、ルーム内の人にだけ復号されます。"
 
 #: ui/settings/about-pane.slint:201
 msgctxt "AboutPane"
 msgid "Your keys stay on this device — we never see them."
-msgstr ""
+msgstr "あなたの鍵はこのデバイスに留まり、私たちが見ることはありません。"
 
 #: ui/settings/about-pane.slint:212
 msgctxt "AboutPane"
 msgid "UNDER THE HOOD"
-msgstr ""
+msgstr "仕組み"
 
 #: ui/settings/about-pane.slint:216
 #, fuzzy
@@ -1594,27 +1614,27 @@ msgstr "エンドツーエンド暗号化:"
 #: ui/settings/about-pane.slint:217
 msgctxt "AboutPane"
 msgid "MLS group keys; no server in the trust path."
-msgstr ""
+msgstr "MLS グループ鍵。信頼経路にサーバーは介在しません。"
 
 #: ui/settings/about-pane.slint:221
 msgctxt "AboutPane"
 msgid "Decentralized network"
-msgstr ""
+msgstr "分散型ネットワーク"
 
 #: ui/settings/about-pane.slint:222
 msgctxt "AboutPane"
 msgid "Connect to Nostr relays you choose."
-msgstr ""
+msgstr "選んだ Nostr リレーに接続します。"
 
 #: ui/settings/about-pane.slint:226
 msgctxt "AboutPane"
 msgid "Local key custody"
-msgstr ""
+msgstr "鍵のローカル管理"
 
 #: ui/settings/about-pane.slint:227
 msgctxt "AboutPane"
 msgid "Private material lives in your OS keychain or encrypted store."
-msgstr ""
+msgstr "秘密情報は OS のキーチェーンまたは暗号化ストアに保管されます。"
 
 #: ui/settings/about-pane.slint:235
 #, fuzzy
@@ -1625,12 +1645,12 @@ msgstr "編集"
 #: ui/settings/about-pane.slint:239
 msgctxt "AboutPane"
 msgid "Built with"
-msgstr ""
+msgstr "使用技術"
 
 #: ui/settings/about-pane.slint:247
 msgctxt "AboutPane"
 msgid "Made with marmots, math, and a little purple liquid."
-msgstr ""
+msgstr "マーモットと数学、そして少しの紫色の液体でできています。"
 
 #: ui/settings/advanced-pane.slint:80
 msgctxt "AdvancedPane"
@@ -1646,37 +1666,37 @@ msgstr "開発者フラグ"
 #: ui/settings/advanced-pane.slint:86
 msgctxt "AdvancedPane"
 msgid "SECURITY & PRIVACY"
-msgstr ""
+msgstr "セキュリティとプライバシー"
 
 #: ui/settings/advanced-pane.slint:89
 msgctxt "AdvancedPane"
 msgid "Share anonymous app telemetry"
-msgstr ""
+msgstr "匿名のアプリ利用統計を共有"
 
 #: ui/settings/advanced-pane.slint:90
 msgctxt "AdvancedPane"
 msgid "Share relay connection telemetry."
-msgstr ""
+msgstr "リレー接続の利用統計を共有します。"
 
 #: ui/settings/advanced-pane.slint:97
 msgctxt "AdvancedPane"
 msgid "Audit logs"
-msgstr ""
+msgstr "監査ログ"
 
 #: ui/settings/advanced-pane.slint:98
 msgctxt "AdvancedPane"
 msgid "Create and send group audit log files. Applies immediately."
-msgstr ""
+msgstr "グループの監査ログファイルを作成して送信します。すぐに適用されます。"
 
 #: ui/settings/advanced-pane.slint:117
 msgctxt "AdvancedPane"
 msgid "AUDIT LOG FILES"
-msgstr ""
+msgstr "監査ログファイル"
 
 #: ui/settings/advanced-pane.slint:125
 msgctxt "AdvancedPane"
 msgid "No audit log files on disk."
-msgstr ""
+msgstr "ディスク上に監査ログファイルはありません。"
 
 #: ui/settings/advanced-pane.slint:142
 #, fuzzy
@@ -1690,6 +1710,8 @@ msgid ""
 "Deleting the file being recorded rotates it — recording continues in a fresh "
 "file."
 msgstr ""
+"記録中のファイルを削除するとローテーションされ、新しいファイルに記録が続きま"
+"す。"
 
 #: ui/settings/advanced-pane.slint:156
 msgctxt "AdvancedPane"
@@ -1719,22 +1741,22 @@ msgstr "ミント"
 #: ui/settings/appearance-pane.slint:24
 msgctxt "AppearancePane"
 msgid "Ocean"
-msgstr ""
+msgstr "オーシャン"
 
 #: ui/settings/appearance-pane.slint:25
 msgctxt "AppearancePane"
 msgid "Berry"
-msgstr ""
+msgstr "ベリー"
 
 #: ui/settings/appearance-pane.slint:26
 msgctxt "AppearancePane"
 msgid "Coral"
-msgstr ""
+msgstr "コーラル"
 
 #: ui/settings/appearance-pane.slint:27
 msgctxt "AppearancePane"
 msgid "Lavender"
-msgstr ""
+msgstr "ラベンダー"
 
 #: ui/settings/appearance-pane.slint:31
 msgctxt "AppearancePane"
@@ -1754,7 +1776,7 @@ msgstr "テーマ"
 #: ui/settings/appearance-pane.slint:41
 msgctxt "AppearancePane"
 msgid "Pick the whole app's look."
-msgstr ""
+msgstr "アプリ全体の見た目を選択します。"
 
 #: ui/settings/appearance-pane.slint:48
 msgctxt "AppearancePane"
@@ -1764,17 +1786,17 @@ msgstr "アクセントカラー"
 #: ui/settings/appearance-pane.slint:60
 msgctxt "AppearancePane"
 msgid "MESSAGES"
-msgstr ""
+msgstr "メッセージ"
 
 #: ui/settings/appearance-pane.slint:63
 msgctxt "AppearancePane"
 msgid "Own messages on the right"
-msgstr ""
+msgstr "自分のメッセージを右側に表示"
 
 #: ui/settings/appearance-pane.slint:64
 msgctxt "AppearancePane"
 msgid "Place your sent messages on the right side."
-msgstr ""
+msgstr "送信したメッセージを右側に配置します。"
 
 #: ui/settings/debug-pane.slint:14
 msgctxt "DebugPane"
@@ -1854,12 +1876,12 @@ msgstr "時刻形式"
 #: ui/settings/general-pane.slint:61
 msgctxt "GeneralPane"
 msgid "24-hour"
-msgstr ""
+msgstr "24時間表示"
 
 #: ui/settings/general-pane.slint:67
 msgctxt "GeneralPane"
 msgid "12-hour"
-msgstr ""
+msgstr "12時間表示"
 
 #: ui/settings/general-pane.slint:74
 msgctxt "GeneralPane"
@@ -1934,7 +1956,7 @@ msgstr "リレー変更を適用するには darkmatter を再起動してくだ
 #: ui/settings/network-pane.slint:254
 msgctxt "NetworkPane"
 msgid "Republish relay list"
-msgstr ""
+msgstr "リレーリストを再公開"
 
 #: ui/settings/network-pane.slint:260
 msgctxt "NetworkPane"
@@ -1942,6 +1964,8 @@ msgid ""
 "Re-broadcasts your relay lists to every relay above. Use this if peers can't "
 "find you."
 msgstr ""
+"あなたのリレーリストを上記のすべてのリレーに再配信します。相手があなたを見つけ"
+"られない場合に使用してください。"
 
 #: ui/settings/notifications-pane.slint:22
 #, fuzzy
@@ -1952,12 +1976,12 @@ msgstr "通知"
 #: ui/settings/notifications-pane.slint:23
 msgctxt "NotificationsPane"
 msgid "DESKTOP ALERTS"
-msgstr ""
+msgstr "デスクトップ通知"
 
 #: ui/settings/notifications-pane.slint:28
 msgctxt "NotificationsPane"
 msgid "INCOMING MESSAGES"
-msgstr ""
+msgstr "受信メッセージ"
 
 #: ui/settings/notifications-pane.slint:31
 #, fuzzy
@@ -1968,22 +1992,22 @@ msgstr "通知"
 #: ui/settings/notifications-pane.slint:32
 msgctxt "NotificationsPane"
 msgid "Alert me about messages in chats I'm not viewing."
-msgstr ""
+msgstr "表示していないチャットのメッセージを通知します。"
 
 #: ui/settings/notifications-pane.slint:39
 msgctxt "NotificationsPane"
 msgid "Play a sound"
-msgstr ""
+msgstr "音を鳴らす"
 
 #: ui/settings/notifications-pane.slint:47
 msgctxt "NotificationsPane"
 msgid "Show message preview"
-msgstr ""
+msgstr "メッセージのプレビューを表示"
 
 #: ui/settings/notifications-pane.slint:48
 msgctxt "NotificationsPane"
 msgid "Off shows only \"New message\" without the text."
-msgstr ""
+msgstr "オフにすると、本文を表示せず「新着メッセージ」とだけ表示します。"
 
 #: ui/settings/settings-sidebar.slint:33
 msgctxt "SettingsSidebar"
@@ -2039,22 +2063,22 @@ msgstr "ストレージ"
 #: ui/settings/storage-pane.slint:29
 msgctxt "StoragePane"
 msgid "ON THIS DEVICE"
-msgstr ""
+msgstr "このデバイス上"
 
 #: ui/settings/storage-pane.slint:34
 msgctxt "StoragePane"
 msgid "MEDIA CACHE"
-msgstr ""
+msgstr "メディアキャッシュ"
 
 #: ui/settings/storage-pane.slint:37
 msgctxt "StoragePane"
 msgid "Cached attachments"
-msgstr ""
+msgstr "キャッシュされた添付ファイル"
 
 #: ui/settings/storage-pane.slint:38
 msgctxt "StoragePane"
 msgid "Decrypted images and files, sealed with your vault key."
-msgstr ""
+msgstr "復号された画像やファイルを、保管庫の鍵で封入して保存します。"
 
 #: ui/settings/storage-pane.slint:42
 #, fuzzy
@@ -2065,52 +2089,52 @@ msgstr "保存中…"
 #: ui/settings/storage-pane.slint:42
 msgctxt "StoragePane"
 msgid "Clear cache"
-msgstr ""
+msgstr "キャッシュを消去"
 
 #: ui/settings/storage-pane.slint:51
 msgctxt "StoragePane"
 msgid "SECRET VAULT"
-msgstr ""
+msgstr "秘密保管庫"
 
 #: ui/settings/storage-pane.slint:54
 msgctxt "StoragePane"
 msgid "Vault location"
-msgstr ""
+msgstr "保管庫の場所"
 
 #: ui/settings/storage-pane.slint:58
 msgctxt "StoragePane"
 msgid "Open folder"
-msgstr ""
+msgstr "フォルダを開く"
 
 #: ui/settings/storage-pane.slint:63
 msgctxt "StoragePane"
 msgid "Back up everything"
-msgstr ""
+msgstr "すべてをバックアップ"
 
 #: ui/settings/storage-pane.slint:64
 msgctxt "StoragePane"
 msgid "Pack accounts, chats, and settings into one encrypted file."
-msgstr ""
+msgstr "アカウント、チャット、設定を1つの暗号化ファイルにまとめます。"
 
 #: ui/settings/storage-pane.slint:67
 msgctxt "StoragePane"
 msgid "Create backup…"
-msgstr ""
+msgstr "バックアップを作成…"
 
 #: ui/settings/storage-pane.slint:72
 msgctxt "StoragePane"
 msgid "Import a backup"
-msgstr ""
+msgstr "バックアップをインポート"
 
 #: ui/settings/storage-pane.slint:73
 msgctxt "StoragePane"
 msgid "Merge the accounts from a backup file into this install."
-msgstr ""
+msgstr "バックアップファイルのアカウントをこのインストールに統合します。"
 
 #: ui/settings/storage-pane.slint:76
 msgctxt "StoragePane"
 msgid "Import…"
-msgstr ""
+msgstr "インポート…"
 
 #: ui/settings/theme-picker.slint:44
 #, fuzzy
@@ -2132,7 +2156,7 @@ msgstr "レトロモード"
 #: ui/settings/theme-picker.slint:44
 msgctxt "ThemePicker"
 msgid "Terminal"
-msgstr ""
+msgstr "ターミナル"
 
 #: ui/shells/side-panel.slint:14
 msgctxt "SidePanel"
@@ -2157,7 +2181,7 @@ msgstr "オンライン"
 #: ui/status-bar.slint:42
 msgctxt "StatusBar"
 msgid "CONNECTING"
-msgstr ""
+msgstr "接続中"
 
 #: ui/status-bar.slint:42
 #, fuzzy

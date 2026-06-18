@@ -2461,7 +2461,11 @@ fn main() -> Result<(), slint::PlatformError> {
             }
             let path = std::path::PathBuf::from(path);
             let password = password.to_string();
-            let restoring = !vault::exists();
+            // Act on the mode the modal is actually showing (Restore vs Import),
+            // not a freshly-recomputed predicate — the displayed copy and the
+            // backend action stay in lockstep. The property was set from
+            // `!vault::exists()` when the modal opened.
+            let restoring = ui.get_import_backup_restore_mode();
             ui.set_import_backup_busy(true);
             ui.set_import_backup_status(s(""));
             let weak = weak.clone();

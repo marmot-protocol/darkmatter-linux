@@ -82,8 +82,7 @@ pub fn create(dest: &Path, password: &str) -> Result<(), BackupError> {
         std::fs::create_dir_all(parent).map_err(|e| BackupError::Io(e.to_string()))?;
     }
     let tmp = dest.with_extension("dmbackup.tmp");
-    std::fs::write(&tmp, &sealed).map_err(|e| BackupError::Io(e.to_string()))?;
-    set_owner_only(&tmp);
+    write_owner_only(&tmp, &sealed).map_err(|e| BackupError::Io(e.to_string()))?;
     std::fs::rename(&tmp, dest).map_err(|e| BackupError::Io(e.to_string()))?;
     set_owner_only(dest);
     Ok(())
@@ -95,14 +94,13 @@ pub fn create(dest: &Path, password: &str) -> Result<(), BackupError> {
 pub fn restore_into_home(src: &Path, password: &str) -> Result<(), BackupError> {
     let entries = read_archive(src, password)?;
     let home = vault::vault_dir();
-    std::fs::create_dir_all(&home).map_err(|e| BackupError::Io(e.to_string()))?;
+    create_dir_all_owner_only(&home).map_err(|e| BackupError::Io(e.to_string()))?;
     for (rel, bytes) in &entries {
         let dest = safe_join(&home, rel)?;
         if let Some(parent) = dest.parent() {
-            std::fs::create_dir_all(parent).map_err(|e| BackupError::Io(e.to_string()))?;
+            create_dir_all_owner_only(parent).map_err(|e| BackupError::Io(e.to_string()))?;
         }
-        std::fs::write(&dest, bytes).map_err(|e| BackupError::Io(e.to_string()))?;
-        set_owner_only(&dest);
+        write_owner_only(&dest, bytes).map_err(|e| BackupError::Io(e.to_string()))?;
     }
     Ok(())
 }
@@ -154,6 +152,14 @@ fn collect_files(
         let path = entry.path();
         let name = entry.file_name();
         let name = name.to_string_lossy();
+        // Skip symlinks: the data dir is ours, but following them would let a
+        // stray link pull bytes from outside `$DM_HOME` into the backup (or, for
+        // a directory link, recurse forever). `file_type` does not traverse.
+        match entry.file_type() {
+            Ok(ft) if ft.is_symlink() => continue,
+            Ok(_) => {}
+            Err(e) => return Err(BackupError::Io(e.to_string())),
+        }
         // Skip the encrypted media cache wholesale — it's regenerable and the
         // bulkiest thing in the directory.
         if path.is_dir() {
@@ -197,7 +203,9 @@ fn safe_join(root: &Path, rel: &str) -> Result<PathBuf, BackupError> {
     let mut out = root.to_path_buf();
     for comp in rel.split('/') {
         if comp.is_empty() || comp == "." || comp == ".." || comp.contains('\\') {
-            return Err(BackupError::Corrupt(format!("unsafe path in backup: {rel}")));
+            return Err(BackupError::Corrupt(format!(
+                "unsafe path in backup: {rel}"
+            )));
         }
         out.push(comp);
     }
@@ -236,7 +244,13 @@ fn unpack(buf: &[u8]) -> Result<Vec<(String, Vec<u8>)>, BackupError> {
             .try_into()
             .map_err(|_| BackupError::Corrupt("count".into()))?,
     ) as usize;
-    let mut out = Vec::with_capacity(count);
+    // `count` is attacker-influenced (decrypt only proves it matches the sealing
+    // password, not that it's sane). Each entry costs ≥10 bytes on the wire
+    // (2-byte path len + 8-byte data len), so never preallocate for more entries
+    // than the remaining buffer could possibly hold — a bogus 4-billion count
+    // can't trigger a multi-gigabyte `Vec` before the loop even runs.
+    let cap = count.min(cur.len() / 10 + 1);
+    let mut out = Vec::with_capacity(cap);
     for _ in 0..count {
         let plen = u16::from_le_bytes(
             take(&mut cur, 2)?
@@ -264,6 +278,45 @@ fn set_owner_only(path: &Path) {
 
 #[cfg(not(unix))]
 fn set_owner_only(_path: &Path) {}
+
+/// Write `bytes` to `path`, creating the file `0600` from the outset so there is
+/// no window where freshly-restored plaintext (e.g. `vault.db`) is world-
+/// readable. Also re-tightens perms on an existing file being overwritten.
+#[cfg(unix)]
+fn write_owner_only(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    use std::io::Write;
+    use std::os::unix::fs::OpenOptionsExt;
+    let mut f = std::fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .mode(0o600)
+        .open(path)?;
+    f.write_all(bytes)?;
+    set_owner_only(path);
+    Ok(())
+}
+
+#[cfg(not(unix))]
+fn write_owner_only(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    std::fs::write(path, bytes)
+}
+
+/// `create_dir_all`, but the directories we create are `0700` from the outset
+/// (Unix). Used for restore targets inside `$DM_HOME`.
+#[cfg(unix)]
+fn create_dir_all_owner_only(path: &Path) -> std::io::Result<()> {
+    use std::os::unix::fs::DirBuilderExt;
+    std::fs::DirBuilder::new()
+        .recursive(true)
+        .mode(0o700)
+        .create(path)
+}
+
+#[cfg(not(unix))]
+fn create_dir_all_owner_only(path: &Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(path)
+}
 
 #[cfg(test)]
 mod tests {
@@ -307,6 +360,21 @@ mod tests {
             .lock()
             .unwrap_or_else(|e| e.into_inner());
 
+        // Restore DM_HOME on the way out (even if an assert panics) so a later
+        // test never inherits this test's now-deleted temp dir.
+        struct DmHomeGuard(Option<std::ffi::OsString>);
+        impl Drop for DmHomeGuard {
+            fn drop(&mut self) {
+                unsafe {
+                    match self.0.take() {
+                        Some(v) => std::env::set_var("DM_HOME", v),
+                        None => std::env::remove_var("DM_HOME"),
+                    }
+                }
+            }
+        }
+        let _home_guard = DmHomeGuard(std::env::var_os("DM_HOME"));
+
         let home = std::env::temp_dir().join(format!("dm-backup-test-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&home);
         std::fs::create_dir_all(&home).unwrap();
@@ -335,7 +403,10 @@ mod tests {
         let dest = std::env::temp_dir().join(format!("dm-backup-{}.dmbackup", std::process::id()));
         let _ = std::fs::remove_file(&dest);
         create(&dest, "pw").unwrap();
-        assert!(matches!(create(&dest, "nope"), Err(BackupError::WrongPassword)));
+        assert!(matches!(
+            create(&dest, "nope"),
+            Err(BackupError::WrongPassword)
+        ));
 
         // merge_nsecs recovers both keys (deduped, bech32).
         let got: std::collections::BTreeSet<String> =

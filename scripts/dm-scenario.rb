@@ -78,10 +78,15 @@ def prepare_golden
   dmvm!(GOLDEN, 'up') # provisions on first run (slow); no-op if already up
   dmvm!(GOLDEN, 'push', 'dm-ctl') # the freshly cross-built control binary
   # Seed relays + wipe any identity so every clone generates its own fresh nsec.
+  # NOTE: the `[d]` bracket trick stops pkill -f from matching this very ssh
+  # command line (which contains the pattern) and killing its own shell before
+  # `find` runs — that exact bug left the vault in place and gave every clone
+  # the same identity.
   dmvm!(GOLDEN, 'ssh',
-        "pkill -9 -f 'dm-ctl' 2>/dev/null; pkill -9 -f 'darkmatter-linux$' 2>/dev/null; " \
+        "pkill -9 -f '[d]m-ctl' 2>/dev/null; pkill -9 -f '[d]arkmatter-linux' 2>/dev/null; sleep 1; " \
         "mkdir -p ~/.config/darkmatter-linux && printf '%s' '#{RELAYS_JSON}' > ~/.config/darkmatter-linux/relays.json; " \
-        'find ~/dm-home -mindepth 1 -delete 2>/dev/null; true')
+        "find ~/dm-home -mindepth 1 -delete 2>/dev/null; " \
+        "echo \"cleared; vault present: $(test -f ~/dm-home/vault.db && echo YES || echo no)\"")
   dmvm!(GOLDEN, 'down') # must be stopped: clones back onto its disk
   log 'golden ready (stopped).'
 end
@@ -89,7 +94,10 @@ end
 # ---- phase 2: clone + boot N VMs --------------------------------------------
 
 def spin_up_vms
-  VMS.each { |vm| dmvm!(vm, 'clone', GOLDEN) }
+  VMS.each do |vm|
+    dmvm(vm, 'down') # in case a previous run left this clone running
+    dmvm!(vm, 'clone', GOLDEN)
+  end
   log "booting #{N} clones in parallel…"
   VMS.map { |vm| Thread.new { dmvm(vm, 'up') } }.each(&:join)
 
@@ -100,6 +108,11 @@ def spin_up_vms
     die("#{vm} never produced an identity") unless who.is_a?(Hash) && who['npub']
     npubs[vm] = who['npub']
     log "  #{vm} = #{who['npub']}"
+  end
+  # Each clone must have generated its OWN nsec; identical npubs mean the golden
+  # wasn't wiped (every clone would invite itself and group ops would fail).
+  if npubs.values.uniq.size != npubs.size
+    die("clones share an identity (#{npubs.values.uniq.size} unique of #{npubs.size}) — golden vault wasn't cleared")
   end
   npubs
 end
@@ -179,6 +192,10 @@ end
 
 die("need at least 2 VMs (got #{N})") if N < 2
 log "scenario: #{N} VMs, golden=#{GOLDEN}, mem=#{ENV['DMVM_MEM_MB']}MiB cpus=#{ENV['DMVM_CPUS']}"
+# Clones back onto the golden's disk, so any still running from a prior run must
+# be stopped before we touch the golden.
+log 'stopping any clones from a previous run…'
+VMS.each { |vm| dmvm(vm, 'down') }
 prepare_golden
 npubs = spin_up_vms
 group = run_scenario(npubs)

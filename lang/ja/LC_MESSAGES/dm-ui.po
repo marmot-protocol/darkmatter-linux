@@ -1425,7 +1425,7 @@ msgstr "画像"
 #: ui/profile/profile-page.slint:94
 msgctxt "PictureField"
 msgid "https://… or upload a file →"
-msgstr ""
+msgstr "https://… またはファイルをアップロード →"
 
 #: ui/profile/profile-page.slint:102
 #, fuzzy
@@ -2443,7 +2443,7 @@ msgstr "再公開中…"
 #: ui/tokens.slint:618
 msgctxt "NativeDialogStrings"
 msgid "Choose a profile picture"
-msgstr ""
+msgstr "プロフィール画像を選択"
 
 #~ msgctxt "AppearancePane"
 #~ msgid "FUN"

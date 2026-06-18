@@ -1431,7 +1431,7 @@ msgstr "Bild"
 #: ui/profile/profile-page.slint:94
 msgctxt "PictureField"
 msgid "https://… or upload a file →"
-msgstr ""
+msgstr "https://… oder Datei hochladen →"
 
 #: ui/profile/profile-page.slint:102
 #, fuzzy
@@ -2471,7 +2471,7 @@ msgstr "Erneut veröffentlichen…"
 #: ui/tokens.slint:618
 msgctxt "NativeDialogStrings"
 msgid "Choose a profile picture"
-msgstr ""
+msgstr "Profilbild auswählen"
 
 #~ msgctxt "AppearancePane"
 #~ msgid "FUN"

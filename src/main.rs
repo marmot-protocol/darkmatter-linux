@@ -6044,7 +6044,10 @@ fn main() -> Result<(), slint::PlatformError> {
                 }
                 let group_hex = entry.group_hex.clone();
                 let temp_id = entry.temp_id.clone();
-                let existing = pending_state.lock().unwrap().find_send(&group_hex, &temp_id);
+                let existing = pending_state
+                    .lock()
+                    .unwrap()
+                    .find_send(&group_hex, &temp_id);
                 let in_overlay = existing.is_some();
                 // A red (online hard-failure) bubble is manual-retry-only within a
                 // session — don't auto-flush it. (After a restart it isn't in the
@@ -6062,7 +6065,8 @@ fn main() -> Result<(), slint::PlatformError> {
                     && let offline_queue::QueuedKind::Text { text, effect, .. } = &entry.kind
                 {
                     let bodies = vec![text.clone(), append_effect_marker(text, *effect)];
-                    if looks_already_sent(&backend, &group_hex, &my_id, &bodies, entry.enqueued_at) {
+                    if looks_already_sent(&backend, &group_hex, &my_id, &bodies, entry.enqueued_at)
+                    {
                         offline_queue::remove(&temp_id);
                         continue;
                     }
@@ -6125,8 +6129,11 @@ fn main() -> Result<(), slint::PlatformError> {
                         .lock()
                         .unwrap()
                         .add_send(&group_hex, pending.clone());
-                    if let Some(idx) =
-                        group_ids.lock().unwrap().iter().position(|g| g == &group_hex)
+                    if let Some(idx) = group_ids
+                        .lock()
+                        .unwrap()
+                        .iter()
+                        .position(|g| g == &group_hex)
                     {
                         let row = pending_chat_message(&pending, &my_id, &my_label);
                         with_inner_messages(&chats_messages, idx, |vm| {

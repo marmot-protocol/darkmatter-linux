@@ -47,10 +47,12 @@ component MenuItem inherits Rectangle {
         clicked => { root.activated(); }
         // Pointer movement keeps keyboard selection in sync so hovering one
         // row and then pressing Return acts on the row under the cursor.
-        moved => { root.activated-hover(); }
+        moved => { root.hovered(); }
     }
     // Internal hover-sync hook so the parent can mirror the selected index.
-    callback activated-hover();
+    // Named `hovered` (not `activated-*`) because it fires no action — it only
+    // tells the parent "the pointer is over me, sync your selection index."
+    callback hovered();
 }
 
 // Right-click context menu for a message bubble. Mounted full-window (like
@@ -152,14 +154,14 @@ export component MessageContextMenu inherits Rectangle {
                     label: @tr("Add reaction");
                     selected: root.selected-index == 0;
                     activated => { root.add-reaction(root.px, root.py); }
-                    activated-hover => { root.selected-index = 0; }
+                    hovered => { root.selected-index = 0; }
                 }
                 MenuItem {
                     glyph: "↩";
                     label: @tr("Reply");
                     selected: root.selected-index == 1;
                     activated => { root.reply(); }
-                    activated-hover => { root.selected-index = 1; }
+                    hovered => { root.selected-index = 1; }
                 }
                 MenuItem {
                     glyph: "✎";
@@ -167,14 +169,15 @@ export component MessageContextMenu inherits Rectangle {
                     shown: root.can-edit;
                     selected: root.selected-index == 2;
                     activated => { root.edit(); }
-                    activated-hover => { root.selected-index = 2; }
+                    hovered => { root.selected-index = 2; }
                 }
             }
         }
     }
 
     // Keyboard handling — focused on mount so keys land here. Esc dismisses;
-    // Up/Down (and Tab/Backtab) move the selection; Return/Enter activates.
+    // Up/Down (and Tab/Backtab) move the selection, Home/End jump to the
+    // first/last item; Return/Enter activates.
     keys := FocusScope {
         key-pressed(e) => {
             if (e.text == Key.Escape) {
@@ -187,6 +190,14 @@ export component MessageContextMenu inherits Rectangle {
             }
             if (e.text == Key.DownArrow) {
                 root.move-selection(1);
+                return accept;
+            }
+            if (e.text == Key.Home) {
+                root.selected-index = 0;
+                return accept;
+            }
+            if (e.text == Key.End) {
+                root.selected-index = root.item-count - 1;
                 return accept;
             }
             if (e.text == Key.Tab) {

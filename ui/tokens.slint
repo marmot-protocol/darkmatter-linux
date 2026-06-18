@@ -432,6 +432,51 @@ export struct MessageLine {
     rule: bool,
 }
 
+// User-facing error / status copy shown by the Rust glue layer. These strings
+// are *set from Rust* (status fields, backend-error banner) but the project
+// keeps all i18n in the Slint `@tr` catalogs, so they live here as `@tr()`
+// properties and Rust reads them back on the UI thread (mirroring how
+// `EmojiSheet`/`ProfileSink` bridge Rust↔Slint). Tier-1 entries name a concrete
+// thing the user can fix; the rest are operation-specific fallbacks that name
+// no internals. The raw error is still logged at every call site for diagnosis.
+export global ErrorCopy {
+    // Tier 1 — content-based classification.
+    out property <string> invalid-key: @tr("That doesn't look like a valid npub or public key. Double-check it and try again.");
+    out property <string> network: @tr("Can't reach your relays right now. Check your network and relay settings, then try again.");
+    // Tier 2 — operation-specific fallbacks.
+    out property <string> sync: @tr("Couldn't finish syncing. We'll keep retrying — check your relay settings if this keeps happening.");
+    out property <string> backend: @tr("Couldn't start up. Check your network and relay settings, then try again.");
+    out property <string> switch-account: @tr("Couldn't switch accounts. Please try again in a moment.");
+    out property <string> accept: @tr("Couldn't accept the invitation. Please try again in a moment.");
+    out property <string> block: @tr("Couldn't decline the invitation. Please try again in a moment.");
+    out property <string> archive: @tr("Couldn't archive this chat. Please try again.");
+    out property <string> unarchive: @tr("Couldn't restore this chat. Please try again.");
+    out property <string> send: @tr("Couldn't send your message. Check your connection and try again.");
+    out property <string> edit: @tr("Couldn't save your edit. Check your connection and try again.");
+    out property <string> react: @tr("Couldn't add your reaction. Please try again.");
+    out property <string> unreact: @tr("Couldn't remove your reaction. Please try again.");
+    out property <string> kp-publish: @tr("Couldn't publish your key package. Check your relay settings and try again.");
+    out property <string> kp-rotate: @tr("Couldn't rotate your key package. Check your relay settings and try again.");
+    out property <string> kp-refresh: @tr("Couldn't refresh your key packages. Check your relay settings and try again.");
+    out property <string> republish: @tr("Couldn't republish to your relays. Check your relay settings and try again.");
+    out property <string> add-account: @tr("Couldn't add that account. Please check the key and try again.");
+    out property <string> create-chat: @tr("Couldn't create the chat. Please try again.");
+    out property <string> add-contact: @tr("Couldn't add that contact. Please try again.");
+    out property <string> add-member: @tr("Couldn't add that member. Please try again.");
+    out property <string> group-settings: @tr("Couldn't update the group settings. Please try again.");
+    out property <string> group-image: @tr("Couldn't update the group image. Please try again.");
+    out property <string> save-profile: @tr("Couldn't save your profile. Check your connection and try again.");
+    out property <string> upload-picture: @tr("Couldn't upload your picture. Please try again.");
+    out property <string> generic: @tr("Something went wrong. Please try again.");
+    // Network-pane status copy (also Rust-set).
+    out property <string> not-connected: @tr("Not connected yet. Please wait a moment and try again.");
+    out property <string> relay-already-listed: @tr("That relay is already in your list.");
+    out property <string> save-relays-failed: @tr("Couldn't save your relay list. Please try again.");
+    out property <string> relay-added: @tr("Relay added.");
+    out property <string> relay-removed: @tr("Relay removed.");
+    out property <string> republishing: @tr("Republishing…");
+}
+
 // Link activation sink. Chat bubbles render Markdown anchors deep inside the
 // IncomingRow/OutgoingRow → MessageBubble → RunCell chain; rather than thread a
 // callback through every level, the leaf RunCell invokes `Linkout.open(url)`

@@ -2,7 +2,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-06-16 08:04+0000\n"
+"POT-Creation-Date: 2026-06-18 02:51+0000\n"
 "PO-Revision-Date: 2026-05-27 13:20+0000\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -255,25 +255,25 @@ msgctxt "ContactsSidebar"
 msgid "Search contacts…"
 msgstr "Cerca contatti…"
 
-#: ui/dark-matter-linux.slint:335
+#: ui/dark-matter-linux.slint:339
 msgctxt "DarkMatterLinux"
 msgid "Connecting to relays…"
 msgstr "Connessione ai relay…"
 
-#: ui/dark-matter-linux.slint:916
+#: ui/dark-matter-linux.slint:924
 #, fuzzy
 msgctxt "DarkMatterLinux"
 msgid "Block this chat request?"
 msgstr "Richiesta chat"
 
-#: ui/dark-matter-linux.slint:917
+#: ui/dark-matter-linux.slint:925
 msgctxt "DarkMatterLinux"
 msgid ""
 "This declines the invite from {}. It can't be restored unless they invite "
 "you again."
 msgstr ""
 
-#: ui/dark-matter-linux.slint:918
+#: ui/dark-matter-linux.slint:926
 #, fuzzy
 msgctxt "DarkMatterLinux"
 msgid "Block"
@@ -929,7 +929,7 @@ msgctxt "MentionPicker"
 msgid "(you)"
 msgstr ""
 
-#: ui/messages.slint:149
+#: ui/messages.slint:148
 #, fuzzy
 msgctxt "MessagesArea"
 msgid "Load earlier messages"
@@ -1596,104 +1596,67 @@ msgstr ""
 "Aggiunge una voce Debug sotto. Mostra account, pacchetti chiave e stato "
 "gruppi."
 
-#: ui/settings/appearance-pane.slint:21
+#: ui/settings/appearance-pane.slint:23
 msgctxt "AppearancePane"
 msgid "Mint"
 msgstr "Menta"
 
-#: ui/settings/appearance-pane.slint:22
+#: ui/settings/appearance-pane.slint:24
 msgctxt "AppearancePane"
 msgid "Ocean"
 msgstr ""
 
-#: ui/settings/appearance-pane.slint:23
+#: ui/settings/appearance-pane.slint:25
 msgctxt "AppearancePane"
 msgid "Berry"
 msgstr ""
 
-#: ui/settings/appearance-pane.slint:24
+#: ui/settings/appearance-pane.slint:26
 msgctxt "AppearancePane"
 msgid "Coral"
 msgstr ""
 
-#: ui/settings/appearance-pane.slint:25
+#: ui/settings/appearance-pane.slint:27
 msgctxt "AppearancePane"
 msgid "Lavender"
 msgstr ""
 
-#: ui/settings/appearance-pane.slint:29
+#: ui/settings/appearance-pane.slint:31
 msgctxt "AppearancePane"
 msgid "Appearance"
 msgstr "Aspetto"
 
-#: ui/settings/appearance-pane.slint:35
+#: ui/settings/appearance-pane.slint:37
 msgctxt "AppearancePane"
 msgid "THEME"
 msgstr "TEMA"
 
-#: ui/settings/appearance-pane.slint:38
+#: ui/settings/appearance-pane.slint:40
 msgctxt "AppearancePane"
 msgid "Theme"
 msgstr "Tema"
 
-#: ui/settings/appearance-pane.slint:39
-#, fuzzy
+#: ui/settings/appearance-pane.slint:41
 msgctxt "AppearancePane"
-msgid "Retro"
-msgstr "Modalità retro"
-
-#: ui/settings/appearance-pane.slint:39
-#, fuzzy
-msgctxt "AppearancePane"
-msgid "Light"
-msgstr "Lightning"
-
-#: ui/settings/appearance-pane.slint:39
-msgctxt "AppearancePane"
-msgid "Dark"
-msgstr "Scuro"
-
-#: ui/settings/appearance-pane.slint:42
-msgctxt "AppearancePane"
-msgid "Light theme"
+msgid "Pick the whole app's look."
 msgstr ""
 
-#: ui/settings/appearance-pane.slint:43
-msgctxt "AppearancePane"
-msgid "Use a warm paper palette across the app."
-msgstr ""
-
-#: ui/settings/appearance-pane.slint:50
+#: ui/settings/appearance-pane.slint:48
 msgctxt "AppearancePane"
 msgid "Accent color"
 msgstr "Colore accento"
 
-#: ui/settings/appearance-pane.slint:62
-msgctxt "AppearancePane"
-msgid "FUN"
-msgstr "DIVERTIMENTO"
-
-#: ui/settings/appearance-pane.slint:65
-msgctxt "AppearancePane"
-msgid "Retro mode"
-msgstr "Modalità retro"
-
-#: ui/settings/appearance-pane.slint:66
-msgctxt "AppearancePane"
-msgid "Turn the whole app into SNES style."
-msgstr "Trasforma tutta l'app in stile SNES."
-
-#: ui/settings/appearance-pane.slint:79
+#: ui/settings/appearance-pane.slint:60
 msgctxt "AppearancePane"
 msgid "MESSAGES"
 msgstr ""
 
-#: ui/settings/appearance-pane.slint:82
+#: ui/settings/appearance-pane.slint:63
 msgctxt "AppearancePane"
 msgid "Own messages on the right"
 msgstr ""
 
-#: ui/settings/appearance-pane.slint:83
+#: ui/settings/appearance-pane.slint:64
 msgctxt "AppearancePane"
 msgid "Place your sent messages on the right side."
 msgstr ""
@@ -1989,6 +1952,28 @@ msgctxt "StoragePane"
 msgid "Clear cache"
 msgstr ""
 
+#: ui/settings/theme-picker.slint:44
+#, fuzzy
+msgctxt "ThemePicker"
+msgid "Dark"
+msgstr "Scuro"
+
+#: ui/settings/theme-picker.slint:44
+msgctxt "ThemePicker"
+msgid "Light"
+msgstr "Chiaro"
+
+#: ui/settings/theme-picker.slint:44
+#, fuzzy
+msgctxt "ThemePicker"
+msgid "Retro"
+msgstr "Modalità retro"
+
+#: ui/settings/theme-picker.slint:44
+msgctxt "ThemePicker"
+msgid "Terminal"
+msgstr ""
+
 #: ui/shells/side-panel.slint:14
 msgctxt "SidePanel"
 msgid "Search…"
@@ -2025,10 +2010,196 @@ msgctxt "StatusBar"
 msgid "RELAYS"
 msgstr "RELAY"
 
-#: ui/status-bar.slint:81
+#: ui/status-bar.slint:84
 msgctxt "StatusBar"
 msgid "COMMAND"
 msgstr "COMANDO"
+
+#. Tier 1 — content-based classification.
+#: ui/tokens.slint:444
+msgctxt "ErrorCopy"
+msgid ""
+"That doesn't look like a valid npub or public key. Double-check it and try "
+"again."
+msgstr "Non sembra un npub o una chiave pubblica valida. Controllala e riprova."
+
+#: ui/tokens.slint:445
+msgctxt "ErrorCopy"
+msgid ""
+"Can't reach your relays right now. Check your network and relay settings, "
+"then try again."
+msgstr "Non riesco a raggiungere i tuoi relay in questo momento. Controlla la rete e le impostazioni dei relay, poi riprova."
+
+#. Tier 2 — operation-specific fallbacks.
+#: ui/tokens.slint:447
+msgctxt "ErrorCopy"
+msgid ""
+"Couldn't finish syncing. We'll keep retrying — check your relay settings if "
+"this keeps happening."
+msgstr "Sincronizzazione non completata. Continueremo a riprovare — se il problema persiste, controlla le impostazioni dei relay."
+
+#: ui/tokens.slint:448
+msgctxt "ErrorCopy"
+msgid ""
+"Couldn't start up. Check your network and relay settings, then try again."
+msgstr "Avvio non riuscito. Controlla la rete e le impostazioni dei relay, poi riprova."
+
+#: ui/tokens.slint:449
+msgctxt "ErrorCopy"
+msgid "Couldn't switch accounts. Please try again in a moment."
+msgstr "Impossibile cambiare account. Riprova tra un momento."
+
+#: ui/tokens.slint:450
+msgctxt "ErrorCopy"
+msgid "Couldn't accept the invitation. Please try again in a moment."
+msgstr "Impossibile accettare l'invito. Riprova tra un momento."
+
+#: ui/tokens.slint:451
+msgctxt "ErrorCopy"
+msgid "Couldn't decline the invitation. Please try again in a moment."
+msgstr "Impossibile rifiutare l'invito. Riprova tra un momento."
+
+#: ui/tokens.slint:452
+msgctxt "ErrorCopy"
+msgid "Couldn't archive this chat. Please try again."
+msgstr "Impossibile archiviare questa chat. Riprova."
+
+#: ui/tokens.slint:453
+msgctxt "ErrorCopy"
+msgid "Couldn't restore this chat. Please try again."
+msgstr "Impossibile ripristinare questa chat. Riprova."
+
+#: ui/tokens.slint:454
+msgctxt "ErrorCopy"
+msgid "Couldn't send your message. Check your connection and try again."
+msgstr "Impossibile inviare il messaggio. Controlla la connessione e riprova."
+
+#: ui/tokens.slint:455
+msgctxt "ErrorCopy"
+msgid "Couldn't save your edit. Check your connection and try again."
+msgstr "Impossibile salvare la modifica. Controlla la connessione e riprova."
+
+#: ui/tokens.slint:456
+msgctxt "ErrorCopy"
+msgid "Couldn't add your reaction. Please try again."
+msgstr "Impossibile aggiungere la reazione. Riprova."
+
+#: ui/tokens.slint:457
+msgctxt "ErrorCopy"
+msgid "Couldn't remove your reaction. Please try again."
+msgstr "Impossibile rimuovere la reazione. Riprova."
+
+#: ui/tokens.slint:458
+msgctxt "ErrorCopy"
+msgid ""
+"Couldn't publish your key package. Check your relay settings and try again."
+msgstr "Impossibile pubblicare il tuo key package. Controlla le impostazioni dei relay e riprova."
+
+#: ui/tokens.slint:459
+msgctxt "ErrorCopy"
+msgid ""
+"Couldn't rotate your key package. Check your relay settings and try again."
+msgstr "Impossibile ruotare il tuo key package. Controlla le impostazioni dei relay e riprova."
+
+#: ui/tokens.slint:460
+msgctxt "ErrorCopy"
+msgid ""
+"Couldn't refresh your key packages. Check your relay settings and try again."
+msgstr "Impossibile aggiornare i tuoi key package. Controlla le impostazioni dei relay e riprova."
+
+#: ui/tokens.slint:461
+msgctxt "ErrorCopy"
+msgid ""
+"Couldn't republish to your relays. Check your relay settings and try again."
+msgstr "Impossibile ripubblicare sui tuoi relay. Controlla le impostazioni dei relay e riprova."
+
+#: ui/tokens.slint:462
+msgctxt "ErrorCopy"
+msgid "Couldn't add that account. Please check the key and try again."
+msgstr "Impossibile aggiungere questo account. Controlla la chiave e riprova."
+
+#: ui/tokens.slint:463
+msgctxt "ErrorCopy"
+msgid "Couldn't create the chat. Please try again."
+msgstr "Impossibile creare la chat. Riprova."
+
+#: ui/tokens.slint:464
+msgctxt "ErrorCopy"
+msgid "Couldn't add that contact. Please try again."
+msgstr "Impossibile aggiungere questo contatto. Riprova."
+
+#: ui/tokens.slint:465
+msgctxt "ErrorCopy"
+msgid "Couldn't add that member. Please try again."
+msgstr "Impossibile aggiungere questo membro. Riprova."
+
+#: ui/tokens.slint:466
+msgctxt "ErrorCopy"
+msgid "Couldn't update the group settings. Please try again."
+msgstr "Impossibile aggiornare le impostazioni del gruppo. Riprova."
+
+#: ui/tokens.slint:467
+msgctxt "ErrorCopy"
+msgid "Couldn't update the group image. Please try again."
+msgstr "Impossibile aggiornare l'immagine del gruppo. Riprova."
+
+#: ui/tokens.slint:468
+msgctxt "ErrorCopy"
+msgid "Couldn't save your profile. Check your connection and try again."
+msgstr "Impossibile salvare il profilo. Controlla la connessione e riprova."
+
+#: ui/tokens.slint:469
+msgctxt "ErrorCopy"
+msgid "Couldn't upload your picture. Please try again."
+msgstr "Impossibile caricare l'immagine. Riprova."
+
+#: ui/tokens.slint:470
+msgctxt "ErrorCopy"
+msgid "Something went wrong. Please try again."
+msgstr "Qualcosa è andato storto. Riprova."
+
+#. Network-pane status copy (also Rust-set).
+#: ui/tokens.slint:472
+msgctxt "ErrorCopy"
+msgid "Not connected yet. Please wait a moment and try again."
+msgstr "Non ancora connesso. Attendi un momento e riprova."
+
+#: ui/tokens.slint:473
+msgctxt "ErrorCopy"
+msgid "That relay is already in your list."
+msgstr "Questo relay è già nella tua lista."
+
+#: ui/tokens.slint:474
+msgctxt "ErrorCopy"
+msgid "Couldn't save your relay list. Please try again."
+msgstr "Impossibile salvare la lista dei relay. Riprova."
+
+#: ui/tokens.slint:475
+msgctxt "ErrorCopy"
+msgid "Relay added."
+msgstr "Relay aggiunto."
+
+#: ui/tokens.slint:476
+msgctxt "ErrorCopy"
+msgid "Relay removed."
+msgstr "Relay rimosso."
+
+#: ui/tokens.slint:477
+msgctxt "ErrorCopy"
+msgid "Republishing…"
+msgstr "Ripubblicazione…"
+
+#~ msgctxt "AppearancePane"
+#~ msgid "FUN"
+#~ msgstr "DIVERTIMENTO"
+
+#~ msgctxt "AppearancePane"
+#~ msgid "Retro mode"
+#~ msgstr "Modalità retro"
+
+#~ msgctxt "AppearancePane"
+#~ msgid "Turn the whole app into SNES style."
+#~ msgstr "Trasforma tutta l'app in stile SNES."
 
 #, fuzzy
 #~ msgctxt "SettingsPage"

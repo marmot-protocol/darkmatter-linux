@@ -328,6 +328,213 @@ fn validate_new_password(pw: &str, confirm: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// Localized snapshot of the user-facing error/status copy.
+///
+/// The strings themselves are authored as `@tr()` properties on the Slint
+/// `ErrorCopy` global so they flow through the same gettext catalogs as the
+/// rest of the UI (the project keeps *all* i18n in the Slint `@tr` catalogs —
+/// see the `notification_body` note). But `friendly_error` and the relay-pane
+/// status setters run on worker threads, where touching a Slint getter is
+/// unsound. So we snapshot the translated strings on the UI thread (at startup
+/// and on every locale change) into this process-global, and worker threads
+/// read the snapshot instead.
+#[derive(Clone)]
+struct ErrorCopySnapshot {
+    invalid_key: String,
+    network: String,
+    sync: String,
+    backend: String,
+    switch_account: String,
+    accept: String,
+    block: String,
+    archive: String,
+    unarchive: String,
+    send: String,
+    edit: String,
+    react: String,
+    unreact: String,
+    kp_publish: String,
+    kp_rotate: String,
+    kp_refresh: String,
+    republish: String,
+    add_account: String,
+    create_chat: String,
+    add_contact: String,
+    add_member: String,
+    group_settings: String,
+    group_image: String,
+    save_profile: String,
+    upload_picture: String,
+    generic: String,
+    not_connected: String,
+    relay_already_listed: String,
+    save_relays_failed: String,
+    relay_added: String,
+    relay_removed: String,
+    republishing: String,
+}
+
+impl Default for ErrorCopySnapshot {
+    /// English fallback, identical to the `@tr()` source strings. Used before
+    /// the first UI-thread snapshot lands (and as a belt-and-braces default).
+    fn default() -> Self {
+        Self {
+            invalid_key: "That doesn't look like a valid npub or public key. Double-check it and try again.".into(),
+            network: "Can't reach your relays right now. Check your network and relay settings, then try again.".into(),
+            sync: "Couldn't finish syncing. We'll keep retrying — check your relay settings if this keeps happening.".into(),
+            backend: "Couldn't start up. Check your network and relay settings, then try again.".into(),
+            switch_account: "Couldn't switch accounts. Please try again in a moment.".into(),
+            accept: "Couldn't accept the invitation. Please try again in a moment.".into(),
+            block: "Couldn't decline the invitation. Please try again in a moment.".into(),
+            archive: "Couldn't archive this chat. Please try again.".into(),
+            unarchive: "Couldn't restore this chat. Please try again.".into(),
+            send: "Couldn't send your message. Check your connection and try again.".into(),
+            edit: "Couldn't save your edit. Check your connection and try again.".into(),
+            react: "Couldn't add your reaction. Please try again.".into(),
+            unreact: "Couldn't remove your reaction. Please try again.".into(),
+            kp_publish: "Couldn't publish your key package. Check your relay settings and try again.".into(),
+            kp_rotate: "Couldn't rotate your key package. Check your relay settings and try again.".into(),
+            kp_refresh: "Couldn't refresh your key packages. Check your relay settings and try again.".into(),
+            republish: "Couldn't republish to your relays. Check your relay settings and try again.".into(),
+            add_account: "Couldn't add that account. Please check the key and try again.".into(),
+            create_chat: "Couldn't create the chat. Please try again.".into(),
+            add_contact: "Couldn't add that contact. Please try again.".into(),
+            add_member: "Couldn't add that member. Please try again.".into(),
+            group_settings: "Couldn't update the group settings. Please try again.".into(),
+            group_image: "Couldn't update the group image. Please try again.".into(),
+            save_profile: "Couldn't save your profile. Check your connection and try again.".into(),
+            upload_picture: "Couldn't upload your picture. Please try again.".into(),
+            generic: "Something went wrong. Please try again.".into(),
+            not_connected: "Not connected yet. Please wait a moment and try again.".into(),
+            relay_already_listed: "That relay is already in your list.".into(),
+            save_relays_failed: "Couldn't save your relay list. Please try again.".into(),
+            relay_added: "Relay added.".into(),
+            relay_removed: "Relay removed.".into(),
+            republishing: "Republishing…".into(),
+        }
+    }
+}
+
+fn error_copy_cell() -> &'static Mutex<ErrorCopySnapshot> {
+    static C: OnceLock<Mutex<ErrorCopySnapshot>> = OnceLock::new();
+    C.get_or_init(|| Mutex::new(ErrorCopySnapshot::default()))
+}
+
+/// Snapshot the localized `ErrorCopy` strings off the Slint global into the
+/// process-global cache. MUST be called on the UI/event-loop thread (it reads
+/// Slint property getters). Call at startup and after every locale change so
+/// worker-thread error copy follows the active language.
+fn refresh_error_copy(ui: &DarkMatterLinux) {
+    let g = ui.global::<ErrorCopy>();
+    let snap = ErrorCopySnapshot {
+        invalid_key: g.get_invalid_key().to_string(),
+        network: g.get_network().to_string(),
+        sync: g.get_sync().to_string(),
+        backend: g.get_backend().to_string(),
+        switch_account: g.get_switch_account().to_string(),
+        accept: g.get_accept().to_string(),
+        block: g.get_block().to_string(),
+        archive: g.get_archive().to_string(),
+        unarchive: g.get_unarchive().to_string(),
+        send: g.get_send().to_string(),
+        edit: g.get_edit().to_string(),
+        react: g.get_react().to_string(),
+        unreact: g.get_unreact().to_string(),
+        kp_publish: g.get_kp_publish().to_string(),
+        kp_rotate: g.get_kp_rotate().to_string(),
+        kp_refresh: g.get_kp_refresh().to_string(),
+        republish: g.get_republish().to_string(),
+        add_account: g.get_add_account().to_string(),
+        create_chat: g.get_create_chat().to_string(),
+        add_contact: g.get_add_contact().to_string(),
+        add_member: g.get_add_member().to_string(),
+        group_settings: g.get_group_settings().to_string(),
+        group_image: g.get_group_image().to_string(),
+        save_profile: g.get_save_profile().to_string(),
+        upload_picture: g.get_upload_picture().to_string(),
+        generic: g.get_generic().to_string(),
+        not_connected: g.get_not_connected().to_string(),
+        relay_already_listed: g.get_relay_already_listed().to_string(),
+        save_relays_failed: g.get_save_relays_failed().to_string(),
+        relay_added: g.get_relay_added().to_string(),
+        relay_removed: g.get_relay_removed().to_string(),
+        republishing: g.get_republishing().to_string(),
+    };
+    *error_copy_cell().lock().unwrap() = snap;
+}
+
+/// Read the current localized `ErrorCopy` snapshot. Safe from any thread.
+fn error_copy() -> ErrorCopySnapshot {
+    error_copy_cell().lock().unwrap().clone()
+}
+
+/// Map a low-level backend error into approachable, action-oriented UI copy.
+///
+/// User-facing error surfaces must never show raw `anyhow` context strings,
+/// Rust debug formatting, or internal module/concept names. The full technical
+/// error is still logged at every call site (`eprintln!("[op] {e:#}")`) and
+/// stays available for diagnosis — this governs only what the *user* reads.
+///
+/// Classification is two-tier: first we inspect the flattened error chain for
+/// signals that point at a specific, fixable user action (a malformed key, an
+/// unreachable relay); failing that we fall back to a reassuring, operation-
+/// specific message. `op` is the short internal label already used at the call
+/// site (e.g. "sync", "switch account", "send").
+///
+/// The returned text is localized: it comes from the `ErrorCopy` snapshot which
+/// mirrors the Slint `@tr()` catalogs for the active locale.
+fn friendly_error(op: &str, e: &anyhow::Error) -> String {
+    let copy = error_copy();
+    // Flatten the whole error chain once for case-insensitive keyword matching.
+    let detail = format!("{e:#}").to_lowercase();
+
+    // Tier 1 — content-based classification. These conditions name a concrete
+    // thing the user can fix, so they take priority over the op default.
+    if detail.contains("npub") || detail.contains("pubkey") || detail.contains("public key") {
+        return copy.invalid_key;
+    }
+    if detail.contains("timed out")
+        || detail.contains("timeout")
+        || detail.contains("connection")
+        || detail.contains("connect")
+        || detail.contains("network")
+        || detail.contains("relay")
+        || detail.contains("offline")
+        || detail.contains("unreachable")
+        || detail.contains("dns")
+    {
+        return copy.network;
+    }
+
+    // Tier 2 — operation-specific fallback. Reassuring, names no internals.
+    match op {
+        "sync" => copy.sync,
+        "backend" => copy.backend,
+        "switch account" => copy.switch_account,
+        "accept" => copy.accept,
+        "block" => copy.block,
+        "archive" => copy.archive,
+        "unarchive" => copy.unarchive,
+        "send" => copy.send,
+        "edit" => copy.edit,
+        "react" => copy.react,
+        "unreact" => copy.unreact,
+        "kp_publish" => copy.kp_publish,
+        "kp_rotate" => copy.kp_rotate,
+        "kp_refresh" => copy.kp_refresh,
+        "republish" => copy.republish,
+        "add account" => copy.add_account,
+        "create chat" => copy.create_chat,
+        "add contact" => copy.add_contact,
+        "add member" => copy.add_member,
+        "group settings" => copy.group_settings,
+        "group image" => copy.group_image,
+        "save profile" => copy.save_profile,
+        "upload picture" => copy.upload_picture,
+        _ => copy.generic,
+    }
+}
+
 fn model<T: Clone + 'static>(v: Vec<T>) -> ModelRc<T> {
     ModelRc::new(VecModel::from(v))
 }
@@ -515,6 +722,9 @@ fn main() -> Result<(), slint::PlatformError> {
     apply_locale(&locale);
     ui.set_locale(s(&locale));
     ui.set_locale_display(s(locale_display(&locale)));
+    // Snapshot the localized error/status copy off the Slint `ErrorCopy` global
+    // now that the locale is applied, so worker threads have it from the start.
+    refresh_error_copy(&ui);
     apply_theme_mode(&ui, &theme_mode);
     ui.set_accent_color(accent_color_idx(accent_color));
     ui.set_outgoing_on_right(initial_settings.outgoing_on_right);
@@ -702,7 +912,7 @@ fn main() -> Result<(), slint::PlatformError> {
                         };
                         if let Err(e) = sync_result {
                             eprintln!("[backend] background sync failed: {e:#}");
-                            ui.set_backend_error(format!("sync: {e:#}").into());
+                            ui.set_backend_error(friendly_error("sync", &e).into());
                             return;
                         }
                         let Some(b) = backend_cell_for_sync.lock().unwrap().clone() else {
@@ -865,7 +1075,7 @@ fn main() -> Result<(), slint::PlatformError> {
                         }
                         Err(e) => {
                             eprintln!("[backend] boot failed: {e:#}");
-                            ui.set_backend_error(format!("backend: {e:#}").into());
+                            ui.set_backend_error(friendly_error("backend", &e).into());
                             ui.set_booting(false);
                         }
                     }
@@ -912,7 +1122,7 @@ fn main() -> Result<(), slint::PlatformError> {
                 Ok(s) => s,
                 Err(e) => {
                     eprintln!("[accounts] switch failed: {e:#}");
-                    ui.set_backend_error(format!("switch account: {e:#}").into());
+                    ui.set_backend_error(friendly_error("switch account", &e).into());
                     return;
                 }
             };
@@ -1128,7 +1338,8 @@ fn main() -> Result<(), slint::PlatformError> {
                             do_switch(summary.account_id_hex);
                         }
                         Err(e) => {
-                            ui.set_add_account_status(format!("{e:#}").into());
+                            eprintln!("[add-account] {e:#}");
+                            ui.set_add_account_status(friendly_error("add account", &e).into());
                         }
                     }
                 });
@@ -1424,6 +1635,8 @@ fn main() -> Result<(), slint::PlatformError> {
                 ui.set_locale(s(&locale));
                 ui.set_locale_display(s(locale_display(&locale)));
                 ui.set_show_language_picker(false);
+                // Re-snapshot the now-localized error/status copy for worker threads.
+                refresh_error_copy(&ui);
             }
         }
     });
@@ -1832,16 +2045,17 @@ fn main() -> Result<(), slint::PlatformError> {
             }
             let mut list: Vec<String> = vec_string_from_model(&ui.get_network_relays());
             if list.iter().any(|u| u.eq_ignore_ascii_case(&trimmed)) {
-                ui.set_network_status("Already in the list.".into());
+                ui.set_network_status(error_copy().relay_already_listed.into());
                 return;
             }
             list.push(trimmed);
             if let Err(e) = backend::save_relays(&list) {
-                ui.set_network_status(format!("Save failed: {e}").into());
+                eprintln!("[network] save relays failed: {e}");
+                ui.set_network_status(error_copy().save_relays_failed.into());
                 return;
             }
             push_network_relays(&ui, &list);
-            ui.set_network_status("Saved.".into());
+            ui.set_network_status(error_copy().relay_added.into());
             // First-run: connect the freshly-added relay live (no-op otherwise).
             reboot();
         }
@@ -1859,11 +2073,12 @@ fn main() -> Result<(), slint::PlatformError> {
                 return;
             }
             if let Err(e) = backend::save_relays(&list) {
-                ui.set_network_status(format!("Save failed: {e}").into());
+                eprintln!("[network] save relays failed: {e}");
+                ui.set_network_status(error_copy().save_relays_failed.into());
                 return;
             }
             push_network_relays(&ui, &list);
-            ui.set_network_status("Removed.".into());
+            ui.set_network_status(error_copy().relay_removed.into());
             // First-run: re-boot so the live transport drops the removed relay.
             reboot();
         }
@@ -1890,7 +2105,7 @@ fn main() -> Result<(), slint::PlatformError> {
                             // We just polled the relay pool — that's a real sync.
                             ui.set_sync_secs(0);
                         }
-                        None => ui.set_network_status("Backend not ready yet.".into()),
+                        None => ui.set_network_status(error_copy().not_connected.into()),
                     }
                 });
             });
@@ -1903,7 +2118,7 @@ fn main() -> Result<(), slint::PlatformError> {
         let backend_cell = backend_cell.clone();
         move || {
             let Some(ui) = weak.upgrade() else { return };
-            ui.set_network_status("Republishing…".into());
+            ui.set_network_status(error_copy().republishing.into());
             let weak = weak.clone();
             let backend_cell = backend_cell.clone();
             std::thread::spawn(move || {
@@ -1911,8 +2126,10 @@ fn main() -> Result<(), slint::PlatformError> {
                 // the relay publish.
                 let b = backend_cell.lock().unwrap().clone();
                 let result = match b {
-                    None => Err("Backend not ready.".to_string()),
-                    Some(b) => b.republish_relay_lists().map_err(|e| format!("{e:#}")),
+                    None => Err(error_copy().not_connected),
+                    Some(b) => b
+                        .republish_relay_lists()
+                        .map_err(|e| friendly_error("republish", &e)),
                 };
                 let _ = slint::invoke_from_event_loop(move || {
                     let Some(ui) = weak.upgrade() else { return };
@@ -1921,7 +2138,7 @@ fn main() -> Result<(), slint::PlatformError> {
                             format!("Republished to {n} relay{}.", if n == 1 { "" } else { "s" })
                                 .into(),
                         ),
-                        Err(e) => ui.set_network_status(format!("Republish failed: {e}").into()),
+                        Err(e) => ui.set_network_status(e.into()),
                     }
                 });
             });
@@ -1949,7 +2166,7 @@ fn main() -> Result<(), slint::PlatformError> {
             std::thread::spawn(move || {
                 let result: Result<String, String> = {
                     match b.as_deref() {
-                        None => Err("backend not ready".to_string()),
+                        None => Err(error_copy().not_connected),
                         Some(b) => match op_kind {
                             // NOTE: the SDK returns the key-package size in bytes,
                             // not a relay-ack count — so we don't surface the number
@@ -1957,11 +2174,11 @@ fn main() -> Result<(), slint::PlatformError> {
                             "publish" => b
                                 .publish_key_package()
                                 .map(|_| "published · your key package is live".to_string())
-                                .map_err(|e| format!("publish failed: {e:#}")),
+                                .map_err(|e| friendly_error("kp_publish", &e)),
                             "rotate" => b
                                 .rotate_key_package()
                                 .map(|_| "rotated · published a fresh key package".to_string())
-                                .map_err(|e| format!("rotate failed: {e:#}")),
+                                .map_err(|e| friendly_error("kp_rotate", &e)),
                             "refresh" => b
                                 .key_packages_fetch()
                                 .map(|recs| {
@@ -1971,8 +2188,8 @@ fn main() -> Result<(), slint::PlatformError> {
                                         if recs.len() == 1 { "" } else { "s" }
                                     )
                                 })
-                                .map_err(|e| format!("fetch failed: {e:#}")),
-                            _ => Err(format!("unknown op: {op_kind}")),
+                                .map_err(|e| friendly_error("kp_refresh", &e)),
+                            _ => Err("Something went wrong. Please try again.".to_string()),
                         },
                     }
                 };
@@ -2229,7 +2446,7 @@ fn main() -> Result<(), slint::PlatformError> {
                         }
                         Err(e) => {
                             eprintln!("[create-group] {e:#}");
-                            ui.set_new_chat_status(format!("Failed: {e:#}").into());
+                            ui.set_new_chat_status(friendly_error("create chat", &e).into());
                         }
                     }
                 });
@@ -2300,7 +2517,7 @@ fn main() -> Result<(), slint::PlatformError> {
                         }
                         Err(e) => {
                             eprintln!("[add-contact] {e:#}");
-                            ui.set_add_contact_status(format!("Failed: {e:#}").into());
+                            ui.set_add_contact_status(friendly_error("add contact", &e).into());
                         }
                     }
                 });
@@ -2337,7 +2554,7 @@ fn main() -> Result<(), slint::PlatformError> {
                         }
                         Err(e) => {
                             eprintln!("[profile-add-contact] {e:#}");
-                            ui.set_peer_profile_status(format!("Failed: {e:#}").into());
+                            ui.set_peer_profile_status(friendly_error("add contact", &e).into());
                         }
                     }
                 });
@@ -2436,7 +2653,7 @@ fn main() -> Result<(), slint::PlatformError> {
                         }
                         Err(e) => {
                             eprintln!("[invite] {e:#}");
-                            ui.set_add_member_status(format!("Failed: {e:#}").into());
+                            ui.set_add_member_status(friendly_error("add member", &e).into());
                         }
                     }
                 });
@@ -2475,7 +2692,9 @@ fn main() -> Result<(), slint::PlatformError> {
                         }
                         Err(e) => {
                             eprintln!("[promote] {e:#}");
-                            ui.set_group_settings_status(format!("Failed: {e:#}").into());
+                            ui.set_group_settings_status(
+                                friendly_error("group settings", &e).into(),
+                            );
                         }
                     }
                 });
@@ -2513,7 +2732,9 @@ fn main() -> Result<(), slint::PlatformError> {
                         }
                         Err(e) => {
                             eprintln!("[demote] {e:#}");
-                            ui.set_group_settings_status(format!("Failed: {e:#}").into());
+                            ui.set_group_settings_status(
+                                friendly_error("group settings", &e).into(),
+                            );
                         }
                     }
                 });
@@ -2547,7 +2768,9 @@ fn main() -> Result<(), slint::PlatformError> {
                         }
                         Err(e) => {
                             eprintln!("[self-demote] {e:#}");
-                            ui.set_group_settings_status(format!("Failed: {e:#}").into());
+                            ui.set_group_settings_status(
+                                friendly_error("group settings", &e).into(),
+                            );
                         }
                     }
                 });
@@ -2591,7 +2814,9 @@ fn main() -> Result<(), slint::PlatformError> {
                         }
                         Err(e) => {
                             eprintln!("[rename] {e:#}");
-                            ui.set_group_settings_status(format!("Failed: {e:#}").into());
+                            ui.set_group_settings_status(
+                                friendly_error("group settings", &e).into(),
+                            );
                         }
                     }
                 });
@@ -2639,7 +2864,7 @@ fn main() -> Result<(), slint::PlatformError> {
                         }
                         Err(e) => {
                             eprintln!("[group-image] clear failed: {e:#}");
-                            ui.set_group_settings_status(format!("Failed: {e:#}").into());
+                            ui.set_group_settings_status(friendly_error("group image", &e).into());
                         }
                     }
                 });
@@ -2759,7 +2984,7 @@ fn main() -> Result<(), slint::PlatformError> {
                             Err(e) => {
                                 eprintln!("[group-image] upload failed: {e:#}");
                                 ui.set_group_settings_status(
-                                    format!("upload failed: {e:#}").into(),
+                                    friendly_error("group image", &e).into(),
                                 );
                             }
                         }
@@ -3001,7 +3226,7 @@ fn main() -> Result<(), slint::PlatformError> {
             let Some(ui) = weak.upgrade() else { return };
             let Some(group_hex) = resolve() else { return };
             let Some(b) = backend_cell.lock().unwrap().clone() else {
-                ui.set_backend_error(s("backend not ready"));
+                ui.set_backend_error(error_copy().not_connected.into());
                 return;
             };
             // Accepting publishes to relays — worker; `refresh` captures only
@@ -3014,7 +3239,7 @@ fn main() -> Result<(), slint::PlatformError> {
                     let Some(ui) = weak.upgrade() else { return };
                     if let Err(e) = result {
                         eprintln!("[accept] {e:#}");
-                        ui.set_backend_error(format!("accept: {e:#}").into());
+                        ui.set_backend_error(friendly_error("accept", &e).into());
                         return;
                     }
                     refresh();
@@ -3032,7 +3257,7 @@ fn main() -> Result<(), slint::PlatformError> {
             let Some(ui) = weak.upgrade() else { return };
             let Some(group_hex) = resolve() else { return };
             let Some(b) = backend_cell.lock().unwrap().clone() else {
-                ui.set_backend_error(s("backend not ready"));
+                ui.set_backend_error(error_copy().not_connected.into());
                 return;
             };
             let weak = weak.clone();
@@ -3043,7 +3268,7 @@ fn main() -> Result<(), slint::PlatformError> {
                     let Some(ui) = weak.upgrade() else { return };
                     if let Err(e) = result {
                         eprintln!("[block] {e:#}");
-                        ui.set_backend_error(format!("block: {e:#}").into());
+                        ui.set_backend_error(friendly_error("block", &e).into());
                         return;
                     }
                     refresh();
@@ -3144,7 +3369,7 @@ fn main() -> Result<(), slint::PlatformError> {
                     let refresh_cb = refresh_cb.clone();
                     let _ = slint::invoke_from_event_loop(move || {
                         let Some(ui) = weak_cb.upgrade() else { return };
-                        ui.set_backend_error(format!("archive: {e:#}").into());
+                        ui.set_backend_error(friendly_error("archive", &e).into());
                         refresh_cb();
                     });
                 }
@@ -3161,7 +3386,7 @@ fn main() -> Result<(), slint::PlatformError> {
             let Some(ui) = weak.upgrade() else { return };
             let idx = ui.get_active_archived() as usize;
             let Some(b) = backend_cell.lock().unwrap().clone() else {
-                ui.set_backend_error(s("backend not ready"));
+                ui.set_backend_error(error_copy().not_connected.into());
                 return;
             };
 
@@ -3235,7 +3460,7 @@ fn main() -> Result<(), slint::PlatformError> {
                             let refresh_cb = refresh_cb.clone();
                             let _ = slint::invoke_from_event_loop(move || {
                                 let Some(ui) = weak_cb.upgrade() else { return };
-                                ui.set_backend_error(format!("unarchive: {e:#}").into());
+                                ui.set_backend_error(friendly_error("unarchive", &e).into());
                                 refresh_cb();
                             });
                         }
@@ -3468,7 +3693,7 @@ fn main() -> Result<(), slint::PlatformError> {
                                     eprintln!("[send] offline — left queued for flush");
                                     return;
                                 }
-                                ui.set_backend_error(format!("send: {e:#}").into());
+                                ui.set_backend_error(friendly_error("send", &e).into());
                                 // Online failure: a real error. Mark failed in place
                                 // — the bubble flips to red without disturbing its
                                 // neighbours.
@@ -3561,7 +3786,7 @@ fn main() -> Result<(), slint::PlatformError> {
                         let mut overlay = pending_state.lock().unwrap();
                         if let Err(e) = &result {
                             eprintln!("[edit] {e:#}");
-                            ui.set_backend_error(format!("edit: {e:#}").into());
+                            ui.set_backend_error(friendly_error("edit", e).into());
                         }
                         overlay.edits.remove(&(group_hex.clone(), target.clone()));
                     }
@@ -3622,7 +3847,7 @@ fn main() -> Result<(), slint::PlatformError> {
             };
             let guard = backend_cell.lock().unwrap();
             let Some(backend) = guard.as_ref() else {
-                ui.set_backend_error(s("backend not ready"));
+                ui.set_backend_error(error_copy().not_connected.into());
                 return;
             };
 
@@ -5669,7 +5894,7 @@ fn main() -> Result<(), slint::PlatformError> {
                         let mut overlay = pending_state.lock().unwrap();
                         if let Err(e) = &result {
                             eprintln!("[{label}] {e:#}");
-                            ui.set_backend_error(format!("{label}: {e:#}").into());
+                            ui.set_backend_error(friendly_error(label, e).into());
                         }
                         overlay
                             .reactions
@@ -5784,7 +6009,7 @@ fn main() -> Result<(), slint::PlatformError> {
                         }
                         Err(e) => {
                             eprintln!("[profile] save failed: {e:#}");
-                            ui.set_profile_status(format!("error: {e:#}").into());
+                            ui.set_profile_status(friendly_error("save profile", &e).into());
                         }
                     }
                 });
@@ -5904,7 +6129,7 @@ fn main() -> Result<(), slint::PlatformError> {
                             }
                             Err(e) => {
                                 eprintln!("[profile] picture upload failed: {e:#}");
-                                ui.set_profile_status(format!("upload failed: {e:#}").into());
+                                ui.set_profile_status(friendly_error("upload picture", &e).into());
                             }
                         }
                     });
@@ -6044,7 +6269,10 @@ fn main() -> Result<(), slint::PlatformError> {
                 }
                 let group_hex = entry.group_hex.clone();
                 let temp_id = entry.temp_id.clone();
-                let existing = pending_state.lock().unwrap().find_send(&group_hex, &temp_id);
+                let existing = pending_state
+                    .lock()
+                    .unwrap()
+                    .find_send(&group_hex, &temp_id);
                 let in_overlay = existing.is_some();
                 // A red (online hard-failure) bubble is manual-retry-only within a
                 // session — don't auto-flush it. (After a restart it isn't in the
@@ -6062,7 +6290,8 @@ fn main() -> Result<(), slint::PlatformError> {
                     && let offline_queue::QueuedKind::Text { text, effect, .. } = &entry.kind
                 {
                     let bodies = vec![text.clone(), append_effect_marker(text, *effect)];
-                    if looks_already_sent(&backend, &group_hex, &my_id, &bodies, entry.enqueued_at) {
+                    if looks_already_sent(&backend, &group_hex, &my_id, &bodies, entry.enqueued_at)
+                    {
                         offline_queue::remove(&temp_id);
                         continue;
                     }
@@ -6125,8 +6354,11 @@ fn main() -> Result<(), slint::PlatformError> {
                         .lock()
                         .unwrap()
                         .add_send(&group_hex, pending.clone());
-                    if let Some(idx) =
-                        group_ids.lock().unwrap().iter().position(|g| g == &group_hex)
+                    if let Some(idx) = group_ids
+                        .lock()
+                        .unwrap()
+                        .iter()
+                        .position(|g| g == &group_hex)
                     {
                         let row = pending_chat_message(&pending, &my_id, &my_label);
                         with_inner_messages(&chats_messages, idx, |vm| {

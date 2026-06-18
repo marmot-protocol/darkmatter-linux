@@ -11,30 +11,34 @@
 
 use std::collections::{HashMap, HashSet};
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
 
 use anyhow::{Context, Result, anyhow};
 use cgka_traits::GroupId;
 use cgka_traits::TransportEndpoint;
+use cgka_traits::app_components::BLOSSOM_LOCATOR_KIND_V1;
 use marmot_account::{AccountHome, AccountSecretStore, AccountSummary};
 use marmot_app::{
     AccountRelayListBootstrap, AccountSetupRequest, AppBlobEndpoint, AppGroupMemberRecord,
     AppGroupMlsState, AppGroupRecord, AppMessageQuery, AppMessageRecord, AuditLogFile,
-    AuditLogSettings, AuditLogTrackerConfig,
-    AuditLogUploadSource, DEFAULT_BLOSSOM_SERVER_URL, MarmotApp, MarmotAppRuntime,
-    MediaAttachmentReference,
-    MediaDownloadResult, MediaUploadAttachmentRequest, MediaUploadRequest, MediaUploadResult,
-    RelayTelemetryResource, RelayTelemetryRuntimeConfig, RelayTelemetrySettings,
-    RuntimeMessageUpdate, RuntimeMessagesSubscription, SendSummary, UserDirectoryRecord,
-    UserProfileMetadata,
+    AuditLogSettings, AuditLogTrackerConfig, AuditLogUploadSource, DEFAULT_BLOSSOM_SERVER_URL,
+    MarmotApp, MarmotAppRuntime, MediaAttachmentReference, MediaDownloadResult,
+    MediaUploadAttachmentRequest, MediaUploadRequest, MediaUploadResult, RelayTelemetryResource,
+    RelayTelemetryRuntimeConfig, RelayTelemetrySettings, RuntimeMessageUpdate,
+    RuntimeMessagesSubscription, SendSummary, UserDirectoryRecord, UserProfileMetadata,
 };
-use cgka_traits::app_components::BLOSSOM_LOCATOR_KIND_V1;
 use tokio::runtime::Runtime as TokioRuntime;
 use tokio::task::JoinHandle;
 
 use crate::observability::ObservabilityConfig;
+
+/// account_id (lowercase) → (display name, picture URL), shared behind a mutex
+/// so the background sync and UI-thread reads share one warmed map.
+type ProfileCache = Arc<Mutex<HashMap<String, (String, Option<String>)>>>;
+/// Boot-progress callback ("Connecting…", "Syncing…"), invoked off the UI thread.
+type StatusCallback = Arc<dyn Fn(&str) + Send + Sync>;
 
 /// Default account label used when we bootstrap from a single stored nsec.
 pub const DEFAULT_ACCOUNT_LABEL: &str = "default";
@@ -76,9 +80,8 @@ fn host_os_version() -> String {
         .ok()
         .or_else(|| cmd_stdout("uname", &["-r"]))
         .and_then(|s| {
-            let digits = |p: &str| -> String {
-                p.chars().take_while(|c| c.is_ascii_digit()).collect()
-            };
+            let digits =
+                |p: &str| -> String { p.chars().take_while(|c| c.is_ascii_digit()).collect() };
             let mut parts = s.trim().split('.');
             match (parts.next().map(digits), parts.next().map(digits)) {
                 (Some(major), Some(minor)) if !major.is_empty() && !minor.is_empty() => {
@@ -140,7 +143,7 @@ pub struct Backend {
     /// which the always-running background sync writes to — UI-thread reads
     /// were observed blocking 0.1–5s per chat switch under contention.
     /// Warmed at boot, refreshed asynchronously.
-    profile_cache: Arc<Mutex<HashMap<String, (String, Option<String>)>>>,
+    profile_cache: ProfileCache,
     /// Accounts with a profile refresh currently in flight (dedupe).
     profile_inflight: Arc<Mutex<HashSet<String>>>,
 }
@@ -167,7 +170,7 @@ impl Backend {
         secret_store: Arc<dyn AccountSecretStore>,
         active_account: Option<String>,
         on_synced: impl FnOnce(Result<()>) + Send + 'static,
-        on_status: Option<Arc<dyn Fn(&str) + Send + Sync>>,
+        on_status: Option<StatusCallback>,
     ) -> Result<Self> {
         let status = |msg: &str| {
             if let Some(ref cb) = on_status {
@@ -219,16 +222,24 @@ impl Backend {
             // start() will fail. We wipe and retry once, then re-import via
             // the proper path.
             Self::start_with_self_heal(&tokio, &runtime, &account_home)?;
-            eprintln!("[boot-timing] first-run start done at {:?}", t_boot.elapsed());
+            eprintln!(
+                "[boot-timing] first-run start done at {:?}",
+                t_boot.elapsed()
+            );
             Self::login_account(tokio.handle(), &runtime, nsec, &relays)?;
-            eprintln!("[boot-timing] first-run login done at {:?}", t_boot.elapsed());
+            eprintln!(
+                "[boot-timing] first-run login done at {:?}",
+                t_boot.elapsed()
+            );
         }
 
         // Resolve the account the UI will display first. Every account in
         // the home gets a running worker regardless; this only picks the
         // initial view. Prefer the caller's last-active hint when that
         // account still exists, otherwise the nsec-derived one.
-        let all_accounts = account_home.accounts().context("list accounts after login")?;
+        let all_accounts = account_home
+            .accounts()
+            .context("list accounts after login")?;
         let account = all_accounts
             .iter()
             .find(|a| a.account_id_hex == target_id)
@@ -655,9 +666,7 @@ impl Backend {
                         accounts
                             .into_iter()
                             .find(|a| a.account_id_hex.eq_ignore_ascii_case(&target_id))
-                            .ok_or_else(|| {
-                                anyhow!("account did not appear in home after login")
-                            })
+                            .ok_or_else(|| anyhow!("account did not appear in home after login"))
                     }),
                 Err(e) => Err(anyhow!("login: {e}")),
             };
@@ -1031,13 +1040,15 @@ impl Backend {
         let request = MediaUploadRequest {
             attachments: items
                 .into_iter()
-                .map(|(file_name, media_type, plaintext, dim)| MediaUploadAttachmentRequest {
-                    file_name,
-                    media_type,
-                    plaintext,
-                    dim,
-                    thumbhash: None,
-                })
+                .map(
+                    |(file_name, media_type, plaintext, dim)| MediaUploadAttachmentRequest {
+                        file_name,
+                        media_type,
+                        plaintext,
+                        dim,
+                        thumbhash: None,
+                    },
+                )
                 .collect(),
             caption: None,
             send: true,
@@ -1273,9 +1284,7 @@ impl Backend {
 
     /// Member count from the cached member list (0 while the cache is cold).
     pub fn group_member_count(&self, group_hex: &str) -> usize {
-        self.group_members(group_hex)
-            .map(|m| m.len())
-            .unwrap_or(0)
+        self.group_members(group_hex).map(|m| m.len()).unwrap_or(0)
     }
 
     /// Queue a background refresh of one group's member list into the cache.
@@ -1397,7 +1406,10 @@ impl Backend {
         account_id_hex: &str,
     ) -> (String, Option<String>) {
         let is_self = account_id_hex.eq_ignore_ascii_case(my_account_id_hex);
-        let entry = app.directory_entry_for_account_id(account_id_hex).ok().flatten();
+        let entry = app
+            .directory_entry_for_account_id(account_id_hex)
+            .ok()
+            .flatten();
         let profile = entry.and_then(|e| e.profile);
         let name = profile.as_ref().and_then(|p| {
             p.display_name
@@ -2033,9 +2045,9 @@ impl Backend {
         (health.connected, health.total_relays)
     }
 
-    /// Diagnostic JSON snapshot — account info, key packages on disk, and
-    /// projected group rows (visible + archived). Used by the in-app debug
-    /// pane to surface state that's otherwise locked behind encrypted SQLite.
+    // Diagnostic JSON snapshot — account info, key packages on disk, and
+    // projected group rows (visible + archived). Used by the in-app debug
+    // pane to surface state that's otherwise locked behind encrypted SQLite.
     // ─── Security & privacy / developer settings ───────────────────────
     // These mirror the darkmatter-android "Security & Privacy" + "Developer"
     // settings cluster. Telemetry + audit-log *enabled* state live in marmot's
@@ -2235,7 +2247,7 @@ impl Backend {
 /// Best-effort dump of the `key-packages/` directory next to the account home.
 /// We surface filename + a few well-known fields; private material stays in the
 /// blob and is never read out here.
-fn read_key_packages_dir(home: &PathBuf) -> Vec<serde_json::Value> {
+fn read_key_packages_dir(home: &Path) -> Vec<serde_json::Value> {
     use serde_json::{Value, json};
     let dir = home.join("key-packages");
     let mut out = Vec::new();
@@ -2578,7 +2590,10 @@ async fn upload_media_with_heal(
     group_id: GroupId,
     request: MediaUploadRequest,
 ) -> Result<MediaUploadResult> {
-    match runtime.upload_media(&label, &group_id, request.clone()).await {
+    match runtime
+        .upload_media(&label, &group_id, request.clone())
+        .await
+    {
         Ok(r) => Ok(r),
         Err(e) => {
             let msg = e.to_string();

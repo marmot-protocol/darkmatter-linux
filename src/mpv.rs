@@ -22,7 +22,7 @@
 
 #![allow(non_camel_case_types)]
 
-use std::ffi::{c_char, c_int, c_void, CStr, CString};
+use std::ffi::{CStr, CString, c_char, c_int, c_void};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread::JoinHandle;
@@ -114,8 +114,11 @@ unsafe extern "C" {
     fn mpv_create() -> *mut mpv_handle;
     fn mpv_initialize(ctx: *mut mpv_handle) -> c_int;
     fn mpv_terminate_destroy(ctx: *mut mpv_handle);
-    fn mpv_set_option_string(ctx: *mut mpv_handle, name: *const c_char, data: *const c_char)
-        -> c_int;
+    fn mpv_set_option_string(
+        ctx: *mut mpv_handle,
+        name: *const c_char,
+        data: *const c_char,
+    ) -> c_int;
     fn mpv_set_property(
         ctx: *mut mpv_handle,
         name: *const c_char,
@@ -149,8 +152,10 @@ unsafe extern "C" {
         mpv: *mut mpv_handle,
         params: *mut mpv_render_param,
     ) -> c_int;
-    fn mpv_render_context_render(ctx: *mut mpv_render_context, params: *mut mpv_render_param)
-        -> c_int;
+    fn mpv_render_context_render(
+        ctx: *mut mpv_render_context,
+        params: *mut mpv_render_param,
+    ) -> c_int;
     fn mpv_render_context_update(ctx: *mut mpv_render_context) -> u64;
     fn mpv_render_context_set_update_callback(
         ctx: *mut mpv_render_context,
@@ -456,7 +461,12 @@ unsafe fn loadfile(h: *mut mpv_handle) {
     let cmd0 = cstr("loadfile");
     let cmd1 = cstr("dmblob://x");
     let cmd2 = cstr("replace");
-    let mut args: [*const c_char; 4] = [cmd0.as_ptr(), cmd1.as_ptr(), cmd2.as_ptr(), std::ptr::null()];
+    let mut args: [*const c_char; 4] = [
+        cmd0.as_ptr(),
+        cmd1.as_ptr(),
+        cmd2.as_ptr(),
+        std::ptr::null(),
+    ];
     unsafe {
         mpv_command(h, args.as_mut_ptr());
     }
@@ -548,10 +558,10 @@ impl MpvPlayer {
                             break;
                         }
                         let flags = unsafe { mpv_render_context_update(rctx.0) };
-                        if flags & MPV_RENDER_UPDATE_FRAME != 0 {
-                            if let Some(px) = unsafe { render_frame(rctx.0, h.0, max_dim) } {
-                                on_frame(px);
-                            }
+                        if flags & MPV_RENDER_UPDATE_FRAME != 0
+                            && let Some(px) = unsafe { render_frame(rctx.0, h.0, max_dim) }
+                        {
+                            on_frame(px);
                         }
                     }
                 })
@@ -603,8 +613,8 @@ impl MpvPlayer {
                                         }
                                     }
                                     b"eof-reached" => {
-                                        st.eof =
-                                            unsafe { get_flag(h.0, c"eof-reached") }.unwrap_or(false);
+                                        st.eof = unsafe { get_flag(h.0, c"eof-reached") }
+                                            .unwrap_or(false);
                                     }
                                     _ => {}
                                 }

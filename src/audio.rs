@@ -84,9 +84,7 @@ impl AudioRecorder {
         }
         .map_err(|e| anyhow!("build input stream: {e}"))?;
 
-        stream
-            .play()
-            .map_err(|e| anyhow!("start capture: {e}"))?;
+        stream.play().map_err(|e| anyhow!("start capture: {e}"))?;
 
         Ok(AudioRecorder {
             _stream: stream,
@@ -150,8 +148,8 @@ fn encode_wav(samples: &[f32], sample_rate: u32) -> Result<Vec<u8>> {
             bits_per_sample: 16,
             sample_format: hound::SampleFormat::Int,
         };
-        let mut writer = hound::WavWriter::new(Cursor::new(&mut out), spec)
-            .context("create wav writer")?;
+        let mut writer =
+            hound::WavWriter::new(Cursor::new(&mut out), spec).context("create wav writer")?;
         for &s in samples {
             let clamped = s.clamp(-1.0, 1.0);
             let i16_sample = (clamped * i16::MAX as f32) as i16;
@@ -188,14 +186,12 @@ pub struct AudioPlayer {
 impl AudioPlayer {
     /// Decode `bytes` and start playback immediately.
     pub fn play(bytes: Vec<u8>) -> Result<Self> {
-        let (_stream, handle) = rodio::OutputStream::try_default()
-            .map_err(|e| anyhow!("audio output: {e}"))?;
-        let sink = rodio::Sink::try_new(&handle)
-            .map_err(|e| anyhow!("audio sink: {e}"))?;
+        let (_stream, handle) =
+            rodio::OutputStream::try_default().map_err(|e| anyhow!("audio output: {e}"))?;
+        let sink = rodio::Sink::try_new(&handle).map_err(|e| anyhow!("audio sink: {e}"))?;
 
         let cursor = Cursor::new(bytes);
-        let source = rodio::Decoder::new(cursor)
-            .map_err(|e| anyhow!("decode audio: {e}"))?;
+        let source = rodio::Decoder::new(cursor).map_err(|e| anyhow!("decode audio: {e}"))?;
         let duration = source.total_duration().unwrap_or_default();
         let shared = Arc::new(Mutex::new(PlaybackState {
             playing: true,
@@ -263,7 +259,11 @@ impl AudioPlayer {
 
     pub fn seek(&self, secs: f64) {
         let target = secs.clamp(0.0, self.duration.as_secs_f64());
-        let _ = self.sink.lock().unwrap().try_seek(Duration::from_secs_f64(target));
+        let _ = self
+            .sink
+            .lock()
+            .unwrap()
+            .try_seek(Duration::from_secs_f64(target));
     }
 
     pub fn state(&self) -> PlaybackState {

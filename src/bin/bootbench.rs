@@ -70,9 +70,16 @@ fn main() {
     let secret_store = Arc::new(vault::VaultSecretStore::new(Arc::new(Mutex::new(vault))));
     let (tx, rx) = std::sync::mpsc::channel();
     let t_boot = Instant::now();
-    let b = backend::Backend::boot(&nsec, relays, secret_store, None, move |r| {
-        let _ = tx.send(r);
-    }, None)
+    let b = backend::Backend::boot(
+        &nsec,
+        relays,
+        secret_store,
+        None,
+        move |r| {
+            let _ = tx.send(r);
+        },
+        None,
+    )
     .expect("boot");
     eprintln!("[bench] ── boot returned in {:?} ──", t_boot.elapsed());
 

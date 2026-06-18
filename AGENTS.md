@@ -11,11 +11,11 @@ This file provides guidance to AI coding agents when working with code in this r
 
 ### marmot crates (git dependency)
 
-`Cargo.toml` pulls `marmot-app`, `marmot-account`, and `cgka-traits` from the private `darkmatter` repo over ssh (`git = "ssh://git@github.com/marmot-protocol/darkmatter.git", branch = "master"`). Anyone with read access to this repo also has read access there. `.cargo/config.toml` sets `net.git-fetch-with-cli` so cargo fetches through the git CLI and your normal ssh keys/agent. `Cargo.lock` pins the exact rev; bump with `cargo update -p marmot-app -p marmot-account -p cgka-traits`.
+`Cargo.toml` pulls `marmot-app`, `marmot-account`, and `cgka-traits` from the public `darkmatter` repo over https (`git = "https://github.com/marmot-protocol/darkmatter.git", branch = "master"`), so cargo fetches them anonymously — no ssh key or deploy secret. `.cargo/config.toml` sets `net.git-fetch-with-cli` so cargo fetches through the git CLI (honouring any local proxy/credential config). `Cargo.lock` pins the exact rev; bump with `cargo update -p marmot-app -p marmot-account -p cgka-traits`.
 
 To develop against a local darkmatter checkout, don't edit `Cargo.toml` — add a patch to `.cargo/config.toml` (or use `[patch]` locally):
 ```toml
-[patch."ssh://git@github.com/marmot-protocol/darkmatter.git"]
+[patch."https://github.com/marmot-protocol/darkmatter.git"]
 marmot-app     = { path = "../darkmatter/crates/marmot-app" }
 marmot-account = { path = "../darkmatter/crates/marmot-account" }
 cgka-traits    = { path = "../darkmatter/crates/traits" }

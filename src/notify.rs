@@ -10,8 +10,8 @@
 //     it off the UI thread.
 
 use std::collections::{BTreeSet, HashMap};
-use std::sync::atomic::AtomicBool;
 use std::sync::Mutex;
+use std::sync::atomic::AtomicBool;
 
 /// Shared notification state. One instance lives for the whole process behind an
 /// `Arc`; the toggle callbacks write the atomics and the chat watcher reads them.

@@ -6,6 +6,7 @@ name = "darkmatter-linux"
 version = "0.1.0"
 edition = "2024"
 default-run = "darkmatter-linux"
+license = "AGPL-3.0-or-later"
 
 [dependencies]
 slint = "1.8"
@@ -75,9 +76,9 @@ rodio = { version = "0.19", default-features = false, features = ["wav"] }
 # Pinned to PR #849 (add-markdown-text-effects) for the `{big}…{/big}` inline
 # text-effect syntax (Inline::Effect). Drop the rev once it merges to master.
 whitenoise-markdown = { git = "https://github.com/marmot-protocol/whitenoise-rs", rev = "973f3ab65bf410c35e401935cdf4374b77770901" }
-marmot-app = { git = "ssh://git@github.com/marmot-protocol/darkmatter.git", branch = "master", features = ["otlp-export"] }
-marmot-account = { git = "ssh://git@github.com/marmot-protocol/darkmatter.git", branch = "master" }
-cgka-traits = { git = "ssh://git@github.com/marmot-protocol/darkmatter.git", branch = "master" }
+marmot-app = { git = "https://github.com/marmot-protocol/darkmatter.git", branch = "master", features = ["otlp-export"] }
+marmot-account = { git = "https://github.com/marmot-protocol/darkmatter.git", branch = "master" }
+cgka-traits = { git = "https://github.com/marmot-protocol/darkmatter.git", branch = "master" }
 
 [build-dependencies]
 # Resolves libmpv's link flags for build.rs (see src/mpv.rs FFI core).

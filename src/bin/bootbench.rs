@@ -26,6 +26,13 @@ mod observability;
 #[path = "../vault.rs"]
 mod vault;
 
+// `vault.rs` is shared with the main binary, whose crate root owns this lock to
+// serialize DM_HOME-rebinding tests. The benchmark pulls vault.rs in via
+// `#[path]`, so its `#[cfg(test)]` module needs the same symbol at this crate
+// root to compile under `cargo test` / `clippy --all-targets`.
+#[cfg(test)]
+pub(crate) static DM_HOME_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 

@@ -1,0 +1,73 @@
+import { Palette, Theme } from "../tokens.slint";
+import { Modal, ModalField } from "modal.slint";
+import { Button } from "../primitives/button.slint";
+
+// Import an encrypted whole-folder backup. The user picks a `.dmbackup` file and
+// enters the password it was sealed with. On a fresh install (no vault yet) Rust
+// restores the entire folder; on a running install it merges the backup's
+// accounts into the current one. This dialog is dumb — picking, decryption, and
+// the restore/merge all live in Rust.
+export component ImportBackupModal inherits Modal {
+    // Display name of the chosen file ("" = none picked yet); Rust fills it after
+    // the native picker returns.
+    in property <string> file-name;
+    // True on a fresh install — flips the copy from "merge" to "restore".
+    in property <bool> restore-mode: false;
+    callback pick-file();
+    callback import(string); // password the backup was sealed with
+
+    in-out property <string> password-text;
+
+    card-width: 460px;
+    title: @tr("Import backup");
+    subtitle: root.restore-mode
+        ? @tr("Restore everything from an encrypted backup. Use the password the backup was created with.")
+        : @tr("Merge the accounts from an encrypted backup into this install. Use the password the backup was created with.");
+    secondary-label: @tr("Cancel");
+    primary-label: root.restore-mode ? @tr("Restore") : @tr("Import");
+    primary-busy-label: root.restore-mode ? @tr("Restoring…") : @tr("Importing…");
+    primary => { root.import(root.password-text); }
+
+    // File chooser row: a button plus the chosen filename.
+    VerticalLayout {
+        spacing: 7px;
+        Text {
+            text: @tr("BACKUP FILE");
+            color: Palette.text-mid;
+            font-size: (9px) * Theme.fs-scale;
+            font-weight: 700;
+            font-family: Theme.font;
+            letter-spacing: 1.6px;
+        }
+        HorizontalLayout {
+            spacing: 10px;
+            Button {
+                label: @tr("Choose file…");
+                button-height: 38px;
+                min-w: 120px;
+                clicked => { root.pick-file(); }
+            }
+            Rectangle {
+                horizontal-stretch: 1;
+                Text {
+                    width: 100%;
+                    text: root.file-name == "" ? @tr("No file selected") : root.file-name;
+                    color: root.file-name == "" ? Palette.text-vlo : Palette.text-hi;
+                    font-size: (12px) * Theme.fs-scale;
+                    font-family: Theme.font;
+                    vertical-alignment: center;
+                    overflow: elide;
+                }
+            }
+        }
+    }
+
+    ModalField {
+        label: @tr("BACKUP PASSWORD");
+        placeholder: @tr("Password the backup was sealed with");
+        text <=> root.password-text;
+        password: true;
+        autofocus: true;
+        submitted => { root.import(root.password-text); }
+    }
+}

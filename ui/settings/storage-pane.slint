@@ -17,6 +17,12 @@ export component StoragePane inherits DetailPage {
     // True while a clear is in flight — disables the button to avoid double-fire.
     in property <bool> clearing: false;
     callback clear-cache();
+    // Full path to the directory holding vault.db (shown so a user keeping their
+    // own backup knows where it lives).
+    in property <string> vault-dir;
+    callback open-vault-folder();
+    callback create-backup();
+    callback import-backup();
 
     PageHeader {
         title: @tr("Storage");
@@ -36,6 +42,39 @@ export component StoragePane inherits DetailPage {
                     label: root.clearing ? @tr("Clearing…") : @tr("Clear cache");
                     enabled: !root.clearing;
                     clicked => { root.clear-cache(); }
+                }
+            }
+        }
+    }
+
+    Section {
+        label: @tr("SECRET VAULT");
+        GroupCard {
+            PrefRow {
+                label: @tr("Vault location");
+                sublabel: root.vault-dir;
+                show-divider: true;
+                MicroButton {
+                    label: @tr("Open folder");
+                    clicked => { root.open-vault-folder(); }
+                }
+            }
+            PrefRow {
+                label: @tr("Back up everything");
+                sublabel: @tr("Pack accounts, chats, and settings into one encrypted file.");
+                show-divider: true;
+                MicroButton {
+                    label: @tr("Create backup…");
+                    clicked => { root.create-backup(); }
+                }
+            }
+            PrefRow {
+                label: @tr("Import a backup");
+                sublabel: @tr("Merge the accounts from a backup file into this install.");
+                show-divider: false;
+                MicroButton {
+                    label: @tr("Import…");
+                    clicked => { root.import-backup(); }
                 }
             }
         }

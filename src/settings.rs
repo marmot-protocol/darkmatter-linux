@@ -49,6 +49,12 @@ pub struct Settings {
     /// notifications. Local-only, like nicknames.
     #[serde(default)]
     pub muted_chats: BTreeSet<String>,
+    /// Per-chat read marker: `group_id_hex` → the Unix-seconds timestamp the
+    /// user last viewed that chat. Messages recorded after the marker count as
+    /// unread. Written when a chat is opened; the authoritative read state the
+    /// rail/tray unread counts derive from. Local-only, like nicknames.
+    #[serde(default)]
+    pub last_read: BTreeMap<String, i64>,
 }
 
 fn default_locale() -> String {
@@ -94,6 +100,7 @@ impl Default for Settings {
             notification_sound: true,
             notification_preview: true,
             muted_chats: BTreeSet::new(),
+            last_read: BTreeMap::new(),
         }
     }
 }

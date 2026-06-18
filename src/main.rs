@@ -23,6 +23,7 @@ mod notify;
 mod observability;
 mod offline_queue;
 mod settings;
+mod unread;
 mod vault;
 
 use backend::Backend;
@@ -3242,6 +3243,7 @@ fn main() -> Result<(), slint::PlatformError> {
         let pending_state = pending_state.clone();
         let banner_seen = encryption_banner_seen.clone();
         let notif = notif.clone();
+        let settings_cell = settings_cell.clone();
         move |idx| {
             if let Some(ui) = weak.upgrade() {
                 ui.set_active_chat(idx);
@@ -3260,6 +3262,21 @@ fn main() -> Result<(), slint::PlatformError> {
                 trigger_encryption_banner_entrance(&ui, group_hex.as_deref(), &banner_seen);
                 if let Some(group_hex) = group_hex {
                     let t_switch = std::time::Instant::now();
+                    // Mark the chat read: advance its read marker to now, clear
+                    // its unread, persist the marker (so backlog that arrives
+                    // while the app is closed surfaces as unread next launch),
+                    // and clear the row's badge optimistically. Persisting on
+                    // open is what makes the read state authoritative.
+                    let now = now_unix_secs() as i64;
+                    unread_state().set_marker(&group_hex, now);
+                    unread_state().set_count(&group_hex, 0);
+                    {
+                        let mut st = settings_cell.borrow_mut();
+                        st.last_read.insert(group_hex.clone(), now);
+                        st.save();
+                    }
+                    clear_chat_unread_row(&ui, idx as usize);
+                    refresh_unread_chrome(&ui);
                     // Re-entering a chat always starts from the default
                     // window — expanded history is per-visit.
                     msg_window_reset(&group_hex);
@@ -3648,7 +3665,10 @@ fn main() -> Result<(), slint::PlatformError> {
                 let _ = slint::invoke_from_event_loop(move || {
                     let Some(ui) = weak.upgrade() else { return };
                     let my_id = b2.account().account_id_hex.clone();
-                    let meta_from_record = chat_meta_from(&record, None, &my_id, &b2);
+                    // Unread starts at 0 on the optimistic unarchive row (no
+                    // UI-thread message scan); the next chat-list snapshot
+                    // recomputes it from the read marker.
+                    let meta_from_record = chat_meta_from(&record, None, &my_id, &b2, 0);
                     let group_hex = record.group_id_hex.clone();
 
                     // 1. Optimistic: pop the archived row, push the chat back
@@ -8309,6 +8329,21 @@ fn set_rail_badges(ui: &DarkMatterLinux, chats: &ModelRc<ChatMeta>) {
     ui.set_rail_badge_keys(0);
 }
 
+/// Clear one chat row's unread affordance in place (badge gone, read mark
+/// restored). Used when a chat is opened so the badge disappears immediately,
+/// ahead of the next full chat-list snapshot that recomputes it.
+fn clear_chat_unread_row(ui: &DarkMatterLinux, idx: usize) {
+    let chats = ui.get_chats();
+    if let Some(vm) = chats.as_any().downcast_ref::<VecModel<ChatMeta>>()
+        && let Some(mut row) = vm.row_data(idx)
+        && !(row.badge.is_empty() && row.read)
+    {
+        row.badge = s("");
+        row.read = true;
+        vm.set_row_data(idx, row);
+    }
+}
+
 /// String key used to derive the current account's avatar palette/initials.
 /// Falls back to the account hex if no display name is available so the
 /// avatar is at least deterministic per account.
@@ -8642,6 +8677,8 @@ struct ChatListSnapshot {
     records: Vec<AppGroupRecord>,
     /// Parallel to `records`.
     latest: Vec<Option<AppMessageRecord>>,
+    /// Parallel to `records`: per-chat unread count at snapshot time.
+    unread: Vec<u32>,
     first_msgs: Vec<AppMessageRecord>,
 }
 
@@ -8653,9 +8690,26 @@ fn fetch_chat_list_snapshot(backend: &Backend) -> Option<ChatListSnapshot> {
             return None;
         }
     };
-    let latest = records
+    let latest: Vec<Option<AppMessageRecord>> = records
         .iter()
         .map(|r| backend.latest_message(&r.group_id_hex))
+        .collect();
+    // Recompute unread for the full visible set from the authoritative read
+    // markers. Clear first so chats that just left the visible set (archived,
+    // blocked) drop out of the total; reseed/recount each one below.
+    let state = unread_state();
+    state.clear_counts();
+    let my_id = backend.account().account_id_hex.clone();
+    let now = now_unix_secs() as i64;
+    let unread: Vec<u32> = records
+        .iter()
+        .zip(latest.iter())
+        .map(|(r, lm)| {
+            let marker = state.marker_or_seed(&r.group_id_hex, now);
+            let n = count_unread(backend, &r.group_id_hex, &my_id, marker, lm.as_ref());
+            state.set_count(&r.group_id_hex, n);
+            n
+        })
         .collect();
     let first_msgs = records
         .first()
@@ -8668,6 +8722,7 @@ fn fetch_chat_list_snapshot(backend: &Backend) -> Option<ChatListSnapshot> {
     Some(ChatListSnapshot {
         records,
         latest,
+        unread,
         first_msgs,
     })
 }
@@ -8695,6 +8750,7 @@ fn refresh_chats_async(
             let chats_messages = ui.get_chats_messages();
             refresh_chats_from(&b, &snap, &chats, &chats_messages, &group_ids);
             set_rail_badges(&ui, &chats);
+            refresh_unread_chrome(&ui);
             spawn_chat_list_avatar_fetches(&ui, &b);
             then(&ui, &b, &snap);
         });
@@ -8725,6 +8781,7 @@ fn refresh_all_chat_models_async(
                 let chats_messages = ui.get_chats_messages();
                 refresh_chats_from(&b, snap, &chats, &chats_messages, &group_ids);
                 set_rail_badges(&ui, &chats);
+                refresh_unread_chrome(&ui);
                 spawn_chat_list_avatar_fetches(&ui, &b);
             }
             if let Some(snap) = &archived_snap {
@@ -8766,7 +8823,10 @@ fn refresh_chats_from(
     let metas: Vec<ChatMeta> = records
         .iter()
         .zip(snap.latest.iter())
-        .map(|(r, latest)| chat_meta_from(r, latest.as_ref(), &my_id, backend))
+        .zip(snap.unread.iter())
+        .map(|((r, latest), &unread)| {
+            chat_meta_from(r, latest.as_ref(), &my_id, backend, unread)
+        })
         .collect();
     let mut messages_outer: Vec<ModelRc<ChatMessage>> = Vec::with_capacity(records.len());
     let mut ids: Vec<String> = Vec::with_capacity(records.len());
@@ -8844,6 +8904,7 @@ fn merge_chat_list_rows_async(
             let chats_messages = ui.get_chats_messages();
             merge_chat_list_rows_from(&b, &snap, &chats, &chats_messages, &group_ids);
             set_rail_badges(&ui, &chats);
+            refresh_unread_chrome(&ui);
             spawn_chat_list_avatar_fetches(&ui, &b);
         });
     });
@@ -8861,8 +8922,13 @@ fn merge_chat_list_rows_from(
         return;
     };
     let mut ids = group_ids.lock().unwrap();
-    for (r, latest) in snap.records.iter().zip(snap.latest.iter()) {
-        let meta = chat_meta_from(r, latest.as_ref(), &my_id, backend);
+    for ((r, latest), &unread) in snap
+        .records
+        .iter()
+        .zip(snap.latest.iter())
+        .zip(snap.unread.iter())
+    {
+        let meta = chat_meta_from(r, latest.as_ref(), &my_id, backend, unread);
         if let Some(pos) = ids.iter().position(|g| g == &r.group_id_hex) {
             // Change-only: set_row_data dirties the row even when the data
             // is identical, and the post-sync merge touches EVERY row — the
@@ -9165,6 +9231,67 @@ fn now_unix_secs() -> u64 {
         .unwrap_or(0)
 }
 
+/// Cap on how many recent messages a per-chat unread recount scans. Counts
+/// above this saturate (the badge shows `99+` long before, anyway), so the
+/// scan stays cheap even for a chat with a deep backlog.
+const UNREAD_SCAN_CAP: usize = 200;
+
+/// Process-wide unread state, lazily initialized from the persisted
+/// `Settings::last_read` markers on first use. A `OnceLock` singleton (like
+/// `active_group_slot`) rather than a threaded handle, because the chat watcher
+/// and the chat-list snapshot fetch both run off the UI thread and would
+/// otherwise need it plumbed through every refresh path.
+fn unread_state() -> &'static unread::UnreadState {
+    static UNREAD: std::sync::OnceLock<unread::UnreadState> = std::sync::OnceLock::new();
+    UNREAD.get_or_init(|| {
+        let markers: HashMap<String, i64> = Settings::load().last_read.into_iter().collect();
+        unread::UnreadState::new(markers)
+    })
+}
+
+/// Count a chat's unread messages relative to `marker`: incoming, visible chat
+/// messages recorded after the marker. `latest` is the chat's most recent
+/// message (already fetched by callers) — when it isn't newer than the marker
+/// there's nothing unread, so the message scan is skipped entirely. That makes
+/// the common case (an already-read chat) a single cheap comparison.
+fn count_unread(
+    backend: &Backend,
+    group_hex: &str,
+    my_id: &str,
+    marker: i64,
+    latest: Option<&AppMessageRecord>,
+) -> u32 {
+    match latest {
+        Some(m) if m.recorded_at as i64 > marker => {
+            let msgs = backend
+                .messages(group_hex, Some(UNREAD_SCAN_CAP))
+                .unwrap_or_default();
+            msgs.iter()
+                .filter(|m| {
+                    m.recorded_at as i64 > marker
+                        && !m.sender.eq_ignore_ascii_case(my_id)
+                        && is_visible_chat_message(m)
+                })
+                .count() as u32
+        }
+        _ => 0,
+    }
+}
+
+/// Push the aggregate unread total into the window title (the "tray" surface —
+/// `(N) darkmatter`) and fold it into the rail's chats badge, which
+/// `set_rail_badges` has just set from pending chat-requests. Call right after
+/// `set_rail_badges` so the badge reflects unread + requests together.
+fn refresh_unread_chrome(ui: &DarkMatterLinux) {
+    let total = unread_state().total();
+    ui.set_rail_badge_chats(ui.get_rail_badge_chats() + total as i32);
+    ui.set_window_title(if total == 0 {
+        s("darkmatter")
+    } else {
+        s(&format!("({total}) darkmatter"))
+    });
+}
+
 /// Build the notification body for an incoming message. Group chats prefix the
 /// sender's display name; 1:1 chats let the title (the peer's name) carry that.
 /// These strings are Rust-side and intentionally not run through gettext (the
@@ -9209,6 +9336,23 @@ fn install_chat_watcher(
         let group_ids = group_ids.clone();
         let backend_cell = backend_cell.clone();
         let notif = notif.clone();
+        // Recompute this chat's unread here, on the tokio thread, before hopping
+        // to the UI: the count can scan up to `UNREAD_SCAN_CAP` decrypted
+        // messages and must never run on the render thread. The UI closure below
+        // zeroes it again if this turns out to be the chat on screen.
+        let id = record.group_id_hex.clone();
+        let now = now_unix_secs() as i64;
+        let marker = unread_state().marker_or_seed(&id, now);
+        let raw_unread = backend_cell
+            .lock()
+            .unwrap()
+            .as_ref()
+            .map(|b| {
+                let my_id = b.account().account_id_hex.clone();
+                let latest = b.latest_message(&id);
+                count_unread(b, &id, &my_id, marker, latest.as_ref())
+            })
+            .unwrap_or(0);
         let _ = slint::invoke_from_event_loop(move || {
             let Some(ui) = weak.upgrade() else { return };
             // The watcher fires on the tokio thread; the backend lives behind
@@ -9230,8 +9374,26 @@ fn install_chat_watcher(
                 .as_ref()
                 .map(|b| b.account().account_id_hex.clone())
                 .unwrap_or_default();
+            // A message landing in the chat already on screen is read on
+            // arrival: advance the marker and drop its unread to zero so an
+            // open chat never grows a badge. A brand-new chat (not yet in
+            // `group_ids`) reads as not-viewing.
+            let viewing = ui.get_active_page() == Page::Chats as i32
+                && group_ids
+                    .lock()
+                    .unwrap()
+                    .get(ui.get_active_chat() as usize)
+                    .map(|g| g == &id)
+                    .unwrap_or(false);
+            let unread = if viewing {
+                unread_state().set_marker(&id, now);
+                0
+            } else {
+                raw_unread
+            };
+            unread_state().set_count(&id, unread);
             let row_meta = match guard.as_deref() {
-                Some(b) => chat_meta_from(&record, None, &my_id, b),
+                Some(b) => chat_meta_from(&record, None, &my_id, b, unread),
                 None => fallback_chat_meta(&record),
             };
             // Title for any notification below = the chat's display name.
@@ -9258,7 +9420,9 @@ fn install_chat_watcher(
                     pos
                 }
             };
+            let _ = pos;
             set_rail_badges(&ui, &chats);
+            refresh_unread_chrome(&ui);
 
             // Desktop notification for a fresh incoming message in a chat the
             // user isn't currently viewing. Gates, in order: master toggle →
@@ -9271,23 +9435,23 @@ fn install_chat_watcher(
             {
                 let incoming = !m.sender.eq_ignore_ascii_case(&my_id);
                 let recent = m.recorded_at.saturating_add(NOTIF_SKEW_SECS) >= since_secs;
+                // `note_latest` runs before the `!viewing` check (it must record
+                // the seen id even while viewing, so switching away later doesn't
+                // re-notify); `&&` short-circuits the notification itself.
                 if incoming
                     && recent
                     && !notif.is_muted(&id)
                     && is_visible_chat_message(&m)
                     && notif.note_latest(&id, &m.message_id_hex)
+                    && !viewing
                 {
-                    let viewing = ui.get_active_page() == Page::Chats as i32
-                        && ui.get_active_chat() == pos as i32;
-                    if !viewing {
-                        let preview = notif.preview.load(std::sync::atomic::Ordering::Relaxed);
-                        let sound = notif.sound.load(std::sync::atomic::Ordering::Relaxed);
-                        let body = notification_body(b, &m, &id, preview);
-                        // dbus IO — keep it off the UI thread.
-                        std::thread::spawn(move || {
-                            notify::show(&chat_name, &body, sound);
-                        });
-                    }
+                    let preview = notif.preview.load(std::sync::atomic::Ordering::Relaxed);
+                    let sound = notif.sound.load(std::sync::atomic::Ordering::Relaxed);
+                    let body = notification_body(b, &m, &id, preview);
+                    // dbus IO — keep it off the UI thread.
+                    std::thread::spawn(move || {
+                        notify::show(&chat_name, &body, sound);
+                    });
                 }
             }
         });
@@ -9335,6 +9499,7 @@ fn chat_meta_from(
     last_message: Option<&AppMessageRecord>,
     my_account_id_hex: &str,
     backend: &Backend,
+    unread: u32,
 ) -> ChatMeta {
     // 1:1 chats are named for the peer, not the (usually-empty) MLS group
     // profile — that's what made every direct chat read as a random hex. For
@@ -9379,8 +9544,10 @@ fn chat_meta_from(
         last_seen: s(""),
         npub: s(&format!("mls:0x{}", short_hex(&record.group_id_hex))),
         session_time: s(""),
-        badge: s(""),
-        read: true,
+        badge: s(&unread::format_unread(unread)),
+        // `read` drives the rail's sent-checkmark, shown only when there's no
+        // unread badge competing for the slot — so a chat with unread hides it.
+        read: unread == 0,
         sending: false,
         av_a: a,
         av_b: b,

@@ -50,7 +50,10 @@ export { EffectCatalog }
 export { ErrorCopy }
 
 export component DarkMatterLinux inherits Window {
-    title: "darkmatter";
+    // Window/taskbar title. Rust prefixes the total unread count — `(3) darkmatter`
+    // — so the count shows wherever the OS surfaces the title (taskbar/tray/Alt-Tab).
+    in property <string> window-title: "darkmatter";
+    title: root.window-title;
     preferred-width: 1920px;
     preferred-height: 1080px;
     min-width: Theme.retro ? 1200px : 960px;

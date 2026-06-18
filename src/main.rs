@@ -2466,6 +2466,15 @@ fn main() -> Result<(), slint::PlatformError> {
             // backend action stay in lockstep. The property was set from
             // `!vault::exists()` when the modal opened.
             let restoring = ui.get_import_backup_restore_mode();
+            // `restore_into_home` overwrites the data dir, so re-check vault
+            // presence now (not just at open time): a full restore must never
+            // clobber an identity that came to exist while the modal was open.
+            if restoring && vault::exists() {
+                ui.set_import_backup_status(s(
+                    "Full restore is only available before unlocking an existing vault.",
+                ));
+                return;
+            }
             ui.set_import_backup_busy(true);
             ui.set_import_backup_status(s(""));
             let weak = weak.clone();

@@ -459,6 +459,7 @@ export component MessageBubble inherits Rectangle {
                     opacity: 0.7;
                 }
                 TouchArea {
+                    enabled: !cell.loading;
                     mouse-cursor: pointer;
                     clicked => { root.album-cell-clicked(cell.key); }
                 }

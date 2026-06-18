@@ -2,7 +2,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-06-18 05:37+0000\n"
+"POT-Creation-Date: 2026-06-18 12:43+0000\n"
 "PO-Revision-Date: 2026-05-27 13:20+0000\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -255,18 +255,18 @@ msgctxt "ContactsSidebar"
 msgid "Search contacts…"
 msgstr "Kontakte durchsuchen…"
 
-#: ui/dark-matter-linux.slint:368
+#: ui/dark-matter-linux.slint:376
 msgctxt "DarkMatterLinux"
 msgid "Connecting to relays…"
 msgstr "Verbinde mit Relays…"
 
-#: ui/dark-matter-linux.slint:982
+#: ui/dark-matter-linux.slint:1005
 #, fuzzy
 msgctxt "DarkMatterLinux"
 msgid "Block this chat request?"
 msgstr "Chat-Anfrage"
 
-#: ui/dark-matter-linux.slint:983
+#: ui/dark-matter-linux.slint:1006
 msgctxt "DarkMatterLinux"
 msgid ""
 "This declines the invite from {}. It can't be restored unless they invite "
@@ -275,7 +275,7 @@ msgstr ""
 "Damit lehnst du die Einladung von {} ab. Sie kann nur wiederhergestellt "
 "werden, wenn sie dich erneut einladen."
 
-#: ui/dark-matter-linux.slint:984
+#: ui/dark-matter-linux.slint:1007
 #, fuzzy
 msgctxt "DarkMatterLinux"
 msgid "Block"
@@ -637,6 +637,11 @@ msgctxt "LoginScreen"
 msgid "Your key never leaves this device."
 msgstr "Dein Schlüssel verlässt nie dieses Gerät."
 
+#: ui/login/login-screen.slint:267
+msgctxt "LoginScreen"
+msgid "NSEC"
+msgstr ""
+
 #: ui/login/login-screen.slint:274 ui/login/login-screen.slint:492
 msgctxt "LoginScreen"
 msgid "VAULT PASSWORD"
@@ -954,7 +959,7 @@ msgctxt "MentionPicker"
 msgid "(you)"
 msgstr "(du)"
 
-#: ui/messages.slint:148
+#: ui/messages.slint:165
 #, fuzzy
 msgctxt "MessagesArea"
 msgid "Load earlier messages"
@@ -1058,8 +1063,8 @@ msgid ""
 "Paste their npub or hex public key. They'll appear in your contacts on every "
 "device."
 msgstr ""
-"Füge ihren npub oder hexadezimalen öffentlichen Schlüssel ein. Sie erscheinen "
-"auf jedem Gerät in deinen Kontakten."
+"Füge ihren npub oder hexadezimalen öffentlichen Schlüssel ein. Sie "
+"erscheinen auf jedem Gerät in deinen Kontakten."
 
 #: ui/modals/add-contact-modal.slint:13
 #, fuzzy
@@ -1238,7 +1243,7 @@ msgctxt "ImportBackupModal"
 msgid "Password the backup was sealed with"
 msgstr "Passwort, mit dem das Backup versiegelt wurde"
 
-#: ui/modals/language-picker-modal.slint:53
+#: ui/modals/language-picker-modal.slint:66
 msgctxt "LanguagePickerModal"
 msgid "Interface language"
 msgstr "Oberflächensprache"
@@ -1376,43 +1381,43 @@ msgctxt "MessageContextMenu"
 msgid "Edit message"
 msgstr "Letzte Nachricht"
 
-#: ui/primitives/message-bubble.slint:363
+#: ui/primitives/message-bubble.slint:409
 msgctxt "MessageBubble"
 msgid "Original message"
 msgstr "Originalnachricht"
 
-#: ui/primitives/message-bubble.slint:373
+#: ui/primitives/message-bubble.slint:419
 msgctxt "MessageBubble"
 msgid "(message unavailable)"
 msgstr "(Nachricht nicht verfügbar)"
 
-#: ui/primitives/message-bubble.slint:588
+#: ui/primitives/message-bubble.slint:635
 msgctxt "MessageBubble"
 msgid "failed · tap to retry"
 msgstr "fehlgeschlagen · tippen zum Wiederholen"
 
-#: ui/primitives/message-bubble.slint:638
+#: ui/primitives/message-bubble.slint:685
 msgctxt "MessageBubble"
 msgid "decrypting…"
 msgstr "entschlüssele…"
 
-#: ui/primitives/message-bubble.slint:640
+#: ui/primitives/message-bubble.slint:687
 #, fuzzy
 msgctxt "MessageBubble"
 msgid "tap to retry"
 msgstr "fehlgeschlagen · tippen zum Wiederholen"
 
-#: ui/primitives/message-bubble.slint:641
+#: ui/primitives/message-bubble.slint:688
 msgctxt "MessageBubble"
 msgid "tap to load"
 msgstr "tippen zum Laden"
 
-#: ui/primitives/message-bubble.slint:800
+#: ui/primitives/message-bubble.slint:847
 msgctxt "MessageBubble"
 msgid "edited"
 msgstr "bearbeitet"
 
-#: ui/primitives/outgoing-row.slint:172 ui/primitives/outgoing-row.slint:183
+#: ui/primitives/outgoing-row.slint:173 ui/primitives/outgoing-row.slint:184
 msgctxt "OutgoingRow"
 msgid "You"
 msgstr "Du"
@@ -1422,6 +1427,11 @@ msgstr "Du"
 msgctxt "PictureField"
 msgid "Picture"
 msgstr "Bild"
+
+#: ui/profile/profile-page.slint:94
+msgctxt "PictureField"
+msgid "https://… or upload a file →"
+msgstr "https://… oder Datei hochladen →"
 
 #: ui/profile/profile-page.slint:102
 #, fuzzy
@@ -1539,6 +1549,11 @@ msgstr "Über"
 msgctxt "ProfilePage"
 msgid "A line or two about you"
 msgstr "Ein oder zwei Zeilen über dich"
+
+#: ui/profile/profile-page.slint:505 ui/profile/profile-page.slint:526
+msgctxt "ProfilePage"
+msgid "NIP-05"
+msgstr ""
 
 #: ui/profile/profile-page.slint:510
 msgctxt "ProfilePage"
@@ -1658,7 +1673,8 @@ msgstr "Lokale Schlüsselverwahrung"
 msgctxt "AboutPane"
 msgid "Private material lives in your OS keychain or encrypted store."
 msgstr ""
-"Private Daten bleiben in deinem OS-Schlüsselbund oder verschlüsselten Speicher."
+"Private Daten bleiben in deinem OS-Schlüsselbund oder verschlüsselten "
+"Speicher."
 
 #: ui/settings/about-pane.slint:235
 #, fuzzy
@@ -1759,67 +1775,67 @@ msgstr ""
 "Fügt unten einen Debug-Eintrag hinzu. Zeigt Konto, Schlüsselpakete und "
 "Gruppenstatus."
 
-#: ui/settings/appearance-pane.slint:23
+#: ui/settings/appearance-pane.slint:26
 msgctxt "AppearancePane"
 msgid "Mint"
 msgstr "Minze"
 
-#: ui/settings/appearance-pane.slint:24
+#: ui/settings/appearance-pane.slint:27
 msgctxt "AppearancePane"
 msgid "Ocean"
 msgstr "Ozean"
 
-#: ui/settings/appearance-pane.slint:25
+#: ui/settings/appearance-pane.slint:28
 msgctxt "AppearancePane"
 msgid "Berry"
 msgstr "Beere"
 
-#: ui/settings/appearance-pane.slint:26
+#: ui/settings/appearance-pane.slint:29
 msgctxt "AppearancePane"
 msgid "Coral"
 msgstr "Koralle"
 
-#: ui/settings/appearance-pane.slint:27
+#: ui/settings/appearance-pane.slint:30
 msgctxt "AppearancePane"
 msgid "Lavender"
 msgstr "Lavendel"
 
-#: ui/settings/appearance-pane.slint:31
+#: ui/settings/appearance-pane.slint:34
 msgctxt "AppearancePane"
 msgid "Appearance"
 msgstr "Erscheinungsbild"
 
-#: ui/settings/appearance-pane.slint:37
+#: ui/settings/appearance-pane.slint:40
 msgctxt "AppearancePane"
 msgid "THEME"
 msgstr "THEMA"
 
-#: ui/settings/appearance-pane.slint:40
+#: ui/settings/appearance-pane.slint:43
 msgctxt "AppearancePane"
 msgid "Theme"
 msgstr "Thema"
 
-#: ui/settings/appearance-pane.slint:41
+#: ui/settings/appearance-pane.slint:44
 msgctxt "AppearancePane"
 msgid "Pick the whole app's look."
 msgstr "Wähle das Aussehen der gesamten App."
 
-#: ui/settings/appearance-pane.slint:48
+#: ui/settings/appearance-pane.slint:51
 msgctxt "AppearancePane"
 msgid "Accent color"
 msgstr "Akzentfarbe"
 
-#: ui/settings/appearance-pane.slint:60
+#: ui/settings/appearance-pane.slint:63
 msgctxt "AppearancePane"
 msgid "MESSAGES"
 msgstr "NACHRICHTEN"
 
-#: ui/settings/appearance-pane.slint:63
+#: ui/settings/appearance-pane.slint:66
 msgctxt "AppearancePane"
 msgid "Own messages on the right"
 msgstr "Eigene Nachrichten rechts"
 
-#: ui/settings/appearance-pane.slint:64
+#: ui/settings/appearance-pane.slint:67
 msgctxt "AppearancePane"
 msgid "Place your sent messages on the right side."
 msgstr "Platziere deine gesendeten Nachrichten auf der rechten Seite."
@@ -2105,7 +2121,8 @@ msgstr "Zwischengespeicherte Anhänge"
 #: ui/settings/storage-pane.slint:38
 msgctxt "StoragePane"
 msgid "Decrypted images and files, sealed with your vault key."
-msgstr "Entschlüsselte Bilder und Dateien, versiegelt mit deinem Tresor-Schlüssel."
+msgstr ""
+"Entschlüsselte Bilder und Dateien, versiegelt mit deinem Tresor-Schlüssel."
 
 #: ui/settings/storage-pane.slint:42
 #, fuzzy
@@ -2163,27 +2180,42 @@ msgctxt "StoragePane"
 msgid "Import…"
 msgstr "Importieren…"
 
-#: ui/settings/theme-picker.slint:44
+#: ui/settings/theme-picker.slint:45
 #, fuzzy
 msgctxt "ThemePicker"
 msgid "Dark"
 msgstr "Dunkel"
 
-#: ui/settings/theme-picker.slint:44
+#: ui/settings/theme-picker.slint:45
 msgctxt "ThemePicker"
 msgid "Light"
 msgstr "Hell"
 
-#: ui/settings/theme-picker.slint:44
+#: ui/settings/theme-picker.slint:45
 #, fuzzy
 msgctxt "ThemePicker"
 msgid "Retro"
 msgstr "Retro-Modus"
 
-#: ui/settings/theme-picker.slint:44
+#: ui/settings/theme-picker.slint:45
 msgctxt "ThemePicker"
 msgid "Terminal"
 msgstr "Terminal"
+
+#: ui/settings/theme-picker.slint:45
+msgctxt "ThemePicker"
+msgid "Sketch"
+msgstr ""
+
+#: ui/settings/theme-picker.slint:45
+msgctxt "ThemePicker"
+msgid "Synthwave"
+msgstr ""
+
+#: ui/settings/theme-picker.slint:45
+msgctxt "ThemePicker"
+msgid "Chalkboard"
+msgstr ""
 
 #: ui/shells/side-panel.slint:14
 msgctxt "SidePanel"
@@ -2227,7 +2259,7 @@ msgid "COMMAND"
 msgstr "BEFEHL"
 
 #. Tier 1 — content-based classification.
-#: ui/tokens.slint:444
+#: ui/tokens.slint:551
 msgctxt "ErrorCopy"
 msgid ""
 "That doesn't look like a valid npub or public key. Double-check it and try "
@@ -2236,7 +2268,7 @@ msgstr ""
 "Das sieht nicht nach einem gültigen npub oder öffentlichen Schlüssel aus. "
 "Bitte überprüfen und erneut versuchen."
 
-#: ui/tokens.slint:445
+#: ui/tokens.slint:552
 msgctxt "ErrorCopy"
 msgid ""
 "Can't reach your relays right now. Check your network and relay settings, "
@@ -2246,7 +2278,7 @@ msgstr ""
 "Relay-Einstellungen und versuche es erneut."
 
 #. Tier 2 — operation-specific fallbacks.
-#: ui/tokens.slint:447
+#: ui/tokens.slint:554
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't finish syncing. We'll keep retrying — check your relay settings if "
@@ -2255,7 +2287,7 @@ msgstr ""
 "Synchronisierung nicht abgeschlossen. Wir versuchen es weiter — überprüfe "
 "deine Relay-Einstellungen, falls das öfter vorkommt."
 
-#: ui/tokens.slint:448
+#: ui/tokens.slint:555
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't start up. Check your network and relay settings, then try again."
@@ -2263,62 +2295,62 @@ msgstr ""
 "Start fehlgeschlagen. Überprüfe dein Netzwerk und deine Relay-Einstellungen "
 "und versuche es erneut."
 
-#: ui/tokens.slint:449
+#: ui/tokens.slint:556
 msgctxt "ErrorCopy"
 msgid "Couldn't switch accounts. Please try again in a moment."
 msgstr ""
 "Konto konnte nicht gewechselt werden. Bitte versuche es gleich noch einmal."
 
-#: ui/tokens.slint:450
+#: ui/tokens.slint:557
 msgctxt "ErrorCopy"
 msgid "Couldn't accept the invitation. Please try again in a moment."
 msgstr ""
 "Einladung konnte nicht angenommen werden. Bitte versuche es gleich noch "
 "einmal."
 
-#: ui/tokens.slint:451
+#: ui/tokens.slint:558
 msgctxt "ErrorCopy"
 msgid "Couldn't decline the invitation. Please try again in a moment."
 msgstr ""
 "Einladung konnte nicht abgelehnt werden. Bitte versuche es gleich noch "
 "einmal."
 
-#: ui/tokens.slint:452
+#: ui/tokens.slint:559
 msgctxt "ErrorCopy"
 msgid "Couldn't archive this chat. Please try again."
 msgstr "Dieser Chat konnte nicht archiviert werden. Bitte versuche es erneut."
 
-#: ui/tokens.slint:453
+#: ui/tokens.slint:560
 msgctxt "ErrorCopy"
 msgid "Couldn't restore this chat. Please try again."
 msgstr ""
 "Dieser Chat konnte nicht wiederhergestellt werden. Bitte versuche es erneut."
 
-#: ui/tokens.slint:454
+#: ui/tokens.slint:561
 msgctxt "ErrorCopy"
 msgid "Couldn't send your message. Check your connection and try again."
 msgstr ""
 "Nachricht konnte nicht gesendet werden. Überprüfe deine Verbindung und "
 "versuche es erneut."
 
-#: ui/tokens.slint:455
+#: ui/tokens.slint:562
 msgctxt "ErrorCopy"
 msgid "Couldn't save your edit. Check your connection and try again."
 msgstr ""
 "Änderung konnte nicht gespeichert werden. Überprüfe deine Verbindung und "
 "versuche es erneut."
 
-#: ui/tokens.slint:456
+#: ui/tokens.slint:563
 msgctxt "ErrorCopy"
 msgid "Couldn't add your reaction. Please try again."
 msgstr "Reaktion konnte nicht hinzugefügt werden. Bitte versuche es erneut."
 
-#: ui/tokens.slint:457
+#: ui/tokens.slint:564
 msgctxt "ErrorCopy"
 msgid "Couldn't remove your reaction. Please try again."
 msgstr "Reaktion konnte nicht entfernt werden. Bitte versuche es erneut."
 
-#: ui/tokens.slint:458
+#: ui/tokens.slint:565
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't publish your key package. Check your relay settings and try again."
@@ -2326,7 +2358,7 @@ msgstr ""
 "Dein Key Package konnte nicht veröffentlicht werden. Überprüfe deine Relay-"
 "Einstellungen und versuche es erneut."
 
-#: ui/tokens.slint:459
+#: ui/tokens.slint:566
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't rotate your key package. Check your relay settings and try again."
@@ -2334,7 +2366,7 @@ msgstr ""
 "Dein Key Package konnte nicht erneuert werden. Überprüfe deine Relay-"
 "Einstellungen und versuche es erneut."
 
-#: ui/tokens.slint:460
+#: ui/tokens.slint:567
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't refresh your key packages. Check your relay settings and try again."
@@ -2342,7 +2374,7 @@ msgstr ""
 "Deine Key Packages konnten nicht aktualisiert werden. Überprüfe deine Relay-"
 "Einstellungen und versuche es erneut."
 
-#: ui/tokens.slint:461
+#: ui/tokens.slint:568
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't republish to your relays. Check your relay settings and try again."
@@ -2350,91 +2382,96 @@ msgstr ""
 "Erneutes Veröffentlichen auf deinen Relays fehlgeschlagen. Überprüfe deine "
 "Relay-Einstellungen und versuche es erneut."
 
-#: ui/tokens.slint:462
+#: ui/tokens.slint:569
 msgctxt "ErrorCopy"
 msgid "Couldn't add that account. Please check the key and try again."
 msgstr ""
 "Dieses Konto konnte nicht hinzugefügt werden. Bitte überprüfe den Schlüssel "
 "und versuche es erneut."
 
-#: ui/tokens.slint:463
+#: ui/tokens.slint:570
 msgctxt "ErrorCopy"
 msgid "Couldn't create the chat. Please try again."
 msgstr "Chat konnte nicht erstellt werden. Bitte versuche es erneut."
 
-#: ui/tokens.slint:464
+#: ui/tokens.slint:571
 msgctxt "ErrorCopy"
 msgid "Couldn't add that contact. Please try again."
 msgstr ""
 "Dieser Kontakt konnte nicht hinzugefügt werden. Bitte versuche es erneut."
 
-#: ui/tokens.slint:465
+#: ui/tokens.slint:572
 msgctxt "ErrorCopy"
 msgid "Couldn't add that member. Please try again."
 msgstr ""
 "Dieses Mitglied konnte nicht hinzugefügt werden. Bitte versuche es erneut."
 
-#: ui/tokens.slint:466
+#: ui/tokens.slint:573
 msgctxt "ErrorCopy"
 msgid "Couldn't update the group settings. Please try again."
 msgstr ""
 "Gruppeneinstellungen konnten nicht aktualisiert werden. Bitte versuche es "
 "erneut."
 
-#: ui/tokens.slint:467
+#: ui/tokens.slint:574
 msgctxt "ErrorCopy"
 msgid "Couldn't update the group image. Please try again."
 msgstr ""
 "Gruppenbild konnte nicht aktualisiert werden. Bitte versuche es erneut."
 
-#: ui/tokens.slint:468
+#: ui/tokens.slint:575
 msgctxt "ErrorCopy"
 msgid "Couldn't save your profile. Check your connection and try again."
 msgstr ""
 "Dein Profil konnte nicht gespeichert werden. Überprüfe deine Verbindung und "
 "versuche es erneut."
 
-#: ui/tokens.slint:469
+#: ui/tokens.slint:576
 msgctxt "ErrorCopy"
 msgid "Couldn't upload your picture. Please try again."
 msgstr "Dein Bild konnte nicht hochgeladen werden. Bitte versuche es erneut."
 
-#: ui/tokens.slint:470
+#: ui/tokens.slint:577
 msgctxt "ErrorCopy"
 msgid "Something went wrong. Please try again."
 msgstr "Etwas ist schiefgelaufen. Bitte versuche es erneut."
 
 #. Network-pane status copy (also Rust-set).
-#: ui/tokens.slint:472
+#: ui/tokens.slint:579
 msgctxt "ErrorCopy"
 msgid "Not connected yet. Please wait a moment and try again."
 msgstr "Noch nicht verbunden. Bitte warte einen Moment und versuche es erneut."
 
-#: ui/tokens.slint:473
+#: ui/tokens.slint:580
 msgctxt "ErrorCopy"
 msgid "That relay is already in your list."
 msgstr "Dieses Relay ist bereits in deiner Liste."
 
-#: ui/tokens.slint:474
+#: ui/tokens.slint:581
 msgctxt "ErrorCopy"
 msgid "Couldn't save your relay list. Please try again."
 msgstr ""
 "Deine Relay-Liste konnte nicht gespeichert werden. Bitte versuche es erneut."
 
-#: ui/tokens.slint:475
+#: ui/tokens.slint:582
 msgctxt "ErrorCopy"
 msgid "Relay added."
 msgstr "Relay hinzugefügt."
 
-#: ui/tokens.slint:476
+#: ui/tokens.slint:583
 msgctxt "ErrorCopy"
 msgid "Relay removed."
 msgstr "Relay entfernt."
 
-#: ui/tokens.slint:477
+#: ui/tokens.slint:584
 msgctxt "ErrorCopy"
 msgid "Republishing…"
 msgstr "Erneut veröffentlichen…"
+
+#: ui/tokens.slint:618
+msgctxt "NativeDialogStrings"
+msgid "Choose a profile picture"
+msgstr "Profilbild auswählen"
 
 #~ msgctxt "AppearancePane"
 #~ msgid "FUN"

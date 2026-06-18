@@ -6304,12 +6304,19 @@ fn main() -> Result<(), slint::PlatformError> {
             };
             ui.set_profile_uploading(true);
             ui.set_profile_status(s("choosing image…"));
+            // Localized dialog title comes from the Slint @tr catalogs (the
+            // project keeps all i18n there); read it here on the UI thread,
+            // then move it into the blocking dialog task.
+            let dialog_title = ui
+                .global::<NativeDialogStrings>()
+                .get_choose_profile_picture()
+                .to_string();
             let weak = ui.as_weak();
             let backend_cell = backend_cell.clone();
             tokio_handle.spawn(async move {
-                let chosen = tokio::task::spawn_blocking(|| {
+                let chosen = tokio::task::spawn_blocking(move || {
                     rfd::FileDialog::new()
-                        .set_title("Choose a profile picture")
+                        .set_title(dialog_title)
                         .add_filter("Images", &["png", "jpg", "jpeg", "gif", "webp"])
                         .pick_file()
                 })

@@ -32,7 +32,7 @@ import { LoginScreen } from "login/login-screen.slint";
 import { SplashScreen } from "splash.slint";
 import { EmojiPicker } from "emoji-picker.slint";
 import { MessageContextMenu } from "primitives/context-menu.slint";
-import { EmojiEntry, EmojiSheet, Linkout, ProfileSink, EffectCatalog, ErrorCopy } from "tokens.slint";
+import { EmojiEntry, EmojiSheet, Linkout, ProfileSink, EffectCatalog, ErrorCopy, NativeDialogStrings } from "tokens.slint";
 import { EditVersion } from "tokens.slint";
 import { AuditLogEntry } from "tokens.slint";
 import { StagedAttachment } from "tokens.slint";
@@ -43,6 +43,8 @@ export { EmojiSheet }
 // Same for the Markdown link sink, bound once in Rust to open URLs externally.
 export { Linkout }
 export { ProfileSink }
+// File-dialog titles localized via @tr, read by Rust before opening the rfd picker.
+export { NativeDialogStrings }
 // Message-effect catalog + armed selection, read/cleared by Rust on send.
 export { EffectCatalog }
 // User-facing error/status copy. Rust reads these `@tr()` properties on the UI

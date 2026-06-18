@@ -264,7 +264,7 @@ export component LoginScreen inherits Rectangle {
                 spacing: 12px;
 
                 VaultField {
-                    label: "NSEC";
+                    label: @tr("NSEC");
                     placeholder: "nsec1…";
                     text <=> root.nsec-input;
                     error: root.error != "";

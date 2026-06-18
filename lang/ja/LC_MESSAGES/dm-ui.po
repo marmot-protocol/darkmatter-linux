@@ -2,7 +2,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-06-18 05:37+0000\n"
+"POT-Creation-Date: 2026-06-18 12:43+0000\n"
 "PO-Revision-Date: 2026-05-27 13:20+0000\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -255,18 +255,18 @@ msgctxt "ContactsSidebar"
 msgid "Search contacts…"
 msgstr "連絡先を検索…"
 
-#: ui/dark-matter-linux.slint:368
+#: ui/dark-matter-linux.slint:376
 msgctxt "DarkMatterLinux"
 msgid "Connecting to relays…"
 msgstr "リレーに接続中…"
 
-#: ui/dark-matter-linux.slint:982
+#: ui/dark-matter-linux.slint:1005
 #, fuzzy
 msgctxt "DarkMatterLinux"
 msgid "Block this chat request?"
 msgstr "チャットリクエスト"
 
-#: ui/dark-matter-linux.slint:983
+#: ui/dark-matter-linux.slint:1006
 msgctxt "DarkMatterLinux"
 msgid ""
 "This declines the invite from {}. It can't be restored unless they invite "
@@ -275,7 +275,7 @@ msgstr ""
 "{} からの招待を辞退します。相手がもう一度招待しない限り、元に戻すことはできま"
 "せん。"
 
-#: ui/dark-matter-linux.slint:984
+#: ui/dark-matter-linux.slint:1007
 #, fuzzy
 msgctxt "DarkMatterLinux"
 msgid "Block"
@@ -314,7 +314,9 @@ msgstr "リレーに接続中…"
 #: ui/get-started.slint:192
 msgctxt "GetStartedScreen"
 msgid "Relays carry your encrypted messages. Add at least one to get online."
-msgstr "リレーは暗号化されたメッセージを中継します。オンラインにするには少なくとも1つ追加してください。"
+msgstr ""
+"リレーは暗号化されたメッセージを中継します。オンラインにするには少なくとも1つ"
+"追加してください。"
 
 #: ui/get-started.slint:208
 #, fuzzy
@@ -633,6 +635,11 @@ msgctxt "LoginScreen"
 msgid "Your key never leaves this device."
 msgstr "鍵がこのデバイス外に出ることはありません。"
 
+#: ui/login/login-screen.slint:267
+msgctxt "LoginScreen"
+msgid "NSEC"
+msgstr ""
+
 #: ui/login/login-screen.slint:274 ui/login/login-screen.slint:492
 msgctxt "LoginScreen"
 msgid "VAULT PASSWORD"
@@ -948,7 +955,7 @@ msgctxt "MentionPicker"
 msgid "(you)"
 msgstr "(あなた)"
 
-#: ui/messages.slint:148
+#: ui/messages.slint:165
 #, fuzzy
 msgctxt "MessagesArea"
 msgid "Load earlier messages"
@@ -965,8 +972,8 @@ msgid ""
 "All accounts stay connected. Switching only changes which one you're looking "
 "at."
 msgstr ""
-"すべてのアカウントは接続されたままです。切り替えても、表示するアカウントが変わ"
-"るだけです。"
+"すべてのアカウントは接続されたままです。切り替えても、表示するアカウントが変"
+"わるだけです。"
 
 #: ui/modals/account-switcher-modal.slint:16
 msgctxt "AccountSwitcherModal"
@@ -997,8 +1004,8 @@ msgid ""
 "Paste another secret key, or generate a fresh one. It's sealed into the same "
 "vault and stays signed in alongside your other accounts."
 msgstr ""
-"別の秘密鍵を貼り付けるか、新しく生成してください。同じ保管庫に封入され、他のア"
-"カウントと並んでサインインしたままになります。"
+"別の秘密鍵を貼り付けるか、新しく生成してください。同じ保管庫に封入され、他の"
+"アカウントと並んでサインインしたままになります。"
 
 #: ui/modals/add-account-modal.slint:17
 #, fuzzy
@@ -1035,8 +1042,8 @@ msgid ""
 "This key was just generated and exists nowhere else yet. Copy it somewhere "
 "safe before adding it — there is no recovery."
 msgstr ""
-"この鍵は今生成されたばかりで、まだ他のどこにも存在しません。追加する前に安全な"
-"場所にコピーしてください。復元はできません。"
+"この鍵は今生成されたばかりで、まだ他のどこにも存在しません。追加する前に安全"
+"な場所にコピーしてください。復元はできません。"
 
 #: ui/modals/add-contact-modal.slint:11 ui/modals/add-contact-modal.slint:14
 #, fuzzy
@@ -1050,8 +1057,8 @@ msgid ""
 "Paste their npub or hex public key. They'll appear in your contacts on every "
 "device."
 msgstr ""
-"相手の npub または16進数の公開鍵を貼り付けてください。すべてのデバイスの連絡先"
-"に表示されます。"
+"相手の npub または16進数の公開鍵を貼り付けてください。すべてのデバイスの連絡"
+"先に表示されます。"
 
 #: ui/modals/add-contact-modal.slint:13
 #, fuzzy
@@ -1165,8 +1172,8 @@ msgid ""
 "Restore everything from an encrypted backup. Use the password the backup was "
 "created with."
 msgstr ""
-"暗号化されたバックアップからすべてを復元します。バックアップ作成時のパスワード"
-"を使用してください。"
+"暗号化されたバックアップからすべてを復元します。バックアップ作成時のパスワー"
+"ドを使用してください。"
 
 #: ui/modals/import-backup-modal.slint:25
 msgctxt "ImportBackupModal"
@@ -1174,8 +1181,8 @@ msgid ""
 "Merge the accounts from an encrypted backup into this install. Use the "
 "password the backup was created with."
 msgstr ""
-"暗号化されたバックアップのアカウントをこのインストールに統合します。バックアッ"
-"プ作成時のパスワードを使用してください。"
+"暗号化されたバックアップのアカウントをこのインストールに統合します。バック"
+"アップ作成時のパスワードを使用してください。"
 
 #: ui/modals/import-backup-modal.slint:26
 #, fuzzy
@@ -1230,7 +1237,7 @@ msgctxt "ImportBackupModal"
 msgid "Password the backup was sealed with"
 msgstr "バックアップを封入したパスワード"
 
-#: ui/modals/language-picker-modal.slint:53
+#: ui/modals/language-picker-modal.slint:66
 msgctxt "LanguagePickerModal"
 msgid "Interface language"
 msgstr "インターフェース言語"
@@ -1368,43 +1375,43 @@ msgctxt "MessageContextMenu"
 msgid "Edit message"
 msgstr "最後のメッセージ"
 
-#: ui/primitives/message-bubble.slint:363
+#: ui/primitives/message-bubble.slint:409
 msgctxt "MessageBubble"
 msgid "Original message"
 msgstr "元のメッセージ"
 
-#: ui/primitives/message-bubble.slint:373
+#: ui/primitives/message-bubble.slint:419
 msgctxt "MessageBubble"
 msgid "(message unavailable)"
 msgstr "(メッセージを表示できません)"
 
-#: ui/primitives/message-bubble.slint:588
+#: ui/primitives/message-bubble.slint:635
 msgctxt "MessageBubble"
 msgid "failed · tap to retry"
 msgstr "失敗 · タップして再試行"
 
-#: ui/primitives/message-bubble.slint:638
+#: ui/primitives/message-bubble.slint:685
 msgctxt "MessageBubble"
 msgid "decrypting…"
 msgstr "復号中…"
 
-#: ui/primitives/message-bubble.slint:640
+#: ui/primitives/message-bubble.slint:687
 #, fuzzy
 msgctxt "MessageBubble"
 msgid "tap to retry"
 msgstr "失敗 · タップして再試行"
 
-#: ui/primitives/message-bubble.slint:641
+#: ui/primitives/message-bubble.slint:688
 msgctxt "MessageBubble"
 msgid "tap to load"
 msgstr "タップして読み込む"
 
-#: ui/primitives/message-bubble.slint:800
+#: ui/primitives/message-bubble.slint:847
 msgctxt "MessageBubble"
 msgid "edited"
 msgstr "編集済み"
 
-#: ui/primitives/outgoing-row.slint:172 ui/primitives/outgoing-row.slint:183
+#: ui/primitives/outgoing-row.slint:173 ui/primitives/outgoing-row.slint:184
 msgctxt "OutgoingRow"
 msgid "You"
 msgstr "あなた"
@@ -1414,6 +1421,11 @@ msgstr "あなた"
 msgctxt "PictureField"
 msgid "Picture"
 msgstr "画像"
+
+#: ui/profile/profile-page.slint:94
+msgctxt "PictureField"
+msgid "https://… or upload a file →"
+msgstr "https://… またはファイルをアップロード →"
 
 #: ui/profile/profile-page.slint:102
 #, fuzzy
@@ -1532,6 +1544,11 @@ msgctxt "ProfilePage"
 msgid "A line or two about you"
 msgstr "自己紹介を1〜2行"
 
+#: ui/profile/profile-page.slint:505 ui/profile/profile-page.slint:526
+msgctxt "ProfilePage"
+msgid "NIP-05"
+msgstr ""
+
 #: ui/profile/profile-page.slint:510
 msgctxt "ProfilePage"
 msgid "Lightning address (LUD-16)"
@@ -1606,8 +1623,8 @@ msgid ""
 "encrypted with MLS before they leave your machine, routed over Nostr relays, "
 "and decrypted only for the people in the room."
 msgstr ""
-"Dark Matter は、プライベートなグループチャットのためのネイティブデスクトップク"
-"ライアントです。メッセージはあなたのマシンを離れる前に MLS で暗号化され、"
+"Dark Matter は、プライベートなグループチャットのためのネイティブデスクトップ"
+"クライアントです。メッセージはあなたのマシンを離れる前に MLS で暗号化され、"
 "Nostr リレーを経由して送られ、ルーム内の人にだけ復号されます。"
 
 #: ui/settings/about-pane.slint:201
@@ -1748,67 +1765,67 @@ msgid ""
 msgstr ""
 "下に Debug 項目を追加。アカウント、キーパッケージ、グループ状態を表示します。"
 
-#: ui/settings/appearance-pane.slint:23
+#: ui/settings/appearance-pane.slint:26
 msgctxt "AppearancePane"
 msgid "Mint"
 msgstr "ミント"
 
-#: ui/settings/appearance-pane.slint:24
+#: ui/settings/appearance-pane.slint:27
 msgctxt "AppearancePane"
 msgid "Ocean"
 msgstr "オーシャン"
 
-#: ui/settings/appearance-pane.slint:25
+#: ui/settings/appearance-pane.slint:28
 msgctxt "AppearancePane"
 msgid "Berry"
 msgstr "ベリー"
 
-#: ui/settings/appearance-pane.slint:26
+#: ui/settings/appearance-pane.slint:29
 msgctxt "AppearancePane"
 msgid "Coral"
 msgstr "コーラル"
 
-#: ui/settings/appearance-pane.slint:27
+#: ui/settings/appearance-pane.slint:30
 msgctxt "AppearancePane"
 msgid "Lavender"
 msgstr "ラベンダー"
 
-#: ui/settings/appearance-pane.slint:31
+#: ui/settings/appearance-pane.slint:34
 msgctxt "AppearancePane"
 msgid "Appearance"
 msgstr "外観"
 
-#: ui/settings/appearance-pane.slint:37
+#: ui/settings/appearance-pane.slint:40
 msgctxt "AppearancePane"
 msgid "THEME"
 msgstr "テーマ"
 
-#: ui/settings/appearance-pane.slint:40
+#: ui/settings/appearance-pane.slint:43
 msgctxt "AppearancePane"
 msgid "Theme"
 msgstr "テーマ"
 
-#: ui/settings/appearance-pane.slint:41
+#: ui/settings/appearance-pane.slint:44
 msgctxt "AppearancePane"
 msgid "Pick the whole app's look."
 msgstr "アプリ全体の見た目を選択します。"
 
-#: ui/settings/appearance-pane.slint:48
+#: ui/settings/appearance-pane.slint:51
 msgctxt "AppearancePane"
 msgid "Accent color"
 msgstr "アクセントカラー"
 
-#: ui/settings/appearance-pane.slint:60
+#: ui/settings/appearance-pane.slint:63
 msgctxt "AppearancePane"
 msgid "MESSAGES"
 msgstr "メッセージ"
 
-#: ui/settings/appearance-pane.slint:63
+#: ui/settings/appearance-pane.slint:66
 msgctxt "AppearancePane"
 msgid "Own messages on the right"
 msgstr "自分のメッセージを右側に表示"
 
-#: ui/settings/appearance-pane.slint:64
+#: ui/settings/appearance-pane.slint:67
 msgctxt "AppearancePane"
 msgid "Place your sent messages on the right side."
 msgstr "送信したメッセージを右側に配置します。"
@@ -1979,8 +1996,8 @@ msgid ""
 "Re-broadcasts your relay lists to every relay above. Use this if peers can't "
 "find you."
 msgstr ""
-"あなたのリレーリストを上記のすべてのリレーに再配信します。相手があなたを見つけ"
-"られない場合に使用してください。"
+"あなたのリレーリストを上記のすべてのリレーに再配信します。相手があなたを見つ"
+"けられない場合に使用してください。"
 
 #: ui/settings/notifications-pane.slint:22
 #, fuzzy
@@ -2151,27 +2168,42 @@ msgctxt "StoragePane"
 msgid "Import…"
 msgstr "インポート…"
 
-#: ui/settings/theme-picker.slint:44
+#: ui/settings/theme-picker.slint:45
 #, fuzzy
 msgctxt "ThemePicker"
 msgid "Dark"
 msgstr "ダーク"
 
-#: ui/settings/theme-picker.slint:44
+#: ui/settings/theme-picker.slint:45
 msgctxt "ThemePicker"
 msgid "Light"
 msgstr "ライト"
 
-#: ui/settings/theme-picker.slint:44
+#: ui/settings/theme-picker.slint:45
 #, fuzzy
 msgctxt "ThemePicker"
 msgid "Retro"
 msgstr "レトロモード"
 
-#: ui/settings/theme-picker.slint:44
+#: ui/settings/theme-picker.slint:45
 msgctxt "ThemePicker"
 msgid "Terminal"
 msgstr "ターミナル"
+
+#: ui/settings/theme-picker.slint:45
+msgctxt "ThemePicker"
+msgid "Sketch"
+msgstr ""
+
+#: ui/settings/theme-picker.slint:45
+msgctxt "ThemePicker"
+msgid "Synthwave"
+msgstr ""
+
+#: ui/settings/theme-picker.slint:45
+msgctxt "ThemePicker"
+msgid "Chalkboard"
+msgstr ""
 
 #: ui/shells/side-panel.slint:14
 msgctxt "SidePanel"
@@ -2215,7 +2247,7 @@ msgid "COMMAND"
 msgstr "コマンド"
 
 #. Tier 1 — content-based classification.
-#: ui/tokens.slint:444
+#: ui/tokens.slint:551
 msgctxt "ErrorCopy"
 msgid ""
 "That doesn't look like a valid npub or public key. Double-check it and try "
@@ -2223,7 +2255,7 @@ msgid ""
 msgstr ""
 "有効な npub または公開鍵ではないようです。確認してもう一度お試しください。"
 
-#: ui/tokens.slint:445
+#: ui/tokens.slint:552
 msgctxt "ErrorCopy"
 msgid ""
 "Can't reach your relays right now. Check your network and relay settings, "
@@ -2233,7 +2265,7 @@ msgstr ""
 "試しください。"
 
 #. Tier 2 — operation-specific fallbacks.
-#: ui/tokens.slint:447
+#: ui/tokens.slint:554
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't finish syncing. We'll keep retrying — check your relay settings if "
@@ -2242,7 +2274,7 @@ msgstr ""
 "同期を完了できませんでした。再試行を続けます。頻発する場合はリレーの設定を確"
 "認してください。"
 
-#: ui/tokens.slint:448
+#: ui/tokens.slint:555
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't start up. Check your network and relay settings, then try again."
@@ -2250,55 +2282,55 @@ msgstr ""
 "起動できませんでした。ネットワークとリレーの設定を確認して、もう一度お試しく"
 "ださい。"
 
-#: ui/tokens.slint:449
+#: ui/tokens.slint:556
 msgctxt "ErrorCopy"
 msgid "Couldn't switch accounts. Please try again in a moment."
 msgstr ""
 "アカウントを切り替えられませんでした。しばらくしてからもう一度お試しくださ"
 "い。"
 
-#: ui/tokens.slint:450
+#: ui/tokens.slint:557
 msgctxt "ErrorCopy"
 msgid "Couldn't accept the invitation. Please try again in a moment."
 msgstr "招待を承認できませんでした。しばらくしてからもう一度お試しください。"
 
-#: ui/tokens.slint:451
+#: ui/tokens.slint:558
 msgctxt "ErrorCopy"
 msgid "Couldn't decline the invitation. Please try again in a moment."
 msgstr "招待を辞退できませんでした。しばらくしてからもう一度お試しください。"
 
-#: ui/tokens.slint:452
+#: ui/tokens.slint:559
 msgctxt "ErrorCopy"
 msgid "Couldn't archive this chat. Please try again."
 msgstr "このチャットをアーカイブできませんでした。もう一度お試しください。"
 
-#: ui/tokens.slint:453
+#: ui/tokens.slint:560
 msgctxt "ErrorCopy"
 msgid "Couldn't restore this chat. Please try again."
 msgstr "このチャットを復元できませんでした。もう一度お試しください。"
 
-#: ui/tokens.slint:454
+#: ui/tokens.slint:561
 msgctxt "ErrorCopy"
 msgid "Couldn't send your message. Check your connection and try again."
 msgstr ""
 "メッセージを送信できませんでした。接続を確認して、もう一度お試しください。"
 
-#: ui/tokens.slint:455
+#: ui/tokens.slint:562
 msgctxt "ErrorCopy"
 msgid "Couldn't save your edit. Check your connection and try again."
 msgstr "編集を保存できませんでした。接続を確認して、もう一度お試しください。"
 
-#: ui/tokens.slint:456
+#: ui/tokens.slint:563
 msgctxt "ErrorCopy"
 msgid "Couldn't add your reaction. Please try again."
 msgstr "リアクションを追加できませんでした。もう一度お試しください。"
 
-#: ui/tokens.slint:457
+#: ui/tokens.slint:564
 msgctxt "ErrorCopy"
 msgid "Couldn't remove your reaction. Please try again."
 msgstr "リアクションを削除できませんでした。もう一度お試しください。"
 
-#: ui/tokens.slint:458
+#: ui/tokens.slint:565
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't publish your key package. Check your relay settings and try again."
@@ -2306,7 +2338,7 @@ msgstr ""
 "キーパッケージを公開できませんでした。リレーの設定を確認して、もう一度お試し"
 "ください。"
 
-#: ui/tokens.slint:459
+#: ui/tokens.slint:566
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't rotate your key package. Check your relay settings and try again."
@@ -2314,7 +2346,7 @@ msgstr ""
 "キーパッケージをローテーションできませんでした。リレーの設定を確認して、もう"
 "一度お試しください。"
 
-#: ui/tokens.slint:460
+#: ui/tokens.slint:567
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't refresh your key packages. Check your relay settings and try again."
@@ -2322,7 +2354,7 @@ msgstr ""
 "キーパッケージを更新できませんでした。リレーの設定を確認して、もう一度お試し"
 "ください。"
 
-#: ui/tokens.slint:461
+#: ui/tokens.slint:568
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't republish to your relays. Check your relay settings and try again."
@@ -2330,83 +2362,88 @@ msgstr ""
 "リレーへの再公開ができませんでした。リレーの設定を確認して、もう一度お試しく"
 "ださい。"
 
-#: ui/tokens.slint:462
+#: ui/tokens.slint:569
 msgctxt "ErrorCopy"
 msgid "Couldn't add that account. Please check the key and try again."
 msgstr ""
 "そのアカウントを追加できませんでした。鍵を確認して、もう一度お試しください。"
 
-#: ui/tokens.slint:463
+#: ui/tokens.slint:570
 msgctxt "ErrorCopy"
 msgid "Couldn't create the chat. Please try again."
 msgstr "チャットを作成できませんでした。もう一度お試しください。"
 
-#: ui/tokens.slint:464
+#: ui/tokens.slint:571
 msgctxt "ErrorCopy"
 msgid "Couldn't add that contact. Please try again."
 msgstr "その連絡先を追加できませんでした。もう一度お試しください。"
 
-#: ui/tokens.slint:465
+#: ui/tokens.slint:572
 msgctxt "ErrorCopy"
 msgid "Couldn't add that member. Please try again."
 msgstr "そのメンバーを追加できませんでした。もう一度お試しください。"
 
-#: ui/tokens.slint:466
+#: ui/tokens.slint:573
 msgctxt "ErrorCopy"
 msgid "Couldn't update the group settings. Please try again."
 msgstr "グループ設定を更新できませんでした。もう一度お試しください。"
 
-#: ui/tokens.slint:467
+#: ui/tokens.slint:574
 msgctxt "ErrorCopy"
 msgid "Couldn't update the group image. Please try again."
 msgstr "グループ画像を更新できませんでした。もう一度お試しください。"
 
-#: ui/tokens.slint:468
+#: ui/tokens.slint:575
 msgctxt "ErrorCopy"
 msgid "Couldn't save your profile. Check your connection and try again."
 msgstr ""
 "プロフィールを保存できませんでした。接続を確認して、もう一度お試しください。"
 
-#: ui/tokens.slint:469
+#: ui/tokens.slint:576
 msgctxt "ErrorCopy"
 msgid "Couldn't upload your picture. Please try again."
 msgstr "画像をアップロードできませんでした。もう一度お試しください。"
 
-#: ui/tokens.slint:470
+#: ui/tokens.slint:577
 msgctxt "ErrorCopy"
 msgid "Something went wrong. Please try again."
 msgstr "問題が発生しました。もう一度お試しください。"
 
 #. Network-pane status copy (also Rust-set).
-#: ui/tokens.slint:472
+#: ui/tokens.slint:579
 msgctxt "ErrorCopy"
 msgid "Not connected yet. Please wait a moment and try again."
 msgstr "まだ接続されていません。少し待ってからもう一度お試しください。"
 
-#: ui/tokens.slint:473
+#: ui/tokens.slint:580
 msgctxt "ErrorCopy"
 msgid "That relay is already in your list."
 msgstr "そのリレーは既にリストにあります。"
 
-#: ui/tokens.slint:474
+#: ui/tokens.slint:581
 msgctxt "ErrorCopy"
 msgid "Couldn't save your relay list. Please try again."
 msgstr "リレーのリストを保存できませんでした。もう一度お試しください。"
 
-#: ui/tokens.slint:475
+#: ui/tokens.slint:582
 msgctxt "ErrorCopy"
 msgid "Relay added."
 msgstr "リレーを追加しました。"
 
-#: ui/tokens.slint:476
+#: ui/tokens.slint:583
 msgctxt "ErrorCopy"
 msgid "Relay removed."
 msgstr "リレーを削除しました。"
 
-#: ui/tokens.slint:477
+#: ui/tokens.slint:584
 msgctxt "ErrorCopy"
 msgid "Republishing…"
 msgstr "再公開中…"
+
+#: ui/tokens.slint:618
+msgctxt "NativeDialogStrings"
+msgid "Choose a profile picture"
+msgstr "プロフィール画像を選択"
 
 #~ msgctxt "AppearancePane"
 #~ msgid "FUN"

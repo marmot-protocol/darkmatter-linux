@@ -609,6 +609,15 @@ export global EmojiSheet {
     in property <int> tile;
 }
 
+// Native (rfd) file-dialog titles. These are set by the OS file picker, which
+// lives on the Rust side — but the project keeps all user-facing i18n in the
+// Slint @tr catalogs, so we expose the localized title here as an @tr property
+// and Rust reads it (on the UI thread) before opening the dialog. A global
+// avoids threading the string through any component tree.
+export global NativeDialogStrings {
+    out property <string> choose-profile-picture: @tr("Choose a profile picture");
+}
+
 // One pickable message effect (Telegram-style burst). `clip-x`/`clip-y` index
 // the chosen emoji's tile in the shared Twemoji sheet, supplied by Rust at
 // startup. The composer's send-button picker iterates these; the per-message

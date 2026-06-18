@@ -91,7 +91,7 @@ component PictureField inherits Rectangle {
                     padding-top: 6px; padding-bottom: 6px;
                     input := LineInput {
                         horizontal-stretch: 1;
-                        placeholder: "https://… or upload a file →";
+                        placeholder: @tr("https://… or upload a file →");
                         single-line: true;
                         fg: Palette.text-hi;
                         placeholder-color: Palette.text-lo;
@@ -502,7 +502,7 @@ export component ProfilePage inherits Rectangle {
                         upload-clicked => { root.upload-picture-clicked(); }
                     }
                     FieldRow {
-                        label: "NIP-05";
+                        label: @tr("NIP-05");
                         placeholder: "you@example.com";
                         text <=> root.nip05;
                     }
@@ -523,7 +523,7 @@ export component ProfilePage inherits Rectangle {
                         value: root.username == "" ? "—" : "@" + root.username;
                     }
                     InfoRow {
-                        label: "NIP-05";
+                        label: @tr("NIP-05");
                         value: root.nip05 == "" ? "—" : root.nip05;
                     }
                     InfoRow {

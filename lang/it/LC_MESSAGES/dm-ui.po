@@ -2,7 +2,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-06-18 16:16+0000\n"
+"POT-Creation-Date: 2026-06-18 23:38+0000\n"
 "PO-Revision-Date: 2026-05-27 13:20+0000\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -644,6 +644,7 @@ msgid "NSEC"
 msgstr ""
 
 #: ui/login/login-screen.slint:274 ui/login/login-screen.slint:492
+#: ui/login/login-screen.slint:274 ui/login/login-screen.slint:492
 msgctxt "LoginScreen"
 msgid "VAULT PASSWORD"
 msgstr "PASSWORD CASSAFORTE"
@@ -801,53 +802,59 @@ msgctxt "Composer"
 msgid "Record voice message"
 msgstr "Registra messaggio vocale"
 
-#: ui/main-pane/composer.slint:89
+#: ui/main-pane/composer.slint:91
 msgctxt "Composer"
 msgid "Editing message  ·  Enter to save"
 msgstr "Modifica messaggio  ·  Invio per salvare"
 
-#: ui/main-pane/composer.slint:98
+#: ui/main-pane/composer.slint:100
 msgctxt "Composer"
 msgid "Cancel edit"
 msgstr "Annulla modifica"
 
-#: ui/main-pane/composer.slint:137
+#: ui/main-pane/composer.slint:139
 msgctxt "Composer"
 msgid "Replying to message:"
 msgstr "Risposta al messaggio:"
 
-#: ui/main-pane/composer.slint:138
+#: ui/main-pane/composer.slint:140
 msgctxt "Composer"
 msgid "Replying to {}:"
 msgstr "Risposta a {}:"
 
-#: ui/main-pane/composer.slint:157
+#: ui/main-pane/composer.slint:159
 msgctxt "Composer"
 msgid "Cancel reply"
 msgstr "Annulla risposta"
 
-#: ui/main-pane/composer.slint:239
+#: ui/main-pane/composer.slint:241
 msgctxt "Composer"
 msgid "Remove"
 msgstr "Rimuovi"
 
-#: ui/main-pane/composer.slint:296
+#: ui/main-pane/composer.slint:298
 #, fuzzy
 msgctxt "Composer"
 msgid "Send a message…"
 msgstr "Ultimo messaggio"
 
-#: ui/main-pane/composer.slint:407
+#: ui/main-pane/composer.slint:410
 msgctxt "Composer"
 msgid "{}s"
 msgstr "{}s"
 
-#: ui/main-pane/composer.slint:417
+#: ui/main-pane/composer.slint:420
 msgctxt "Composer"
 msgid "Send"
 msgstr "Invia"
 
-#: ui/main-pane/composer.slint:510
+#: ui/main-pane/composer.slint:440
+#, fuzzy
+msgctxt "Composer"
+msgid "Cancel recording"
+msgstr "Annulla modifica"
+
+#: ui/main-pane/composer.slint:515
 #, fuzzy
 msgctxt "Composer"
 msgid "Shift+Enter for newline"
@@ -938,6 +945,7 @@ msgid "Remove image"
 msgstr "Rimuovi contatto"
 
 #: ui/main-pane/group-settings-card.slint:78
+#: ui/main-pane/group-settings-card.slint:78
 #, fuzzy
 msgctxt "GroupSettingsCard"
 msgid "Group name"
@@ -1013,7 +1021,7 @@ msgctxt "AddAccountModal"
 msgid "Add account"
 msgstr "Contatto"
 
-#: ui/modals/add-account-modal.slint:16
+#: ui/modals/add-account-modal.slint:59
 msgctxt "AddAccountModal"
 msgid ""
 "Paste another secret key, or generate a fresh one. It's sealed into the same "
@@ -1182,7 +1190,7 @@ msgctxt "ImportBackupModal"
 msgid "Import backup"
 msgstr "Importa backup"
 
-#: ui/modals/import-backup-modal.slint:24
+#: ui/modals/import-backup-modal.slint:25
 msgctxt "ImportBackupModal"
 msgid ""
 "Restore everything from an encrypted backup. Use the password the backup was "
@@ -1401,6 +1409,9 @@ msgctxt "MessageBubble"
 msgid "(message unavailable)"
 msgstr "(messaggio non disponibile)"
 
+#: ui/primitives/message-bubble.slint:635
+#: ui/primitives/message-bubble.slint:635
+#: ui/primitives/message-bubble.slint:635
 #: ui/primitives/message-bubble.slint:635
 msgctxt "MessageBubble"
 msgid "failed · tap to retry"
@@ -1754,7 +1765,7 @@ msgctxt "AdvancedPane"
 msgid "Refresh"
 msgstr "Aggiorna"
 
-#: ui/settings/advanced-pane.slint:148
+#: ui/settings/advanced-pane.slint:160
 msgctxt "AdvancedPane"
 msgid ""
 "Deleting the file being recorded rotates it — recording continues in a fresh "
@@ -2267,7 +2278,7 @@ msgid "COMMAND"
 msgstr "COMANDO"
 
 #. Tier 1 — content-based classification.
-#: ui/tokens.slint:551
+#: ui/tokens.slint:568
 msgctxt "ErrorCopy"
 msgid ""
 "That doesn't look like a valid npub or public key. Double-check it and try "
@@ -2275,7 +2286,7 @@ msgid ""
 msgstr ""
 "Non sembra un npub o una chiave pubblica valida. Controllala e riprova."
 
-#: ui/tokens.slint:552
+#: ui/tokens.slint:568
 msgctxt "ErrorCopy"
 msgid ""
 "Can't reach your relays right now. Check your network and relay settings, "
@@ -2285,7 +2296,7 @@ msgstr ""
 "le impostazioni dei relay, poi riprova."
 
 #. Tier 2 — operation-specific fallbacks.
-#: ui/tokens.slint:554
+#: ui/tokens.slint:568
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't finish syncing. We'll keep retrying — check your relay settings if "
@@ -2294,7 +2305,7 @@ msgstr ""
 "Sincronizzazione non completata. Continueremo a riprovare — se il problema "
 "persiste, controlla le impostazioni dei relay."
 
-#: ui/tokens.slint:555
+#: ui/tokens.slint:568
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't start up. Check your network and relay settings, then try again."
@@ -2347,7 +2358,7 @@ msgctxt "ErrorCopy"
 msgid "Couldn't remove your reaction. Please try again."
 msgstr "Impossibile rimuovere la reazione. Riprova."
 
-#: ui/tokens.slint:565
+#: ui/tokens.slint:568
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't publish your key package. Check your relay settings and try again."
@@ -2355,7 +2366,7 @@ msgstr ""
 "Impossibile pubblicare il tuo key package. Controlla le impostazioni dei "
 "relay e riprova."
 
-#: ui/tokens.slint:566
+#: ui/tokens.slint:568
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't rotate your key package. Check your relay settings and try again."
@@ -2363,7 +2374,7 @@ msgstr ""
 "Impossibile ruotare il tuo key package. Controlla le impostazioni dei relay "
 "e riprova."
 
-#: ui/tokens.slint:567
+#: ui/tokens.slint:568
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't refresh your key packages. Check your relay settings and try again."

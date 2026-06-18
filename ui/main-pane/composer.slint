@@ -436,25 +436,18 @@ export component Composer inherits Rectangle {
                     }
 
                     // Cancel — discards the clip.
-                    Rectangle {
-                        width: 36px;
-                        height: 36px;
+                    MicroButton {
+                        label: @tr("Cancel recording");
+                        button-height: 32px;
                         y: (parent.height - self.height) / 2;
-                        border-radius: (8px) * Theme.r-scale;
-                        background: rec-cancel-touch.has-hover ? Palette.panel-2 : transparent;
-                        animate background { duration: 100ms; }
-                        Text {
-                            text: "✕";
-                            color: rec-cancel-touch.has-hover ? Palette.text-hi : Palette.text-mid;
-                            font-size: (14px) * Theme.fs-scale;
-                            font-family: Theme.font;
-                            horizontal-alignment: center;
-                            vertical-alignment: center;
-                        }
-                        rec-cancel-touch := TouchArea {
-                            mouse-cursor: pointer;
-                            clicked => { root.cancel-recording(); }
-                        }
+                        focusable: true;
+                        fg: Palette.text-mid;
+                        hover-fg: Palette.text-hi;
+                        bg-color: transparent;
+                        hover-bg: Palette.panel-2;
+                        outline: Palette.border-2;
+                        hover-outline: Palette.border;
+                        clicked => { root.cancel-recording(); }
                     }
                 }
             }

@@ -2,7 +2,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-06-18 16:16+0000\n"
+"POT-Creation-Date: 2026-06-18 23:38+0000\n"
 "PO-Revision-Date: 2026-05-27 13:20+0000\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -641,6 +641,7 @@ msgid "NSEC"
 msgstr ""
 
 #: ui/login/login-screen.slint:274 ui/login/login-screen.slint:492
+#: ui/login/login-screen.slint:274 ui/login/login-screen.slint:492
 msgctxt "LoginScreen"
 msgid "VAULT PASSWORD"
 msgstr "保管庫のパスワード"
@@ -797,53 +798,59 @@ msgctxt "Composer"
 msgid "Record voice message"
 msgstr "音声メッセージを録音"
 
-#: ui/main-pane/composer.slint:89
+#: ui/main-pane/composer.slint:91
 msgctxt "Composer"
 msgid "Editing message  ·  Enter to save"
 msgstr "メッセージを編集中  ·  Enter で保存"
 
-#: ui/main-pane/composer.slint:98
+#: ui/main-pane/composer.slint:100
 msgctxt "Composer"
 msgid "Cancel edit"
 msgstr "編集をキャンセル"
 
-#: ui/main-pane/composer.slint:137
+#: ui/main-pane/composer.slint:139
 msgctxt "Composer"
 msgid "Replying to message:"
 msgstr "返信先メッセージ:"
 
-#: ui/main-pane/composer.slint:138
+#: ui/main-pane/composer.slint:140
 msgctxt "Composer"
 msgid "Replying to {}:"
 msgstr "{} への返信:"
 
-#: ui/main-pane/composer.slint:157
+#: ui/main-pane/composer.slint:159
 msgctxt "Composer"
 msgid "Cancel reply"
 msgstr "返信をキャンセル"
 
-#: ui/main-pane/composer.slint:239
+#: ui/main-pane/composer.slint:241
 msgctxt "Composer"
 msgid "Remove"
 msgstr "削除"
 
-#: ui/main-pane/composer.slint:296
+#: ui/main-pane/composer.slint:298
 #, fuzzy
 msgctxt "Composer"
 msgid "Send a message…"
 msgstr "最後のメッセージ"
 
-#: ui/main-pane/composer.slint:407
+#: ui/main-pane/composer.slint:410
 msgctxt "Composer"
 msgid "{}s"
 msgstr "{}秒"
 
-#: ui/main-pane/composer.slint:417
+#: ui/main-pane/composer.slint:420
 msgctxt "Composer"
 msgid "Send"
 msgstr "送信"
 
-#: ui/main-pane/composer.slint:510
+#: ui/main-pane/composer.slint:440
+#, fuzzy
+msgctxt "Composer"
+msgid "Cancel recording"
+msgstr "編集をキャンセル"
+
+#: ui/main-pane/composer.slint:515
 #, fuzzy
 msgctxt "Composer"
 msgid "Shift+Enter for newline"
@@ -933,6 +940,7 @@ msgid "Remove image"
 msgstr "連絡先を削除"
 
 #: ui/main-pane/group-settings-card.slint:78
+#: ui/main-pane/group-settings-card.slint:78
 #, fuzzy
 msgctxt "GroupSettingsCard"
 msgid "Group name"
@@ -1008,7 +1016,7 @@ msgctxt "AddAccountModal"
 msgid "Add account"
 msgstr "連絡先"
 
-#: ui/modals/add-account-modal.slint:16
+#: ui/modals/add-account-modal.slint:59
 msgctxt "AddAccountModal"
 msgid ""
 "Paste another secret key, or generate a fresh one. It's sealed into the same "
@@ -1176,7 +1184,7 @@ msgctxt "ImportBackupModal"
 msgid "Import backup"
 msgstr "バックアップをインポート"
 
-#: ui/modals/import-backup-modal.slint:24
+#: ui/modals/import-backup-modal.slint:25
 msgctxt "ImportBackupModal"
 msgid ""
 "Restore everything from an encrypted backup. Use the password the backup was "
@@ -1395,6 +1403,9 @@ msgctxt "MessageBubble"
 msgid "(message unavailable)"
 msgstr "(メッセージを表示できません)"
 
+#: ui/primitives/message-bubble.slint:635
+#: ui/primitives/message-bubble.slint:635
+#: ui/primitives/message-bubble.slint:635
 #: ui/primitives/message-bubble.slint:635
 msgctxt "MessageBubble"
 msgid "failed · tap to retry"
@@ -1746,7 +1757,7 @@ msgctxt "AdvancedPane"
 msgid "Refresh"
 msgstr "更新"
 
-#: ui/settings/advanced-pane.slint:148
+#: ui/settings/advanced-pane.slint:160
 msgctxt "AdvancedPane"
 msgid ""
 "Deleting the file being recorded rotates it — recording continues in a fresh "
@@ -2257,7 +2268,7 @@ msgid "COMMAND"
 msgstr "コマンド"
 
 #. Tier 1 — content-based classification.
-#: ui/tokens.slint:551
+#: ui/tokens.slint:568
 msgctxt "ErrorCopy"
 msgid ""
 "That doesn't look like a valid npub or public key. Double-check it and try "
@@ -2265,7 +2276,7 @@ msgid ""
 msgstr ""
 "有効な npub または公開鍵ではないようです。確認してもう一度お試しください。"
 
-#: ui/tokens.slint:552
+#: ui/tokens.slint:568
 msgctxt "ErrorCopy"
 msgid ""
 "Can't reach your relays right now. Check your network and relay settings, "
@@ -2275,7 +2286,7 @@ msgstr ""
 "試しください。"
 
 #. Tier 2 — operation-specific fallbacks.
-#: ui/tokens.slint:554
+#: ui/tokens.slint:568
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't finish syncing. We'll keep retrying — check your relay settings if "
@@ -2284,7 +2295,7 @@ msgstr ""
 "同期を完了できませんでした。再試行を続けます。頻発する場合はリレーの設定を確"
 "認してください。"
 
-#: ui/tokens.slint:555
+#: ui/tokens.slint:568
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't start up. Check your network and relay settings, then try again."
@@ -2340,7 +2351,7 @@ msgctxt "ErrorCopy"
 msgid "Couldn't remove your reaction. Please try again."
 msgstr "リアクションを削除できませんでした。もう一度お試しください。"
 
-#: ui/tokens.slint:565
+#: ui/tokens.slint:568
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't publish your key package. Check your relay settings and try again."
@@ -2348,7 +2359,7 @@ msgstr ""
 "キーパッケージを公開できませんでした。リレーの設定を確認して、もう一度お試し"
 "ください。"
 
-#: ui/tokens.slint:566
+#: ui/tokens.slint:568
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't rotate your key package. Check your relay settings and try again."
@@ -2356,7 +2367,7 @@ msgstr ""
 "キーパッケージをローテーションできませんでした。リレーの設定を確認して、もう"
 "一度お試しください。"
 
-#: ui/tokens.slint:567
+#: ui/tokens.slint:568
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't refresh your key packages. Check your relay settings and try again."

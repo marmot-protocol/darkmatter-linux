@@ -19,12 +19,22 @@
 # eventually-consistent (relay round-trips + MLS epoch commits), so every step
 # retries.
 #
-# Usage:  ruby scripts/dm-scenario.rb [N]
-# Env:    DM_SCENARIO_GOLDEN (default "default"), DMVM_MEM_MB, DMVM_CPUS
+# There is also a "chaotic" mode (`ruby scripts/dm-scenario.rb chaotic [N]`):
+# instead of building the group step by step, it puts everyone in one group up
+# front, then ALL VMs blast messages at the same time. It does not care about
+# ordering — it only confirms that every VM eventually received every message,
+# and exits non-zero if any VM is missing any.
+#
+# Usage:  ruby scripts/dm-scenario.rb [N]                # escalating build
+#         ruby scripts/dm-scenario.rb chaotic [N]        # simultaneous blast
+#         ruby scripts/dm-scenario.rb screenshots [N]    # re-capture GUIs only
+# Env:    DM_SCENARIO_GOLDEN (default "default"), DM_CHAOS_MSGS (default 3),
+#         DMVM_MEM_MB, DMVM_CPUS
 
 require 'json'
 require 'open3'
 require 'fileutils'
+require 'set'
 
 DMVM      = File.expand_path('dmvm.rb', __dir__)
 REPO_ROOT = File.expand_path('..', __dir__)
@@ -34,7 +44,14 @@ START_TAG = Time.now.utc.strftime('%Y-%m-%dT%H%M%SZ')
 # re-running the whole scenario.
 SCREENSHOTS_ONLY = ARGV[0] == 'screenshots'
 ARGV.shift if SCREENSHOTS_ONLY
+# `dm-scenario.rb chaotic [N]` runs the chaos scenario instead of the escalating
+# build: one group with everyone in it, all VMs blast messages simultaneously,
+# then we confirm every VM received every message (order irrelevant).
+CHAOTIC = ARGV[0] == 'chaotic'
+ARGV.shift if CHAOTIC
 N      = (ARGV[0] || ENV['DM_SCENARIO_N'] || '5').to_i
+# Messages each VM fires during the chaos round (total expected = N * CHAOS_MSGS).
+CHAOS_MSGS = (ENV['DM_CHAOS_MSGS'] || '3').to_i
 GOLDEN = ENV['DM_SCENARIO_GOLDEN'] || 'default'
 VMS    = (1..N).map { |i| "vm#{i}" }
 RELAYS_JSON = JSON.generate(%w[wss://relay.eu.whitenoise.chat wss://relay.us.whitenoise.chat])
@@ -180,6 +197,117 @@ def run_scenario(npubs)
   group
 end
 
+# ---- phase 3b: chaotic scenario ---------------------------------------------
+
+# Stand up ONE group containing everyone, up front. vm1 creates it inviting
+# vm2..vmN in a single commit; each newcomer then accepts. Accepts are done
+# sequentially on purpose — concurrent accepts race the MLS epoch.
+def build_full_group(npubs)
+  others = (2..N).map { |j| "vm#{j}" }
+  log "vm1 creates a group with everyone (#{others.join(', ')})…"
+  res = retry_until('group-create', tries: 8, wait: 6) do
+    dm('vm1', 'group-create', 'Chaos', *others.map { |vm| npubs[vm] })
+  end
+  die('group-create failed') unless res.is_a?(Hash) && res['group_id_hex']
+  group = res['group_id_hex']
+  log "  group = #{group}"
+
+  joined = ['vm1']
+  others.each do |vm|
+    log "#{vm} accepts…"
+    accept_invite(vm, group) ? (joined << vm) : warn_("#{vm} could not accept")
+  end
+
+  # Everyone must be in the room before the blast, or the absentees can never
+  # receive (they're not in the MLS group) and the run is meaningless.
+  retry_until('all members present', tries: 20, wait: 6) do
+    m = dm('vm1', 'group-members', group)
+    m.is_a?(Array) && m.size >= N
+  end or warn_("group has fewer than #{N} members; chaos verification may be incomplete")
+
+  [group, joined]
+end
+
+# The unique payload VM `vm` emits as its k-th message. START_TAG makes it unique
+# per run so a re-run's messages can never be mistaken for this one's.
+def chaos_text(vm, k) = "chaos #{START_TAG} #{vm} seq#{k}"
+
+# The blast: every joined VM fires CHAOS_MSGS messages AT THE SAME TIME. One
+# thread per VM (the sends are blocking subprocess calls, so Ruby threads give
+# real overlap), each thread firing its messages back-to-back. No ordering,
+# no turn-taking — maximum interleave on the relays.
+def chaos_blast(joined, group)
+  total = joined.size * CHAOS_MSGS
+  log "💥 chaos: #{joined.size} VMs × #{CHAOS_MSGS} msgs = #{total} messages, all at once…"
+  sent = Hash.new(0)
+  mutex = Mutex.new
+  joined.map do |vm|
+    Thread.new do
+      CHAOS_MSGS.times do |k|
+        ok = retry_until("#{vm} send seq#{k}", tries: 10, wait: 5) do
+          dm(vm, 'send', group, chaos_text(vm, k))
+        end
+        mutex.synchronize { sent[vm] += 1 if ok }
+      end
+    end
+  end.each(&:join)
+  joined.each { |vm| warn_("#{vm} only sent #{sent[vm]}/#{CHAOS_MSGS}") if sent[vm] < CHAOS_MSGS }
+  log "  sent #{sent.values.sum}/#{total} total"
+end
+
+# The whole point: confirm EVERY VM eventually sees EVERY message (order
+# irrelevant). For each VM we fetch its message list and check the set of
+# kind-9 plaintexts against the expected set, retrying because relay + MLS
+# delivery is eventually consistent. Returns a per-VM map of the still-missing
+# payloads (empty array = fully caught up).
+def verify_all_received(joined, group)
+  expected = joined.flat_map { |vm| (0...CHAOS_MSGS).map { |k| chaos_text(vm, k) } }.to_set
+  log "verifying all #{joined.size} VMs each received all #{expected.size} messages…"
+  limit = (expected.size + 100).to_s
+  missing = {}
+
+  retry_until('every VM has every message', tries: 30, wait: 8) do
+    all_done = true
+    joined.each do |vm|
+      msgs = dm(vm, 'messages', group, limit)
+      seen = msgs.is_a?(Array) ? msgs.select { |m| m['kind'] == 9 }.map { |m| m['plaintext'] }.to_set : Set.new
+      gap = expected - seen
+      missing[vm] = gap.to_a
+      all_done = false unless gap.empty?
+    end
+    if all_done
+      log '  ✅ all VMs are fully caught up'
+      true
+    else
+      behind = missing.select { |_, g| g.any? }.transform_values(&:size)
+      log "  …waiting: #{behind.map { |vm, n| "#{vm} missing #{n}" }.join(', ')}"
+      false
+    end
+  end
+
+  [expected, missing]
+end
+
+def run_chaotic(npubs)
+  group, joined = build_full_group(npubs)
+  chaos_blast(joined, group)
+  expected, missing = verify_all_received(joined, group)
+
+  log '─' * 60
+  log "chaos result: #{joined.size} VMs, #{expected.size} unique messages each"
+  failures = missing.select { |_, g| g.any? }
+  if failures.empty?
+    log '  🎉 PASS — every VM received every message'
+  else
+    log '  ❌ FAIL — some VMs never received all messages:'
+    failures.each do |vm, gap|
+      log "    #{vm} missing #{gap.size}: #{gap.first(5).join(', ')}#{gap.size > 5 ? ', …' : ''}"
+    end
+  end
+  log '─' * 60
+  [group, failures.empty?]
+end
+
 # ---- phase 4: report --------------------------------------------------------
 
 def report(group)
@@ -230,13 +358,20 @@ if SCREENSHOTS_ONLY
   exit 0
 end
 
-log "scenario: #{N} VMs, golden=#{GOLDEN}, mem=#{ENV['DMVM_MEM_MB']}MiB cpus=#{ENV['DMVM_CPUS']}"
+log "scenario: #{CHAOTIC ? 'chaotic, ' : ''}#{N} VMs, golden=#{GOLDEN}, mem=#{ENV['DMVM_MEM_MB']}MiB cpus=#{ENV['DMVM_CPUS']}"
 # Clones back onto the golden's disk, so any still running from a prior run must
 # be stopped before we touch the golden.
 log 'stopping any clones from a previous run…'
 VMS.each { |vm| dmvm(vm, 'down') }
 prepare_golden
 npubs = spin_up_vms
-group = run_scenario(npubs)
-report(group)
-capture_screenshots
+if CHAOTIC
+  group, passed = run_chaotic(npubs)
+  report(group)
+  capture_screenshots
+  exit(passed ? 0 : 1)
+else
+  group = run_scenario(npubs)
+  report(group)
+  capture_screenshots
+end

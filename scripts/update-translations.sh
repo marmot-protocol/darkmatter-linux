@@ -27,10 +27,21 @@ fi
 for locale in it de ja; do
     PO="lang/$locale/LC_MESSAGES/$DOMAIN.po"
     if [[ ! -f "$PO" ]]; then
-        msginit --no-translator --locale="$locale" --input="$POT" --output-file="$PO"
+        msginit --no-translator --no-wrap --locale="$locale" --input="$POT" --output-file="$PO"
     else
-        msgmerge -U "$PO" "$POT"
+        # --no-wrap so merged strings stay one-per-line and don't churn against
+        # the po-clean normalization the commit filter/hook apply.
+        msgmerge --no-wrap -U "$PO" "$POT"
     fi
 done
 
-echo "Updated $POT and merged into it/de/ja catalogs."
+# Finish by running the exact same normalization the po-clean filter/pre-commit
+# hook apply (no-location, sort-output, no-wrap, drop POT-Creation-Date), so a
+# fresh `update-translations.sh` produces byte-identical catalogs to a commit —
+# no phantom diff between regenerating and staging.
+for f in "$POT" lang/{it,de,ja}/LC_MESSAGES/"$DOMAIN".po; do
+    tmp="$(mktemp)"
+    scripts/po-clean.sh < "$f" > "$tmp" && mv "$tmp" "$f"
+done
+
+echo "Updated $POT and merged into it/de/ja catalogs (normalized via po-clean.sh)."

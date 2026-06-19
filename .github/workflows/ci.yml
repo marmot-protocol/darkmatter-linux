@@ -14,10 +14,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Formatting needs no compilation, system deps, or cache — keep it as its own
-  # tiny job so it fails in seconds instead of riding behind the clippy build.
+  # Formatting and catalog normalization need no compilation, heavy system
+  # deps, or cache — keep them in their own tiny job so they fail in seconds
+  # instead of riding behind the clippy build. These mirror the pre-commit hook
+  # (.githooks/pre-commit): fmt here, clippy in the job below, catalogs here.
   fmt:
-    name: fmt
+    name: fmt + catalogs
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -26,6 +28,25 @@ jobs:
           components: rustfmt
       - name: Check formatting
         run: cargo fmt --all -- --check
+
+      # gettext gives us msgcat for scripts/po-clean.sh — a few seconds to
+      # install, keeps this job fast.
+      - name: Install gettext
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends gettext
+
+      # Reject any catalog a contributor committed without the po-clean
+      # normalization the hook/filter apply (e.g. via `git commit --no-verify`).
+      # Running po-clean.sh must be a no-op on every tracked catalog.
+      - name: Check PO catalogs are normalized
+        run: |
+          fail=0
+          while IFS= read -r f; do
+            if ! bash scripts/po-clean.sh < "$f" | cmp -s - "$f"; then
+              echo "::error file=$f::catalog not normalized — run scripts/update-translations.sh (or scripts/po-clean.sh) and commit the result"
+              fail=1
+            fi
+          done < <(git ls-files '*.po' '*.pot')
+          exit "$fail"
 
   clippy:
     name: clippy

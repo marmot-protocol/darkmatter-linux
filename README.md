@@ -145,6 +145,19 @@ There's no automated test suite yet. `cargo test` is a no-op, and changes are ch
 
 Issues and pull requests are welcome. If you're working with an AI coding agent, point it at [`AGENTS.md`](AGENTS.md) first, since it has the architecture and the conventions in more detail than this file does.
 
+Before your first commit, install the project git hooks:
+
+```sh
+scripts/install-hooks.sh
+```
+
+This is required. It points `core.hooksPath` at the tracked `.githooks/` directory and registers the `po-clean` catalog filter, so the same checks CI enforces run locally before you commit. The `pre-commit` hook:
+
+- **Normalizes gettext catalogs** (`*.po` / `*.pot`) — it strips source-line references and the volatile `POT-Creation-Date` header and sorts by message id, so unrelated line shifts never surface as catalog diffs or merge conflicts. This needs `gettext` (`msgcat`) installed; without it the hook still strips the date header. The same normalization runs automatically on `git add` via the filter, and CI rejects any catalog that isn't normalized.
+- **Gates Rust/Slint/Cargo changes** on `cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` — the same gates CI runs. Run `cargo fmt --all` to fix formatting before committing.
+
+In a genuine emergency you can bypass a single commit with `git commit --no-verify`, but CI runs the same checks, so the bypass only defers them.
+
 ## License
 
 Licensed under the GNU Affero General Public License, version 3 (AGPL-3.0). See [`LICENSE`](LICENSE) for the full text. In short: you're free to use, modify, and redistribute it, but if you run a modified version as a network service you have to offer your users its source.

@@ -2933,7 +2933,9 @@ fn main() -> Result<(), slint::PlatformError> {
                         return;
                     };
                     for i in 0..vm.row_count() {
-                        let Some(mut r) = vm.row_data(i) else { continue };
+                        let Some(mut r) = vm.row_data(i) else {
+                            continue;
+                        };
                         if r.account_id != account_id {
                             continue;
                         }

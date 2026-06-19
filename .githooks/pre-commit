@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# Project pre-commit hook. Enforced via core.hooksPath=.githooks
+# (run scripts/install-hooks.sh once per clone to activate).
+#
+#   1. Normalize every staged PO/POT catalog in place, then re-stage it, so the
+#      working tree matches what the po-clean filter writes to the index.
+#   2. Gate any Rust/Slint/Cargo change on `cargo fmt --check` and
+#      `cargo clippy -D warnings`.
+#
+# Emergency bypass:  git commit --no-verify
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+# NUL-safe list of paths staged for this commit (Added/Copied/Modified/Renamed).
+staged() { git diff --cached --name-only --diff-filter=ACMR -z "$@"; }
+
+# --- 1. Normalize staged catalogs ---------------------------------------
+po_changed=0
+while IFS= read -r -d '' f; do
+    [ -f "$f" ] || continue          # skip deletions
+    tmp="$(mktemp)"
+    if scripts/po-clean.sh < "$f" > "$tmp" && ! cmp -s "$f" "$tmp"; then
+        cat "$tmp" > "$f"
+        git add -- "$f"
+        po_changed=1
+    fi
+    rm -f "$tmp"
+done < <(staged -- '*.po' '*.pot')
+[ "$po_changed" = 1 ] && echo "pre-commit: normalized staged PO/POT catalogs."
+
+# --- 2. Rust gate -------------------------------------------------------
+# Only run the (heavier) compile-based checks when staged changes can affect
+# the build: Rust sources (incl. build.rs), Cargo manifests, or the Slint UI
+# they compile. Pure translation/docs commits skip straight through.
+if staged -- '*.rs' '*.slint' '*Cargo.toml' '*Cargo.lock' | grep -qz .; then
+    echo "pre-commit: cargo fmt --check…"
+    if ! cargo fmt --all -- --check; then
+        echo "✗ Unformatted code. Run: cargo fmt --all" >&2
+        exit 1
+    fi
+
+    echo "pre-commit: cargo clippy -D warnings… (first run can be slow)"
+    if ! cargo clippy --all-targets -- -D warnings; then
+        echo "✗ Clippy reported warnings/errors. Fix them, then re-commit." >&2
+        exit 1
+    fi
+fi
+
+exit 0

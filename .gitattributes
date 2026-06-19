@@ -1,0 +1,7 @@
+# Route gettext catalogs through the `po-clean` clean filter so source-line
+# shifts and the POT-Creation-Date header never surface as phantom diffs/
+# conflicts. The filter is registered in local git config by
+# scripts/install-hooks.sh — run that once per clone. If it is not registered
+# git treats `po-clean` as a no-op, so this line is harmless on its own.
+*.po  filter=po-clean
+*.pot filter=po-clean

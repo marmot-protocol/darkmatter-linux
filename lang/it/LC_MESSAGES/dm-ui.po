@@ -2,7 +2,6 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-06-19 03:42+0000\n"
 "PO-Revision-Date: 2026-05-27 13:20+0000\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -12,891 +11,34 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: ui/archived/archived-detail.slint:27
-msgctxt "ArchivedDetail"
-msgid "ARCHIVED  ·  {} MEMBERS  ·  {}"
-msgstr "ARCHIVIATO  ·  {} MEMBRI  ·  {}"
+msgctxt "MessageBubble"
+msgid "(message unavailable)"
+msgstr "(messaggio non disponibile)"
 
-#: ui/archived/archived-detail.slint:32
-msgctxt "ArchivedDetail"
-msgid "Unarchive"
-msgstr "Ripristina"
+msgctxt "ProfilePage"
+msgid "(no display name)"
+msgstr "(nessun nome visualizzato)"
 
-#: ui/archived/archived-detail.slint:39
-msgctxt "ArchivedDetail"
-msgid "Delete"
-msgstr "Elimina"
-
-#: ui/archived/archived-detail.slint:75
-msgctxt "ArchivedDetail"
-msgid "This chat is archived"
-msgstr "Questa chat è archiviata"
-
-#: ui/archived/archived-detail.slint:81
-msgctxt "ArchivedDetail"
-msgid ""
-"It stays end-to-end encrypted. Unarchiving returns it to your main list and "
-"resumes notifications."
-msgstr ""
-"Resta crittografata end-to-end. Ripristinandola torna nell'elenco principale "
-"e riprendono le notifiche."
-
-#: ui/archived/archived-detail.slint:91
-msgctxt "ArchivedDetail"
-msgid "LAST ACTIVITY"
-msgstr "ULTIMA ATTIVITÀ"
-
-#: ui/archived/archived-detail.slint:94
-msgctxt "ArchivedDetail"
-msgid "Last message"
-msgstr "Ultimo messaggio"
-
-#: ui/archived/archived-detail.slint:99
-msgctxt "ArchivedDetail"
-msgid "Members"
-msgstr "Membri"
-
-#: ui/archived/archived-detail.slint:103
-msgctxt "ArchivedDetail"
-msgid "Group id"
-msgstr "ID gruppo"
-
-#: ui/archived/archived-detail.slint:111
-msgctxt "ArchivedDetail"
-msgid "MEMBER LIST"
-msgstr "ELENCO MEMBRI"
-
-#: ui/archived/archived-page.slint:36
-#, fuzzy
-msgctxt "ArchivedPage"
-msgid "No archived chats"
-msgstr "Archivia chat"
-
-#: ui/archived/archived-page.slint:37
-msgctxt "ArchivedPage"
-msgid "Chats you archive are kept here, out of your main list."
-msgstr ""
-"Le chat che archivi vengono conservate qui, fuori dall'elenco principale."
-
-#: ui/archived/archived-sidebar.slint:10
-msgctxt "ArchivedSidebar"
-msgid "ARCHIVED"
-msgstr "ARCHIVIATI"
-
-#: ui/chat-list.slint:19
-msgctxt "ChatListPanel"
-msgid "CHATS"
-msgstr "CHAT"
-
-#: ui/chat-list.slint:22
-msgctxt "ChatListPanel"
-msgid "Search chats…"
-msgstr "Cerca chat…"
-
-#: ui/chat-list.slint:26
-#, fuzzy
-msgctxt "ChatListPanel"
-msgid "RELAYS"
-msgstr "RELAY"
-
-#: ui/chat-list.slint:27
-#, fuzzy
-msgctxt "ChatListPanel"
-msgid "NO RELAYS"
-msgstr "RELAY"
-
-#: ui/chat-list.slint:29
-msgctxt "ChatListPanel"
-msgid "SYNCING…"
-msgstr "SINCRONIZZAZIONE…"
-
-#: ui/chat-list.slint:30
-msgctxt "ChatListPanel"
-msgid "SYNCED"
-msgstr "SINCRONIZZATO"
-
-#: ui/chat-list.slint:30
-msgctxt "ChatListPanel"
-msgid "AGO"
-msgstr "FA"
-
-#: ui/contacts/contact-detail.slint:29
-msgctxt "ContactDetail"
-msgid "Contact"
-msgstr "Contatto"
-
-#: ui/contacts/contact-detail.slint:30
-msgctxt "ContactDetail"
-msgid "ADDED {}  ·  {} RELAYS"
-msgstr "AGGIUNTO {}  ·  {} RELAY"
-
-#: ui/contacts/contact-detail.slint:80
-msgctxt "ContactDetail"
-msgid "aka {}"
-msgstr "alias {}"
-
-#: ui/contacts/contact-detail.slint:86
-msgctxt "ContactDetail"
-msgid "✓ VERIFIED"
-msgstr "✓ VERIFICATO"
-
-#: ui/contacts/contact-detail.slint:93
-msgctxt "ContactDetail"
-msgid "Nickname"
-msgstr "Soprannome"
-
-#: ui/contacts/contact-detail.slint:100
-msgctxt "ContactDetail"
-msgid "{} RELAYS"
-msgstr "{} RELAY"
-
-#: ui/contacts/contact-detail.slint:122
-msgctxt "ContactDetail"
-msgid "Start chat"
-msgstr "Avvia chat"
-
-#: ui/contacts/contact-detail.slint:134
-msgctxt "ContactDetail"
-msgid "IDENTITY"
-msgstr "IDENTITÀ"
-
-#: ui/contacts/contact-detail.slint:138
-msgctxt "ContactDetail"
-msgid "Public key, safe to share."
-msgstr "Chiave pubblica, sicura da condividere."
-
-#: ui/contacts/contact-detail.slint:141
-msgctxt "ContactDetail"
-msgid "Copy"
-msgstr "Copia"
-
-#: ui/contacts/contact-detail.slint:147
-msgctxt "ContactDetail"
-msgid "Key package"
-msgstr "Pacchetto chiavi"
-
-#: ui/contacts/contact-detail.slint:151
-msgctxt "ContactDetail"
-msgid "Refresh"
-msgstr "Aggiorna"
-
-#: ui/contacts/contact-detail.slint:157
-msgctxt "ContactDetail"
-msgid "Mutual relays"
-msgstr "Relay condivisi"
-
-#: ui/contacts/contact-detail.slint:158
-msgctxt "ContactDetail"
-msgid "Used to deliver messages between you."
-msgstr "Usati per consegnare i messaggi tra voi."
-
-#: ui/contacts/contact-detail.slint:159
-msgctxt "ContactDetail"
-msgid "{} relays"
-msgstr "{} relay"
-
-#: ui/contacts/contact-detail.slint:169
-msgctxt "ContactDetail"
-msgid "Show as QR"
-msgstr "Mostra come QR"
-
-#: ui/contacts/contact-detail.slint:179
-msgctxt "ContactDetail"
-msgid "ACTIONS"
-msgstr "AZIONI"
-
-#: ui/contacts/contact-detail.slint:184
-msgctxt "ContactDetail"
-msgid "Mute"
-msgstr "Silenzia"
-
-#: ui/contacts/contact-detail.slint:188
-msgctxt "ContactDetail"
-msgid "Archive chat"
-msgstr "Archivia chat"
-
-#: ui/contacts/contact-detail.slint:193
-msgctxt "ContactDetail"
-msgid "Block"
-msgstr "Blocca"
-
-#: ui/contacts/contact-detail.slint:202
-msgctxt "ContactDetail"
-msgid "Remove contact"
-msgstr "Rimuovi contatto"
-
-#: ui/contacts/contacts-page.slint:39
-#, fuzzy
-msgctxt "ContactsPage"
-msgid "No contacts yet"
-msgstr "Rimuovi contatto"
-
-#: ui/contacts/contacts-page.slint:40
-msgctxt "ContactsPage"
-msgid "People you start chats with will show up here."
-msgstr "Le persone con cui avvii una chat compariranno qui."
-
-#: ui/contacts/contacts-sidebar.slint:10
-msgctxt "ContactsSidebar"
-msgid "CONTACTS"
-msgstr "CONTATTI"
-
-#: ui/contacts/contacts-sidebar.slint:13
-msgctxt "ContactsSidebar"
-msgid "Search contacts…"
-msgstr "Cerca contatti…"
-
-#: ui/dark-matter-linux.slint:377
-msgctxt "DarkMatterLinux"
-msgid "Connecting to relays…"
-msgstr "Connessione ai relay…"
-
-#: ui/dark-matter-linux.slint:1020
-#, fuzzy
-msgctxt "DarkMatterLinux"
-msgid "Block this chat request?"
-msgstr "Richiesta chat"
-
-#: ui/dark-matter-linux.slint:1021
-msgctxt "DarkMatterLinux"
-msgid ""
-"This declines the invite from {}. It can't be restored unless they invite "
-"you again."
-msgstr ""
-"Questo rifiuta l'invito di {}. Non potrà essere ripristinato a meno che non "
-"ti invitino di nuovo."
-
-#: ui/dark-matter-linux.slint:1022
-#, fuzzy
-msgctxt "DarkMatterLinux"
-msgid "Block"
-msgstr "Blocca"
-
-#: ui/emoji-picker.slint:90
-msgctxt "EmojiPicker"
-msgid "search…"
-msgstr "cerca…"
-
-#: ui/emoji-picker.slint:195
-msgctxt "EmojiPicker"
-msgid "no matches"
-msgstr "nessun risultato"
-
-#: ui/get-started.slint:173
-msgctxt "GetStartedScreen"
-msgid "Welcome to darkmatter"
-msgstr "Benvenuto in darkmatter"
-
-#: ui/get-started.slint:180
-msgctxt "GetStartedScreen"
-msgid ""
-"Three quick steps and you're ready to message — end-to-end encrypted, no "
-"servers in the middle."
-msgstr ""
-"Tre rapidi passaggi e sei pronto a messaggiare — crittografia end-to-end, "
-"nessun server di mezzo."
-
-#: ui/get-started.slint:191
-#, fuzzy
-msgctxt "GetStartedScreen"
-msgid "Connect a relay"
-msgstr "Connessione ai relay…"
-
-#: ui/get-started.slint:192
-msgctxt "GetStartedScreen"
-msgid "Relays carry your encrypted messages. Add at least one to get online."
-msgstr ""
-"I relay trasportano i tuoi messaggi crittografati. Aggiungine almeno uno per "
-"andare online."
-
-#: ui/get-started.slint:208
-#, fuzzy
-msgctxt "GetStartedScreen"
-msgid "No relays yet"
-msgstr "Nessun relay configurato"
-
-#: ui/get-started.slint:210
-#, fuzzy
-msgctxt "GetStartedScreen"
-msgid "Connected · {}/{}"
-msgstr "Connesso · {}/{}"
-
-#: ui/get-started.slint:211
-#, fuzzy
-msgctxt "GetStartedScreen"
-msgid "Partial · {}/{} connected"
-msgstr "Parziale · {}/{} connessi"
-
-#: ui/get-started.slint:251
-#, fuzzy
-msgctxt "GetStartedScreen"
-msgid "Add"
-msgstr "Aggiungi"
-
-#: ui/get-started.slint:272
-msgctxt "GetStartedScreen"
-msgid "SUGGESTED"
-msgstr "SUGGERITI"
-
-#: ui/get-started.slint:326
-#, fuzzy
-msgctxt "GetStartedScreen"
-msgid "Publish your key package"
-msgstr "Nessun pacchetto chiave"
-
-#: ui/get-started.slint:327
-msgctxt "GetStartedScreen"
-msgid "This is what lets other people start an encrypted chat with you."
-msgstr ""
-"È ciò che permette agli altri di avviare una chat crittografata con te."
-
-#: ui/get-started.slint:339
-#, fuzzy
-msgctxt "GetStartedScreen"
-msgid "Published"
-msgstr "Pubblica"
-
-#: ui/get-started.slint:340
-#, fuzzy
-msgctxt "GetStartedScreen"
-msgid "Publishing…"
-msgstr "Pubblicazione…"
-
-#: ui/get-started.slint:340
-#, fuzzy
-msgctxt "GetStartedScreen"
-msgid "Publish key package"
-msgstr "Pacchetto chiavi"
-
-#: ui/get-started.slint:363
-msgctxt "GetStartedScreen"
-msgid "Add a relay first."
-msgstr "Aggiungi prima un relay."
-
-#: ui/get-started.slint:382
-#, fuzzy
-msgctxt "GetStartedScreen"
-msgid "Start your first chat"
-msgstr "Avvia una nuova chat"
-
-#: ui/get-started.slint:383
-msgctxt "GetStartedScreen"
-msgid "Invite someone by their npub and say hello."
-msgstr "Invita qualcuno tramite il suo npub e saluta."
-
-#: ui/get-started.slint:389
-msgctxt "GetStartedScreen"
-msgid "New chat"
-msgstr "Nuova chat"
-
-#: ui/keys/device-row.slint:8
-msgctxt "DeviceRow"
-msgid "Revoke"
-msgstr "Revoca"
-
-#: ui/keys/keys-page.slint:33
-msgctxt "KeysPage"
-msgid "This computer"
-msgstr "Questo computer"
-
-#: ui/keys/keys-page.slint:46
-msgctxt "KeysPage"
-msgid "Keys & identity"
-msgstr "Chiavi e identità"
-
-#: ui/keys/keys-page.slint:47
-msgctxt "KeysPage"
-msgid "MLS  ·  YOUR KEY MATERIAL"
-msgstr "MLS  ·  IL TUO MATERIALE CHIAVE"
-
-#: ui/keys/keys-page.slint:70
-msgctxt "KeysPage"
-msgid "Your identity is sovereign"
-msgstr "La tua identità è sovrana"
-
-#: ui/keys/keys-page.slint:76
-msgctxt "KeysPage"
-msgid ""
-"Dark Matter never sees your private key. It lives only on this device and "
-"any signer you connect."
-msgstr ""
-"Dark Matter non vede mai la tua chiave privata. Resta solo su questo "
-"dispositivo e su qualsiasi firmatario collegato."
-
-#: ui/keys/keys-page.slint:88
-msgctxt "KeysPage"
-msgid "IDENTITY"
-msgstr "IDENTITÀ"
-
-#: ui/keys/keys-page.slint:93
-msgctxt "KeysPage"
-msgid "Public key (npub)"
-msgstr "Chiave pubblica (npub)"
-
-#: ui/keys/keys-page.slint:94
-msgctxt "KeysPage"
-msgid "Safe to share. This is how people find you."
-msgstr "Sicura da condividere. Così ti trovano gli altri."
-
-#: ui/keys/keys-page.slint:98
-msgctxt "KeysPage"
-msgid "Copy"
-msgstr "Copia"
-
-#: ui/keys/keys-page.slint:109
-msgctxt "KeysPage"
-msgid "KEY PACKAGES"
-msgstr "PACCHETTI CHIAVE"
-
-#: ui/keys/keys-page.slint:111
-msgctxt "KeysPage"
-msgid "(published to your kind-10051 relay list)"
-msgstr "(pubblicato sulla tua lista relay kind-10051)"
-
-#: ui/keys/keys-page.slint:112
 msgctxt "KeysPage"
 msgid "(no key-package relays configured)"
 msgstr "(nessun relay per pacchetti chiave configurato)"
 
-#: ui/keys/keys-page.slint:114 ui/keys/keys-page.slint:238
-msgctxt "KeysPage"
-msgid "…"
-msgstr "…"
+msgctxt "DebugPane"
+msgid "(no snapshot yet — click Refresh)"
+msgstr "(nessuna istantanea — clicca Aggiorna)"
 
-#: ui/keys/keys-page.slint:114
-msgctxt "KeysPage"
-msgid "Refresh"
-msgstr "Aggiorna"
-
-#: ui/keys/keys-page.slint:133
-msgctxt "KeysPage"
-msgid "No key packages yet"
-msgstr "Nessun pacchetto chiave"
-
-#: ui/keys/keys-page.slint:140
-msgctxt "KeysPage"
-msgid "Publish one so other users can invite you to groups."
-msgstr "Pubblicane uno così altri utenti possono invitarti nei gruppi."
-
-#: ui/keys/keys-page.slint:141
-msgctxt "KeysPage"
-msgid "Configure key-package relays first."
-msgstr "Configura prima i relay per i pacchetti chiave."
-
-#: ui/keys/keys-page.slint:149
-msgctxt "KeysPage"
-msgid "Publishing…"
-msgstr "Pubblicazione…"
-
-#: ui/keys/keys-page.slint:149
-msgctxt "KeysPage"
-msgid "Publish"
-msgstr "Pubblica"
-
-#: ui/keys/keys-page.slint:160
-msgctxt "KeysPage"
-msgid "{n} relay"
-msgid_plural "{n} relays"
-msgstr[0] "{n} relay"
-msgstr[1] "{n} relay"
-
-#: ui/keys/keys-page.slint:161
-msgctxt "KeysPage"
-msgid "local only"
-msgstr "solo locale"
-
-#: ui/keys/keys-page.slint:187
-msgctxt "KeysPage"
-msgid "LINKED DEVICES"
-msgstr "DISPOSITIVI COLLEGATI"
-
-#: ui/keys/keys-page.slint:188
 msgctxt "KeysPage"
 msgid "(other Dark Matter instances signed into this identity)"
 msgstr "(altre istanze Dark Matter connessi a questa identità)"
 
-#: ui/keys/keys-page.slint:194
 msgctxt "KeysPage"
-msgid "current"
-msgstr "attuale"
+msgid "(published to your kind-10051 relay list)"
+msgstr "(pubblicato sulla tua lista relay kind-10051)"
 
-#: ui/keys/keys-page.slint:195
-msgctxt "KeysPage"
-msgid "Sign out"
-msgstr "Esci"
+msgctxt "MentionPicker"
+msgid "(you)"
+msgstr "(tu)"
 
-#: ui/keys/keys-page.slint:205
-msgctxt "KeysPage"
-msgid "DANGER ZONE"
-msgstr "ZONA PERICOLOSA"
-
-#: ui/keys/keys-page.slint:224
-msgctxt "KeysPage"
-msgid "Rotate key package now"
-msgstr "Ruota pacchetto chiavi ora"
-
-#: ui/keys/keys-page.slint:230
-msgctxt "KeysPage"
-msgid "Invalidates the current package and uploads a fresh one to your relays."
-msgstr "Invalida il pacchetto attuale e ne carica uno nuovo sui tuoi relay."
-
-#: ui/keys/keys-page.slint:238
-msgctxt "KeysPage"
-msgid "Rotate"
-msgstr "Ruota"
-
-#: ui/left-rail/left-rail.slint:148
-#, fuzzy
-msgctxt "ProfileTile"
-msgid "Profile"
-msgstr "Il tuo profilo"
-
-#: ui/left-rail/left-rail.slint:233
-msgctxt "LeftRail"
-msgid "Chats"
-msgstr "Chat"
-
-#: ui/left-rail/left-rail.slint:246
-#, fuzzy
-msgctxt "LeftRail"
-msgid "Contacts"
-msgstr "Contatto"
-
-#: ui/left-rail/left-rail.slint:257
-#, fuzzy
-msgctxt "LeftRail"
-msgid "Archive"
-msgstr "Archivia"
-
-#: ui/left-rail/left-rail.slint:268
-msgctxt "LeftRail"
-msgid "Keys"
-msgstr "Chiavi"
-
-#: ui/left-rail/left-rail.slint:281
-msgctxt "LeftRail"
-msgid "New chat"
-msgstr "Nuova chat"
-
-#: ui/left-rail/left-rail.slint:303
-msgctxt "LeftRail"
-msgid "Settings"
-msgstr "Impostazioni"
-
-#: ui/left-rail/left-rail.slint:316
-msgctxt "LeftRail"
-msgid "Accounts"
-msgstr "Account"
-
-#: ui/login/login-screen.slint:183
-msgctxt "LoginScreen"
-msgid "Sign in to your Nostr identity"
-msgstr "Accedi alla tua identità Nostr"
-
-#: ui/login/login-screen.slint:185
-msgctxt "LoginScreen"
-msgid "Import a key & set a password"
-msgstr "Importa una chiave e imposta una password"
-
-#: ui/login/login-screen.slint:187
-msgctxt "LoginScreen"
-msgid "Enter your password to unlock"
-msgstr "Inserisci la password per sbloccare"
-
-#: ui/login/login-screen.slint:188
-msgctxt "LoginScreen"
-msgid "Save your new key"
-msgstr "Salva la tua nuova chiave"
-
-#: ui/login/login-screen.slint:200
-msgctxt "LoginScreen"
-msgid "I have an nsec"
-msgstr "Ho un nsec"
-
-#: ui/login/login-screen.slint:220
-msgctxt "LoginScreen"
-msgid "Generate a new key"
-msgstr "Genera una nuova chiave"
-
-#: ui/login/login-screen.slint:238
-msgctxt "LoginScreen"
-msgid "Import a backup"
-msgstr "Importa un backup"
-
-#: ui/login/login-screen.slint:255
-msgctxt "LoginScreen"
-msgid "Your key never leaves this device."
-msgstr "La tua chiave non lascia mai questo dispositivo."
-
-#: ui/login/login-screen.slint:267
-msgctxt "LoginScreen"
-msgid "NSEC"
-msgstr ""
-
-#: ui/login/login-screen.slint:274 ui/login/login-screen.slint:492
-msgctxt "LoginScreen"
-msgid "VAULT PASSWORD"
-msgstr "PASSWORD CASSAFORTE"
-
-#: ui/login/login-screen.slint:275 ui/login/login-screen.slint:493
-msgctxt "LoginScreen"
-msgid "Choose a password"
-msgstr "Scegli una password"
-
-#: ui/login/login-screen.slint:281 ui/login/login-screen.slint:499
-msgctxt "LoginScreen"
-msgid "CONFIRM PASSWORD"
-msgstr "CONFERMA PASSWORD"
-
-#: ui/login/login-screen.slint:282 ui/login/login-screen.slint:500
-msgctxt "LoginScreen"
-msgid "Re-enter password"
-msgstr "Reinserisci la password"
-
-#: ui/login/login-screen.slint:300 ui/login/login-screen.slint:518
-msgctxt "LoginScreen"
-msgid "Back"
-msgstr "Indietro"
-
-#: ui/login/login-screen.slint:310
-msgctxt "LoginScreen"
-msgid "Signing in…"
-msgstr "Accesso…"
-
-#: ui/login/login-screen.slint:310
-msgctxt "LoginScreen"
-msgid "Continue"
-msgstr "Continua"
-
-#: ui/login/login-screen.slint:355
-msgctxt "LoginScreen"
-msgid "YOUR DISPLAY NAME"
-msgstr "IL TUO NOME VISUALIZZATO"
-
-#: ui/login/login-screen.slint:392
-msgctxt "LoginScreen"
-msgid "Back up your nsec before saving"
-msgstr "Fai backup del nsec prima di salvare"
-
-#: ui/login/login-screen.slint:398
-msgctxt "LoginScreen"
-msgid ""
-"Sealed with your password on this device. Keep your own copy of the nsec too "
-"— lose both and this identity is gone."
-msgstr ""
-"Sigillato con la tua password su questo dispositivo. Tieni anche una tua "
-"copia del nsec — se perdi entrambi, questa identità è persa."
-
-#: ui/login/login-screen.slint:467
-msgctxt "LoginScreen"
-msgid "Regenerate"
-msgstr "Rigenera"
-
-#: ui/login/login-screen.slint:478
-msgctxt "LoginScreen"
-msgid "Copy"
-msgstr "Copia"
-
-#: ui/login/login-screen.slint:525
-msgctxt "LoginScreen"
-msgid "Saving…"
-msgstr "Salvataggio…"
-
-#: ui/login/login-screen.slint:525
-msgctxt "LoginScreen"
-msgid "Create vault"
-msgstr "Crea cassaforte"
-
-#: ui/login/login-screen.slint:544
-msgctxt "LoginScreen"
-msgid "Enter your password"
-msgstr "Inserisci la tua password"
-
-#: ui/login/login-screen.slint:563
-msgctxt "LoginScreen"
-msgid "Use another key"
-msgstr "Usa un'altra chiave"
-
-#: ui/login/login-screen.slint:570
-msgctxt "LoginScreen"
-msgid "Unlocking…"
-msgstr "Sblocco in corso…"
-
-#: ui/login/login-screen.slint:570
-msgctxt "LoginScreen"
-msgid "Unlock"
-msgstr "Sblocca"
-
-#: ui/main-pane/add-member-card.slint:15
-#, fuzzy
-msgctxt "AddMemberCard"
-msgid "Add member"
-msgstr "1 membro"
-
-#: ui/main-pane/add-member-card.slint:53
-#, fuzzy
-msgctxt "AddMemberCard"
-msgid "Inviting…"
-msgstr "Salvataggio…"
-
-#: ui/main-pane/add-member-card.slint:53
-msgctxt "AddMemberCard"
-msgid "Invite"
-msgstr "Invita"
-
-#: ui/main-pane/chat-header.slint:91
-msgctxt "ChatHeader"
-msgid "1 member"
-msgid_plural "{n} members"
-msgstr[0] "1 membro"
-msgstr[1] "{n} membri"
-
-#: ui/main-pane/chat-header.slint:147
-msgctxt "ChatHeader"
-msgid "Block"
-msgstr "Blocca"
-
-#: ui/main-pane/chat-header.slint:154
-msgctxt "ChatHeader"
-msgid "Archive"
-msgstr "Archivia"
-
-#: ui/main-pane/chat-header.slint:161
-msgctxt "ChatHeader"
-msgid "Accept"
-msgstr "Accetta"
-
-#: ui/main-pane/chat-request-banner.slint:30
-msgctxt "ChatRequestBanner"
-msgid "Chat request"
-msgstr "Richiesta chat"
-
-#: ui/main-pane/chat-request-banner.slint:36
-msgctxt "ChatRequestBanner"
-msgid "This sender isn't in your contacts. Accept to start an"
-msgstr "Questo mittente non è nei tuoi contatti. Accetta per avviare una"
-
-#: ui/main-pane/chat-request-banner.slint:36
-msgctxt "ChatRequestBanner"
-msgid "session."
-msgstr "sessione."
-
-#: ui/main-pane/composer.slint:58
-msgctxt "Composer"
-msgid "Send message"
-msgstr "Invia messaggio"
-
-#: ui/main-pane/composer.slint:58
-msgctxt "Composer"
-msgid "Record voice message"
-msgstr "Registra messaggio vocale"
-
-#: ui/main-pane/composer.slint:91
-msgctxt "Composer"
-msgid "Editing message  ·  Enter to save"
-msgstr "Modifica messaggio  ·  Invio per salvare"
-
-#: ui/main-pane/composer.slint:100
-msgctxt "Composer"
-msgid "Cancel edit"
-msgstr "Annulla modifica"
-
-#: ui/main-pane/composer.slint:139
-msgctxt "Composer"
-msgid "Replying to message:"
-msgstr "Risposta al messaggio:"
-
-#: ui/main-pane/composer.slint:140
-msgctxt "Composer"
-msgid "Replying to {}:"
-msgstr "Risposta a {}:"
-
-#: ui/main-pane/composer.slint:159
-msgctxt "Composer"
-msgid "Cancel reply"
-msgstr "Annulla risposta"
-
-#: ui/main-pane/composer.slint:241
-msgctxt "Composer"
-msgid "Remove"
-msgstr "Rimuovi"
-
-#: ui/main-pane/composer.slint:298
-#, fuzzy
-msgctxt "Composer"
-msgid "Send a message…"
-msgstr "Ultimo messaggio"
-
-#: ui/main-pane/composer.slint:410
-msgctxt "Composer"
-msgid "{}s"
-msgstr "{}s"
-
-#: ui/main-pane/composer.slint:420
-msgctxt "Composer"
-msgid "Send"
-msgstr "Invia"
-
-#: ui/main-pane/composer.slint:440
-#, fuzzy
-msgctxt "Composer"
-msgid "Cancel recording"
-msgstr "Annulla modifica"
-
-#: ui/main-pane/composer.slint:515
-#, fuzzy
-msgctxt "Composer"
-msgid "Shift+Enter for newline"
-msgstr "per a capo"
-
-#: ui/main-pane/encryption-banner.slint:66
-msgctxt "EncryptionBanner"
-msgid "End-to-end encrypted with"
-msgstr "Crittografato end-to-end con"
-
-#: ui/main-pane/encryption-banner.slint:99
-msgctxt "EncryptionBanner"
-msgid "Forward secret"
-msgstr "Segreto forward"
-
-#: ui/main-pane/encryption-banner.slint:101
-msgctxt "EncryptionBanner"
-msgid "post-compromise secure"
-msgstr "sicuro dopo compromissione"
-
-#: ui/main-pane/group-member-row.slint:54
-msgctxt "GroupMemberRow"
-msgid "YOU"
-msgstr "TU"
-
-#: ui/main-pane/group-member-row.slint:60
-msgctxt "GroupMemberRow"
-msgid "ADMIN"
-msgstr "ADMIN"
-
-#: ui/main-pane/group-member-row.slint:87
-msgctxt "GroupMemberRow"
-msgid "Make admin"
-msgstr "Rendi admin"
-
-#: ui/main-pane/group-member-row.slint:107
-#, fuzzy
-msgctxt "GroupMemberRow"
-msgid "Remove admin"
-msgstr "Rimuovi contatto"
-
-#: ui/main-pane/group-member-row.slint:127
-msgctxt "GroupMemberRow"
-msgid "Step down"
-msgstr "Rinuncia"
-
-#: ui/main-pane/group-members-header.slint:18
-#, fuzzy
-msgctxt "GroupMembersHeader"
-msgid "Members"
-msgstr "Membri"
-
-#: ui/main-pane/group-members-header.slint:24
 #, fuzzy
 msgctxt "GroupMembersHeader"
 msgid "1 in this group"
@@ -904,1589 +46,1879 @@ msgid_plural "{n} in this group"
 msgstr[0] "1 in questo gruppo"
 msgstr[1] "{n} in questo gruppo"
 
-#: ui/main-pane/group-members-panel.slint:73
-msgctxt "GroupMembersPanel"
-msgid "Members"
-msgstr "Membri"
+msgctxt "ChatHeader"
+msgid "1 member"
+msgid_plural "{n} members"
+msgstr[0] "1 membro"
+msgstr[1] "{n} membri"
 
-#: ui/main-pane/group-settings-card.slint:24
-#, fuzzy
-msgctxt "GroupSettingsCard"
-msgid "Group settings"
-msgstr "ID gruppo"
+msgctxt "GeneralPane"
+msgid "12-hour"
+msgstr "12 ore"
 
-#: ui/main-pane/group-settings-card.slint:48
-#, fuzzy
-msgctxt "GroupSettingsCard"
-msgid "Uploading…"
-msgstr "Salvataggio…"
+msgctxt "GeneralPane"
+msgid "24-hour"
+msgstr "24 ore"
 
-#: ui/main-pane/group-settings-card.slint:48
-#, fuzzy
-msgctxt "GroupSettingsCard"
-msgid "Change image"
-msgstr "Modifica"
+msgctxt "ProfilePage"
+msgid "A line or two about you"
+msgstr "Una riga o due su di te"
 
-#: ui/main-pane/group-settings-card.slint:58
-#, fuzzy
-msgctxt "GroupSettingsCard"
-msgid "Remove image"
-msgstr "Rimuovi contatto"
+msgctxt "NicknameModal"
+msgid "A private name for {}. Only you see it — leave empty to use their published name."
+msgstr "Un nome privato per {}. Lo vedi solo tu — lascia vuoto per usare il nome che hanno pubblicato."
 
-#: ui/main-pane/group-settings-card.slint:78
-#, fuzzy
-msgctxt "GroupSettingsCard"
-msgid "Group name"
-msgstr "ID gruppo"
+msgctxt "ContactDetail"
+msgid "ACTIONS"
+msgstr "AZIONI"
 
-#: ui/main-pane/group-settings-card.slint:112
-#, fuzzy
-msgctxt "GroupSettingsCard"
-msgid "Saving…"
-msgstr "Salvataggio…"
-
-#: ui/main-pane/group-settings-card.slint:112
-#, fuzzy
-msgctxt "GroupSettingsCard"
-msgid "Save name"
-msgstr "Salva"
-
-#: ui/main-pane/main-pane.slint:134
-msgctxt "MainPane"
-msgid "CHAT REQUEST"
-msgstr "RICHIESTA CHAT"
-
-#: ui/main-pane/main-pane.slint:135
-msgctxt "MainPane"
-msgid "SESSION ESTABLISHED"
-msgstr "SESSIONE STABILITA"
-
-#: ui/main-pane/mention-picker.slint:65
-msgctxt "MentionPicker"
-msgid "(you)"
-msgstr "(tu)"
-
-#: ui/messages.slint:165
-#, fuzzy
-msgctxt "MessagesArea"
-msgid "Load earlier messages"
-msgstr "Ultimo messaggio"
-
-#: ui/modals/account-switcher-modal.slint:14
-msgctxt "AccountSwitcherModal"
-msgid "Accounts"
-msgstr "Account"
-
-#: ui/modals/account-switcher-modal.slint:15
-msgctxt "AccountSwitcherModal"
-msgid ""
-"All accounts stay connected. Switching only changes which one you're looking "
-"at."
-msgstr ""
-"Tutti gli account restano connessi. Il passaggio cambia solo quale stai "
-"visualizzando."
-
-#: ui/modals/account-switcher-modal.slint:16
-msgctxt "AccountSwitcherModal"
-msgid "Close"
-msgstr "Chiudi"
-
-#: ui/modals/account-switcher-modal.slint:17
-#, fuzzy
-msgctxt "AccountSwitcherModal"
-msgid "Add account"
-msgstr "Contatto"
-
-#: ui/modals/account-switcher-modal.slint:79
 #, fuzzy
 msgctxt "AccountSwitcherModal"
 msgid "ACTIVE"
 msgstr "AZIONI"
 
-#: ui/modals/add-account-modal.slint:15 ui/modals/add-account-modal.slint:18
+msgctxt "ContactDetail"
+msgid "ADDED {}  ·  {} RELAYS"
+msgstr "AGGIUNTO {}  ·  {} RELAY"
+
+msgctxt "GroupMemberRow"
+msgid "ADMIN"
+msgstr "ADMIN"
+
+msgctxt "ChatListPanel"
+msgid "AGO"
+msgstr "FA"
+
+msgctxt "ArchivedSidebar"
+msgid "ARCHIVED"
+msgstr "ARCHIVIATI"
+
+msgctxt "ArchivedDetail"
+msgid "ARCHIVED  ·  {} MEMBERS  ·  {}"
+msgstr "ARCHIVIATO  ·  {} MEMBRI  ·  {}"
+
+msgctxt "AdvancedPane"
+msgid "AUDIT LOG FILES"
+msgstr "FILE DI LOG DI AUDIT"
+
+#, fuzzy
+msgctxt "AboutPane"
+msgid "About"
+msgstr "Informazioni"
+
+msgctxt "ProfilePage"
+msgid "About"
+msgstr "Informazioni"
+
+msgctxt "SettingsSidebar"
+msgid "About"
+msgstr "Informazioni"
+
+msgctxt "AppearancePane"
+msgid "Accent color"
+msgstr "Colore accento"
+
+msgctxt "ChatHeader"
+msgid "Accept"
+msgstr "Accetta"
+
+msgctxt "DebugPane"
+msgid "Account / key packages / groups"
+msgstr "Account / pacchetti chiave / gruppi"
+
+msgctxt "AccountSwitcherModal"
+msgid "Accounts"
+msgstr "Account"
+
+msgctxt "LeftRail"
+msgid "Accounts"
+msgstr "Account"
+
+#, fuzzy
+msgctxt "GetStartedScreen"
+msgid "Add"
+msgstr "Aggiungi"
+
+msgctxt "NetworkPane"
+msgid "Add"
+msgstr "Aggiungi"
+
+msgctxt "SidePanel"
+msgid "Add"
+msgstr "Aggiungi"
+
+msgctxt "NetworkPane"
+msgid "Add a relay below — nothing publishes until you do."
+msgstr "Aggiungi un relay sotto — nulla viene pubblicato finché non lo fai."
+
+msgctxt "GetStartedScreen"
+msgid "Add a relay first."
+msgstr "Aggiungi prima un relay."
+
+#, fuzzy
+msgctxt "AccountSwitcherModal"
+msgid "Add account"
+msgstr "Contatto"
+
 #, fuzzy
 msgctxt "AddAccountModal"
 msgid "Add account"
 msgstr "Contatto"
 
-#: ui/modals/add-account-modal.slint:16
-msgctxt "AddAccountModal"
-msgid ""
-"Paste another secret key, or generate a fresh one. It's sealed into the same "
-"vault and stays signed in alongside your other accounts."
-msgstr ""
-"Incolla un'altra chiave segreta, o generane una nuova. Viene sigillata nella "
-"stessa cassaforte e resta connessa insieme agli altri account."
-
-#: ui/modals/add-account-modal.slint:17
-#, fuzzy
-msgctxt "AddAccountModal"
-msgid "Cancel"
-msgstr "Annulla"
-
-#: ui/modals/add-account-modal.slint:19
-#, fuzzy
-msgctxt "AddAccountModal"
-msgid "Adding…"
-msgstr "Salvataggio…"
-
-#: ui/modals/add-account-modal.slint:23
-msgctxt "AddAccountModal"
-msgid "SECRET KEY (NSEC)"
-msgstr "CHIAVE SEGRETA (NSEC)"
-
-#: ui/modals/add-account-modal.slint:34
-#, fuzzy
-msgctxt "AddAccountModal"
-msgid "No second key yet?"
-msgstr "Rimuovi contatto"
-
-#: ui/modals/add-account-modal.slint:47
-#, fuzzy
-msgctxt "AddAccountModal"
-msgid "Generate a new key"
-msgstr "Genera una nuova chiave"
-
-#: ui/modals/add-account-modal.slint:59
-msgctxt "AddAccountModal"
-msgid ""
-"This key was just generated and exists nowhere else yet. Copy it somewhere "
-"safe before adding it — there is no recovery."
-msgstr ""
-"Questa chiave è stata appena generata e non esiste ancora altrove. Copiala "
-"in un posto sicuro prima di aggiungerla — non c'è modo di recuperarla."
-
-#: ui/modals/add-contact-modal.slint:11 ui/modals/add-contact-modal.slint:14
 #, fuzzy
 msgctxt "AddContactModal"
 msgid "Add contact"
 msgstr "Contatto"
-
-#: ui/modals/add-contact-modal.slint:12
-msgctxt "AddContactModal"
-msgid ""
-"Paste their npub or hex public key. They'll appear in your contacts on every "
-"device."
-msgstr ""
-"Incolla il loro npub o la chiave pubblica esadecimale. Compariranno tra i "
-"tuoi contatti su ogni dispositivo."
-
-#: ui/modals/add-contact-modal.slint:13
-#, fuzzy
-msgctxt "AddContactModal"
-msgid "Cancel"
-msgstr "Annulla"
-
-#: ui/modals/add-contact-modal.slint:15
-#, fuzzy
-msgctxt "AddContactModal"
-msgid "Adding…"
-msgstr "Salvataggio…"
-
-#: ui/modals/add-contact-modal.slint:20
-msgctxt "AddContactModal"
-msgid "PUBLIC KEY"
-msgstr "CHIAVE PUBBLICA"
-
-#: ui/modals/backup-create-modal.slint:13
-msgctxt "BackupCreateModal"
-msgid "Create backup"
-msgstr "Crea backup"
-
-#: ui/modals/backup-create-modal.slint:14
-msgctxt "BackupCreateModal"
-msgid ""
-"Pack everything — accounts, chats, settings — into one encrypted file, "
-"sealed with your vault password. The media cache is left out."
-msgstr ""
-"Racchiudi tutto — account, chat, impostazioni — in un unico file "
-"crittografato, sigillato con la password della cassaforte. La cache dei "
-"media è esclusa."
-
-#: ui/modals/backup-create-modal.slint:15
-#, fuzzy
-msgctxt "BackupCreateModal"
-msgid "Cancel"
-msgstr "Annulla"
-
-#: ui/modals/backup-create-modal.slint:16
-msgctxt "BackupCreateModal"
-msgid "Choose location…"
-msgstr "Scegli posizione…"
-
-#: ui/modals/backup-create-modal.slint:17
-#, fuzzy
-msgctxt "BackupCreateModal"
-msgid "Saving…"
-msgstr "Salvataggio…"
-
-#: ui/modals/backup-create-modal.slint:21
-msgctxt "BackupCreateModal"
-msgid "VAULT PASSWORD"
-msgstr "PASSWORD CASSAFORTE"
-
-#: ui/modals/backup-create-modal.slint:22
-msgctxt "BackupCreateModal"
-msgid "Confirm your vault password"
-msgstr "Conferma la password della cassaforte"
-
-#: ui/modals/command-palette.slint:80
-msgctxt "CommandPalette"
-msgid "Type a command…"
-msgstr "Digita un comando…"
-
-#: ui/modals/command-palette.slint:232
-msgctxt "CommandPalette"
-msgid "No matches"
-msgstr "Nessun risultato"
-
-#. are translated.
-#: ui/modals/command-palette.slint:262
-msgctxt "command palette footer"
-msgid "Navigate"
-msgstr "Naviga"
-
-#: ui/modals/command-palette.slint:273
-msgctxt "command palette footer"
-msgid "Select"
-msgstr "Seleziona"
-
-#: ui/modals/command-palette.slint:284
-msgctxt "command palette footer"
-msgid "Close"
-msgstr "Chiudi"
-
-#: ui/modals/confirm-modal.slint:12
-#, fuzzy
-msgctxt "ConfirmModal"
-msgid "Cancel"
-msgstr "Annulla"
-
-#: ui/modals/edit-history-modal.slint:12
-msgctxt "EditHistoryModal"
-msgid "Edit history"
-msgstr "Cronologia modifiche"
-
-#: ui/modals/image-viewer-modal.slint:76
-#, fuzzy
-msgctxt "ImageViewerModal"
-msgid "Loading…"
-msgstr "Salvataggio…"
-
-#: ui/modals/import-backup-modal.slint:22
-msgctxt "ImportBackupModal"
-msgid "Import backup"
-msgstr "Importa backup"
-
-#: ui/modals/import-backup-modal.slint:24
-msgctxt "ImportBackupModal"
-msgid ""
-"Restore everything from an encrypted backup. Use the password the backup was "
-"created with."
-msgstr ""
-"Ripristina tutto da un backup crittografato. Usa la password con cui è stato "
-"creato il backup."
-
-#: ui/modals/import-backup-modal.slint:25
-msgctxt "ImportBackupModal"
-msgid ""
-"Merge the accounts from an encrypted backup into this install. Use the "
-"password the backup was created with."
-msgstr ""
-"Unisci gli account di un backup crittografato a questa installazione. Usa la "
-"password con cui è stato creato il backup."
-
-#: ui/modals/import-backup-modal.slint:26
-#, fuzzy
-msgctxt "ImportBackupModal"
-msgid "Cancel"
-msgstr "Annulla"
-
-#: ui/modals/import-backup-modal.slint:27
-msgctxt "ImportBackupModal"
-msgid "Restore"
-msgstr "Ripristina"
-
-#: ui/modals/import-backup-modal.slint:27
-msgctxt "ImportBackupModal"
-msgid "Import"
-msgstr "Importa"
-
-#: ui/modals/import-backup-modal.slint:28
-#, fuzzy
-msgctxt "ImportBackupModal"
-msgid "Restoring…"
-msgstr "Salvataggio…"
-
-#: ui/modals/import-backup-modal.slint:28
-#, fuzzy
-msgctxt "ImportBackupModal"
-msgid "Importing…"
-msgstr "Salvataggio…"
-
-#: ui/modals/import-backup-modal.slint:35
-msgctxt "ImportBackupModal"
-msgid "BACKUP FILE"
-msgstr "FILE DI BACKUP"
-
-#: ui/modals/import-backup-modal.slint:45
-msgctxt "ImportBackupModal"
-msgid "Choose file…"
-msgstr "Scegli file…"
-
-#: ui/modals/import-backup-modal.slint:54
-msgctxt "ImportBackupModal"
-msgid "No file selected"
-msgstr "Nessun file selezionato"
-
-#: ui/modals/import-backup-modal.slint:66
-msgctxt "ImportBackupModal"
-msgid "BACKUP PASSWORD"
-msgstr "PASSWORD DEL BACKUP"
-
-#: ui/modals/import-backup-modal.slint:67
-msgctxt "ImportBackupModal"
-msgid "Password the backup was sealed with"
-msgstr "Password con cui è stato sigillato il backup"
-
-#: ui/modals/language-picker-modal.slint:66
-msgctxt "LanguagePickerModal"
-msgid "Interface language"
-msgstr "Lingua interfaccia"
-
-#: ui/modals/nickname-modal.slint:13
-msgctxt "NicknameModal"
-msgid "Nickname"
-msgstr "Soprannome"
-
-#: ui/modals/nickname-modal.slint:14
-msgctxt "NicknameModal"
-msgid ""
-"A private name for {}. Only you see it — leave empty to use their published "
-"name."
-msgstr ""
-"Un nome privato per {}. Lo vedi solo tu — lascia vuoto per usare il nome che "
-"hanno pubblicato."
-
-#: ui/modals/nickname-modal.slint:15
-#, fuzzy
-msgctxt "NicknameModal"
-msgid "Cancel"
-msgstr "Annulla"
-
-#: ui/modals/nickname-modal.slint:16
-#, fuzzy
-msgctxt "NicknameModal"
-msgid "Save"
-msgstr "Salva"
-
-#: ui/modals/nickname-modal.slint:20
-msgctxt "NicknameModal"
-msgid "NICKNAME"
-msgstr "SOPRANNOME"
 
 #. or failed kind-0 fetch hides the action entirely.
-#: ui/modals/profile-modal.slint:38
 #, fuzzy
 msgctxt "ProfileModal"
 msgid "Add contact"
 msgstr "Contatto"
 
-#: ui/modals/profile-modal.slint:39
 #, fuzzy
-msgctxt "ProfileModal"
-msgid "Adding…"
-msgstr "Salvataggio…"
+msgctxt "AddMemberCard"
+msgid "Add member"
+msgstr "1 membro"
 
-#: ui/modals/profile-modal.slint:193
-msgctxt "ProfileModal"
-msgid "Copied ✓"
-msgstr "Copiato ✓"
-
-#: ui/modals/profile-modal.slint:226
-msgctxt "ProfileModal"
-msgid "✓ In your contacts"
-msgstr "✓ Nei tuoi contatti"
-
-#: ui/modals/profile-modal.slint:287
-#, fuzzy
-msgctxt "ProfileModal"
-msgid "Contacting relays…"
-msgstr "Connessione ai relay…"
-
-#: ui/modals/profile-modal.slint:294
-msgctxt "ProfileModal"
-msgid "No profile found on relays."
-msgstr "Nessun profilo trovato sui relay."
-
-#: ui/modals/qr-modal.slint:17
-#, fuzzy
-msgctxt "QrModal"
-msgid "Scan to add or message on another device"
-msgstr "Scansiona per aggiungermi da un altro dispositivo"
-
-#: ui/modals/qr-modal.slint:67
-#, fuzzy
-msgctxt "QrModal"
-msgid "Copied ✓"
-msgstr "Copiato ✓"
-
-#: ui/modals/start-new-chat-modal.slint:14
-msgctxt "StartNewChatModal"
-msgid "New chat or group"
-msgstr "Nuova chat o gruppo"
-
-#: ui/modals/start-new-chat-modal.slint:15
-msgctxt "StartNewChatModal"
-msgid ""
-"Paste one npub for a direct chat, or several (one per line) plus a group "
-"name."
-msgstr ""
-"Incolla un npub per una chat diretta, o diversi (uno per riga) più un nome "
-"per il gruppo."
-
-#: ui/modals/start-new-chat-modal.slint:16
-msgctxt "StartNewChatModal"
-msgid "Cancel"
-msgstr "Annulla"
-
-#: ui/modals/start-new-chat-modal.slint:17
-msgctxt "StartNewChatModal"
-msgid "Create"
-msgstr "Crea"
-
-#: ui/modals/start-new-chat-modal.slint:18
-#, fuzzy
-msgctxt "StartNewChatModal"
-msgid "Creating…"
-msgstr "Salvataggio…"
-
-#: ui/modals/start-new-chat-modal.slint:24
-msgctxt "StartNewChatModal"
-msgid "GROUP NAME (OPTIONAL)"
-msgstr "NOME DEL GRUPPO (OPZIONALE)"
-
-#: ui/modals/start-new-chat-modal.slint:25
-msgctxt "StartNewChatModal"
-msgid "e.g. friday-crew"
-msgstr "es. squadra-venerdì"
-
-#: ui/modals/start-new-chat-modal.slint:34
-#, fuzzy
-msgctxt "StartNewChatModal"
-msgid "MEMBERS"
-msgstr "ELENCO MEMBRI"
-
-#: ui/modals/video-viewer-modal.slint:80
-#, fuzzy
-msgctxt "VideoViewerModal"
-msgid "Loading…"
-msgstr "Salvataggio…"
-
-#: ui/primitives/context-menu.slint:154
 msgctxt "MessageContextMenu"
 msgid "Add reaction"
 msgstr "Aggiungi reazione"
 
-#: ui/primitives/context-menu.slint:161
-msgctxt "MessageContextMenu"
-msgid "Reply"
-msgstr "Rispondi"
-
-#: ui/primitives/context-menu.slint:168
 #, fuzzy
-msgctxt "MessageContextMenu"
-msgid "Edit message"
-msgstr "Ultimo messaggio"
-
-#: ui/primitives/message-bubble.slint:409
-msgctxt "MessageBubble"
-msgid "Original message"
-msgstr "Messaggio originale"
-
-#: ui/primitives/message-bubble.slint:419
-msgctxt "MessageBubble"
-msgid "(message unavailable)"
-msgstr "(messaggio non disponibile)"
-
-#: ui/primitives/message-bubble.slint:635
-msgctxt "MessageBubble"
-msgid "failed · tap to retry"
-msgstr "fallito · tocca per riprovare"
-
-#: ui/primitives/message-bubble.slint:685
-msgctxt "MessageBubble"
-msgid "decrypting…"
-msgstr "decifrazione…"
-
-#: ui/primitives/message-bubble.slint:687
-#, fuzzy
-msgctxt "MessageBubble"
-msgid "tap to retry"
-msgstr "fallito · tocca per riprovare"
-
-#: ui/primitives/message-bubble.slint:688
-msgctxt "MessageBubble"
-msgid "tap to load"
-msgstr "tocca per caricare"
-
-#: ui/primitives/message-bubble.slint:847
-msgctxt "MessageBubble"
-msgid "edited"
-msgstr "modificato"
-
-#: ui/primitives/outgoing-row.slint:173 ui/primitives/outgoing-row.slint:184
-msgctxt "OutgoingRow"
-msgid "You"
-msgstr "Tu"
-
-#: ui/profile/profile-page.slint:72
-#, fuzzy
-msgctxt "PictureField"
-msgid "Picture"
-msgstr "Immagine"
-
-#: ui/profile/profile-page.slint:94
-msgctxt "PictureField"
-msgid "https://… or upload a file →"
-msgstr "https://… o carica un file →"
-
-#: ui/profile/profile-page.slint:102
-#, fuzzy
-msgctxt "PictureField"
-msgid "Uploading…"
+msgctxt "AddAccountModal"
+msgid "Adding…"
 msgstr "Salvataggio…"
 
-#: ui/profile/profile-page.slint:102
-msgctxt "PictureField"
-msgid "Upload"
-msgstr "Carica"
-
-#: ui/profile/profile-page.slint:179
 #, fuzzy
-msgctxt "AvatarEditable"
-msgid "Uploading…"
+msgctxt "AddContactModal"
+msgid "Adding…"
 msgstr "Salvataggio…"
 
-#: ui/profile/profile-page.slint:263
-msgctxt "ProfilePage"
-msgid "Your profile"
-msgstr "Il tuo profilo"
-
-#: ui/profile/profile-page.slint:270
-msgctxt "ProfilePage"
-msgid "EDITING · BROADCAST TO RELAYS ON SAVE"
-msgstr "MODIFICA · TRASMETTE AI RELAY AL SALVATAGGIO"
-
-#: ui/profile/profile-page.slint:271
-msgctxt "ProfilePage"
-msgid "VISIBLE TO ANYONE YOU CHAT WITH"
-msgstr "VISIBILE A CHIUNQUE CHATTI"
-
-#: ui/profile/profile-page.slint:281
-msgctxt "ProfilePage"
-msgid "Edit profile"
-msgstr "Modifica profilo"
-
-#: ui/profile/profile-page.slint:299
-msgctxt "ProfilePage"
-msgid "Saving…"
+#, fuzzy
+msgctxt "ProfileModal"
+msgid "Adding…"
 msgstr "Salvataggio…"
 
-#: ui/profile/profile-page.slint:299
-msgctxt "ProfilePage"
-msgid "Save"
-msgstr "Salva"
+msgctxt "AdvancedPane"
+msgid "Advanced"
+msgstr "Avanzate"
 
-#: ui/profile/profile-page.slint:310
-msgctxt "ProfilePage"
-msgid "Cancel"
-msgstr "Annulla"
+msgctxt "SettingsSidebar"
+msgid "Advanced"
+msgstr "Avanzate"
 
-#: ui/profile/profile-page.slint:374
-msgctxt "ProfilePage"
-msgid "(no display name)"
-msgstr "(nessun nome visualizzato)"
+msgctxt "NetworkPane"
+msgid "Aggregate connection counter from the relay pool."
+msgstr "Contatore connessioni aggregato dal pool relay."
 
-#: ui/profile/profile-page.slint:394
-msgctxt "ProfilePage"
-msgid "no handle yet"
-msgstr "nessun handle ancora"
+msgctxt "NotificationsPane"
+msgid "Alert me about messages in chats I'm not viewing."
+msgstr "Avvisami dei messaggi nelle chat che non sto guardando."
 
-#: ui/profile/profile-page.slint:431
-msgctxt "ProfilePage"
-msgid "IDENTITY"
-msgstr "IDENTITÀ"
+msgctxt "AccountSwitcherModal"
+msgid "All accounts stay connected. Switching only changes which one you're looking at."
+msgstr "Tutti gli account restano connessi. Il passaggio cambia solo quale stai visualizzando."
 
-#: ui/profile/profile-page.slint:435
-msgctxt "ProfilePage"
-msgid "Your public key. Safe to share."
-msgstr "La tua chiave pubblica. Sicura da condividere."
+msgctxt "AppearancePane"
+msgid "Appearance"
+msgstr "Aspetto"
 
-#: ui/profile/profile-page.slint:438
-msgctxt "ProfilePage"
-msgid "Copy"
-msgstr "Copia"
+msgctxt "SettingsSidebar"
+msgid "Appearance"
+msgstr "Aspetto"
 
-#: ui/profile/profile-page.slint:470
-msgctxt "ProfilePage"
-msgid "Scan to add me from another device"
-msgstr "Scansiona per aggiungermi da un altro dispositivo"
+msgctxt "ChatHeader"
+msgid "Archive"
+msgstr "Archivia"
 
-#: ui/profile/profile-page.slint:481
-msgctxt "ProfilePage"
-msgid "EDIT"
-msgstr "MODIFICA"
-
-#: ui/profile/profile-page.slint:484
-msgctxt "ProfilePage"
-msgid "Display name"
-msgstr "Nome visualizzato"
-
-#: ui/profile/profile-page.slint:485
-msgctxt "ProfilePage"
-msgid "How your name appears in chats"
-msgstr "Come appare il tuo nome nelle chat"
-
-#: ui/profile/profile-page.slint:489 ui/profile/profile-page.slint:522
-msgctxt "ProfilePage"
-msgid "Username"
-msgstr "Nome utente"
-
-#: ui/profile/profile-page.slint:490
-msgctxt "ProfilePage"
-msgid "Short handle (no spaces)"
-msgstr "Handle breve (senza spazi)"
-
-#: ui/profile/profile-page.slint:494
-msgctxt "ProfilePage"
-msgid "About"
-msgstr "Informazioni"
-
-#: ui/profile/profile-page.slint:495
-msgctxt "ProfilePage"
-msgid "A line or two about you"
-msgstr "Una riga o due su di te"
-
-#: ui/profile/profile-page.slint:505 ui/profile/profile-page.slint:526
-msgctxt "ProfilePage"
-msgid "NIP-05"
-msgstr ""
-
-#: ui/profile/profile-page.slint:510
-msgctxt "ProfilePage"
-msgid "Lightning address (LUD-16)"
-msgstr "Indirizzo Lightning (LUD-16)"
-
-#: ui/profile/profile-page.slint:519
-msgctxt "ProfilePage"
-msgid "PROFILE"
-msgstr "PROFILO"
-
-#: ui/profile/profile-page.slint:530
-msgctxt "ProfilePage"
-msgid "Lightning"
-msgstr "Lightning"
-
-#: ui/profile/profile-page.slint:534
-msgctxt "ProfilePage"
-msgid "Picture"
-msgstr "Immagine"
-
-#: ui/profile/profile-page.slint:535
-msgctxt "ProfilePage"
-msgid "Not set"
-msgstr "Non impostato"
-
-#: ui/profile/profile-page.slint:535
-msgctxt "ProfilePage"
-msgid "Set"
-msgstr "Imposta"
-
-#: ui/profile/wallet-address-row.slint:10
-msgctxt "WalletAddressRow"
-msgid "Lightning address"
-msgstr "Indirizzo Lightning"
-
-#: ui/profile/wallet-address-row.slint:11
-msgctxt "WalletAddressRow"
-msgid "People can zap you via this address."
-msgstr "Le persone possono zaparti tramite questo indirizzo."
-
-#: ui/profile/wallet-address-row.slint:14
-msgctxt "WalletAddressRow"
-msgid "Copy"
-msgstr "Copia"
-
-#: ui/settings/about-pane.slint:94
 #, fuzzy
-msgctxt "AboutPane"
-msgid "About"
-msgstr "Informazioni"
+msgctxt "LeftRail"
+msgid "Archive"
+msgstr "Archivia"
 
-#: ui/settings/about-pane.slint:95
-msgctxt "AboutPane"
-msgid "Encrypted group chat on Nostr"
-msgstr "Chat di gruppo crittografata su Nostr"
+msgctxt "ContactDetail"
+msgid "Archive chat"
+msgstr "Archivia chat"
 
-#: ui/settings/about-pane.slint:172
+msgctxt "AdvancedPane"
+msgid "Audit logs"
+msgstr "Log di audit"
+
+msgctxt "ImportBackupModal"
+msgid "BACKUP FILE"
+msgstr "FILE DI BACKUP"
+
+msgctxt "ImportBackupModal"
+msgid "BACKUP PASSWORD"
+msgstr "PASSWORD DEL BACKUP"
+
+msgctxt "LoginScreen"
+msgid "Back"
+msgstr "Indietro"
+
+msgctxt "StoragePane"
+msgid "Back up everything"
+msgstr "Esegui il backup di tutto"
+
+msgctxt "LoginScreen"
+msgid "Back up your nsec before saving"
+msgstr "Fai backup del nsec prima di salvare"
+
+msgctxt "AppearancePane"
+msgid "Berry"
+msgstr "Bacca"
+
+msgctxt "ChatHeader"
+msgid "Block"
+msgstr "Blocca"
+
+msgctxt "ContactDetail"
+msgid "Block"
+msgstr "Blocca"
+
 #, fuzzy
-msgctxt "AboutPane"
-msgid "End-to-end encrypted group messaging for Linux."
-msgstr "Crittografato end-to-end con"
+msgctxt "DarkMatterLinux"
+msgid "Block"
+msgstr "Blocca"
 
-#: ui/settings/about-pane.slint:183
-msgctxt "AboutPane"
-msgid "WHAT IT IS"
-msgstr "COS'È"
-
-#: ui/settings/about-pane.slint:194
-msgctxt "AboutPane"
-msgid ""
-"Dark Matter is a native desktop client for private group chat. Messages are "
-"encrypted with MLS before they leave your machine, routed over Nostr relays, "
-"and decrypted only for the people in the room."
-msgstr ""
-"Dark Matter è un client desktop nativo per chat di gruppo private. I "
-"messaggi vengono crittografati con MLS prima di lasciare la tua macchina, "
-"instradati sui relay Nostr e decifrati solo per le persone nella stanza."
-
-#: ui/settings/about-pane.slint:201
-msgctxt "AboutPane"
-msgid "Your keys stay on this device — we never see them."
-msgstr "Le tue chiavi restano su questo dispositivo — noi non le vediamo mai."
-
-#: ui/settings/about-pane.slint:212
-msgctxt "AboutPane"
-msgid "UNDER THE HOOD"
-msgstr "SOTTO IL COFANO"
-
-#: ui/settings/about-pane.slint:216
 #, fuzzy
-msgctxt "AboutPane"
-msgid "End-to-end encryption"
-msgstr "Crittografato end-to-end con"
+msgctxt "DarkMatterLinux"
+msgid "Block this chat request?"
+msgstr "Richiesta chat"
 
-#: ui/settings/about-pane.slint:217
 msgctxt "AboutPane"
-msgid "MLS group keys; no server in the trust path."
-msgstr "Chiavi di gruppo MLS; nessun server nella catena di fiducia."
+msgid "Built with"
+msgstr "Realizzato con"
 
-#: ui/settings/about-pane.slint:221
-msgctxt "AboutPane"
-msgid "Decentralized network"
-msgstr "Rete decentralizzata"
+msgctxt "MainPane"
+msgid "CHAT REQUEST"
+msgstr "RICHIESTA CHAT"
 
-#: ui/settings/about-pane.slint:222
-msgctxt "AboutPane"
-msgid "Connect to Nostr relays you choose."
-msgstr "Connettiti ai relay Nostr che scegli."
+msgctxt "ChatListPanel"
+msgid "CHATS"
+msgstr "CHAT"
 
-#: ui/settings/about-pane.slint:226
-msgctxt "AboutPane"
-msgid "Local key custody"
-msgstr "Custodia locale delle chiavi"
+msgctxt "StatusBar"
+msgid "COMMAND"
+msgstr "COMANDO"
 
-#: ui/settings/about-pane.slint:227
-msgctxt "AboutPane"
-msgid "Private material lives in your OS keychain or encrypted store."
-msgstr ""
-"Il materiale privato risiede nel portachiavi del sistema operativo o in un "
-"archivio crittografato."
+msgctxt "LoginScreen"
+msgid "CONFIRM PASSWORD"
+msgstr "CONFERMA PASSWORD"
 
-#: ui/settings/about-pane.slint:235
+msgctxt "StatusBar"
+msgid "CONNECTING"
+msgstr "CONNESSIONE"
+
+msgctxt "ContactsSidebar"
+msgid "CONTACTS"
+msgstr "CONTATTI"
+
 #, fuzzy
 msgctxt "AboutPane"
 msgid "CREDITS"
 msgstr "MODIFICA"
 
-#: ui/settings/about-pane.slint:239
-msgctxt "AboutPane"
-msgid "Built with"
-msgstr "Realizzato con"
-
-#: ui/settings/about-pane.slint:247
-msgctxt "AboutPane"
-msgid "Made with marmots, math, and a little purple liquid."
-msgstr "Fatto con marmotte, matematica e un po' di liquido viola."
-
-#: ui/settings/advanced-pane.slint:80
-msgctxt "AdvancedPane"
-msgid "Advanced"
-msgstr "Avanzate"
-
-#: ui/settings/advanced-pane.slint:81
-#, fuzzy
-msgctxt "AdvancedPane"
-msgid "Privacy & developer flags"
-msgstr "Flag sviluppatore"
-
-#: ui/settings/advanced-pane.slint:86
-msgctxt "AdvancedPane"
-msgid "SECURITY & PRIVACY"
-msgstr "SICUREZZA E PRIVACY"
-
-#: ui/settings/advanced-pane.slint:89
-msgctxt "AdvancedPane"
-msgid "Share anonymous app telemetry"
-msgstr "Condividi telemetria anonima dell'app"
-
-#: ui/settings/advanced-pane.slint:90
-msgctxt "AdvancedPane"
-msgid "Share relay connection telemetry."
-msgstr "Condividi la telemetria di connessione ai relay."
-
-#: ui/settings/advanced-pane.slint:97
-msgctxt "AdvancedPane"
-msgid "Audit logs"
-msgstr "Log di audit"
-
-#: ui/settings/advanced-pane.slint:98
-msgctxt "AdvancedPane"
-msgid "Create and send group audit log files. Applies immediately."
-msgstr "Crea e invia i file di log di audit del gruppo. Si applica subito."
-
-#: ui/settings/advanced-pane.slint:117
-msgctxt "AdvancedPane"
-msgid "AUDIT LOG FILES"
-msgstr "FILE DI LOG DI AUDIT"
-
-#: ui/settings/advanced-pane.slint:125
-msgctxt "AdvancedPane"
-msgid "No audit log files on disk."
-msgstr "Nessun file di log di audit su disco."
-
-#: ui/settings/advanced-pane.slint:142
-#, fuzzy
-msgctxt "AdvancedPane"
-msgid "Refresh"
-msgstr "Aggiorna"
-
-#: ui/settings/advanced-pane.slint:148
-msgctxt "AdvancedPane"
-msgid ""
-"Deleting the file being recorded rotates it — recording continues in a fresh "
-"file."
-msgstr ""
-"Eliminare il file in registrazione lo ruota — la registrazione continua in "
-"un nuovo file."
-
-#: ui/settings/advanced-pane.slint:156
-msgctxt "AdvancedPane"
-msgid "DEVELOPER"
-msgstr "SVILUPPATORE"
-
-#: ui/settings/advanced-pane.slint:159
-#, fuzzy
-msgctxt "AdvancedPane"
-msgid "Developer mode"
-msgstr "Flag sviluppatore"
-
-#: ui/settings/advanced-pane.slint:160
-#, fuzzy
-msgctxt "AdvancedPane"
-msgid ""
-"Shows diagnostics and MLS internals. Adds a Debug entry with account, key-"
-"packages, and group state."
-msgstr ""
-"Aggiunge una voce Debug sotto. Mostra account, pacchetti chiave e stato "
-"gruppi."
-
-#: ui/settings/appearance-pane.slint:26
-msgctxt "AppearancePane"
-msgid "Mint"
-msgstr "Menta"
-
-#: ui/settings/appearance-pane.slint:27
-msgctxt "AppearancePane"
-msgid "Ocean"
-msgstr "Oceano"
-
-#: ui/settings/appearance-pane.slint:28
-msgctxt "AppearancePane"
-msgid "Berry"
-msgstr "Bacca"
-
-#: ui/settings/appearance-pane.slint:29
-msgctxt "AppearancePane"
-msgid "Coral"
-msgstr "Corallo"
-
-#: ui/settings/appearance-pane.slint:30
-msgctxt "AppearancePane"
-msgid "Lavender"
-msgstr "Lavanda"
-
-#: ui/settings/appearance-pane.slint:34
-msgctxt "AppearancePane"
-msgid "Appearance"
-msgstr "Aspetto"
-
-#: ui/settings/appearance-pane.slint:40
-msgctxt "AppearancePane"
-msgid "THEME"
-msgstr "TEMA"
-
-#: ui/settings/appearance-pane.slint:43
-msgctxt "AppearancePane"
-msgid "Theme"
-msgstr "Tema"
-
-#: ui/settings/appearance-pane.slint:44
-msgctxt "AppearancePane"
-msgid "Pick the whole app's look."
-msgstr "Scegli l'aspetto di tutta l'app."
-
-#: ui/settings/appearance-pane.slint:51
-msgctxt "AppearancePane"
-msgid "Accent color"
-msgstr "Colore accento"
-
-#: ui/settings/appearance-pane.slint:63
-msgctxt "AppearancePane"
-msgid "MESSAGES"
-msgstr "MESSAGGI"
-
-#: ui/settings/appearance-pane.slint:66
-msgctxt "AppearancePane"
-msgid "Own messages on the right"
-msgstr "I tuoi messaggi a destra"
-
-#: ui/settings/appearance-pane.slint:67
-msgctxt "AppearancePane"
-msgid "Place your sent messages on the right side."
-msgstr "Posiziona i messaggi che invii sul lato destro."
-
-#: ui/settings/debug-pane.slint:14
-msgctxt "DebugPane"
-msgid "Debug"
-msgstr "Debug"
-
-#: ui/settings/debug-pane.slint:15
-msgctxt "DebugPane"
-msgid "Account / key packages / groups"
-msgstr "Account / pacchetti chiave / gruppi"
-
-#: ui/settings/debug-pane.slint:20
-msgctxt "DebugPane"
-msgid "STATE SNAPSHOT"
-msgstr "ISTANTANEA STATO"
-
-#: ui/settings/debug-pane.slint:26
-msgctxt "DebugPane"
-msgid "Refresh"
-msgstr "Aggiorna"
-
-#: ui/settings/debug-pane.slint:30
-msgctxt "DebugPane"
-msgid "Copy JSON"
-msgstr "Copia JSON"
-
-#: ui/settings/debug-pane.slint:54
-msgctxt "DebugPane"
-msgid "(no snapshot yet — click Refresh)"
-msgstr "(nessuna istantanea — clicca Aggiorna)"
-
-#: ui/settings/general-pane.slint:22
-msgctxt "GeneralPane"
-msgid "General"
-msgstr "Generale"
-
-#: ui/settings/general-pane.slint:28
-msgctxt "GeneralPane"
-msgid "STARTUP"
-msgstr "AVVIO"
-
-#: ui/settings/general-pane.slint:31
-msgctxt "GeneralPane"
-msgid "Launch at login"
-msgstr "Avvia all'accesso"
-
-#: ui/settings/general-pane.slint:35
-msgctxt "GeneralPane"
-msgid "Start minimized to tray"
-msgstr "Avvia minimizzato nella tray"
-
-#: ui/settings/general-pane.slint:39
-msgctxt "GeneralPane"
-msgid "Restore last selected chat on launch"
-msgstr "Ripristina l'ultima chat selezionata all'avvio"
-
-#: ui/settings/general-pane.slint:47
-msgctxt "GeneralPane"
-msgid "LANGUAGE"
-msgstr "LINGUA"
-
-#: ui/settings/general-pane.slint:50
-msgctxt "GeneralPane"
-msgid "Interface language"
-msgstr "Lingua interfaccia"
-
-#: ui/settings/general-pane.slint:53
-msgctxt "language picker button"
-msgid "Change"
-msgstr "Modifica"
-
-#: ui/settings/general-pane.slint:59
-msgctxt "GeneralPane"
-msgid "Time format"
-msgstr "Formato ora"
-
-#: ui/settings/general-pane.slint:61
-msgctxt "GeneralPane"
-msgid "24-hour"
-msgstr "24 ore"
-
-#: ui/settings/general-pane.slint:67
-msgctxt "GeneralPane"
-msgid "12-hour"
-msgstr "12 ore"
-
-#: ui/settings/general-pane.slint:74
-msgctxt "GeneralPane"
-msgid "Date format"
-msgstr "Formato data"
-
-#: ui/settings/network-pane.slint:82
-msgctxt "NetworkPane"
-msgid "Network & relays"
-msgstr "Rete e relay"
-
-#: ui/settings/network-pane.slint:83
-msgctxt "NetworkPane"
-msgid "Where your messages land."
-msgstr "Dove arrivano i tuoi messaggi."
-
-#: ui/settings/network-pane.slint:88
-msgctxt "NetworkPane"
-msgid "STATUS"
-msgstr "STATO"
-
-#: ui/settings/network-pane.slint:112
-msgctxt "NetworkPane"
-msgid "No relays configured"
-msgstr "Nessun relay configurato"
-
-#: ui/settings/network-pane.slint:114
-msgctxt "NetworkPane"
-msgid "Connected · {}/{}"
-msgstr "Connesso · {}/{}"
-
-#: ui/settings/network-pane.slint:115
-msgctxt "NetworkPane"
-msgid "Partial · {}/{} connected"
-msgstr "Parziale · {}/{} connessi"
-
-#: ui/settings/network-pane.slint:122
-msgctxt "NetworkPane"
-msgid "Add a relay below — nothing publishes until you do."
-msgstr "Aggiungi un relay sotto — nulla viene pubblicato finché non lo fai."
-
-#: ui/settings/network-pane.slint:123
-msgctxt "NetworkPane"
-msgid "Aggregate connection counter from the relay pool."
-msgstr "Contatore connessioni aggregato dal pool relay."
-
-#: ui/settings/network-pane.slint:132
-msgctxt "NetworkPane"
-msgid "Refresh"
-msgstr "Aggiorna"
-
-#: ui/settings/network-pane.slint:143
-msgctxt "NetworkPane"
-msgid "RELAYS"
-msgstr "RELAY"
-
-#: ui/settings/network-pane.slint:177
-msgctxt "NetworkPane"
-msgid "Add"
-msgstr "Aggiungi"
-
-#: ui/settings/network-pane.slint:204
-msgctxt "NetworkPane"
-msgid "No relays yet. Add one above."
-msgstr "Nessun relay. Aggiungine uno sopra."
-
-#: ui/settings/network-pane.slint:239
-msgctxt "NetworkPane"
-msgid "Restart darkmatter to apply relay changes."
-msgstr "Riavvia darkmatter per applicare le modifiche ai relay."
-
-#: ui/settings/network-pane.slint:254
-msgctxt "NetworkPane"
-msgid "Republish relay list"
-msgstr "Ripubblica elenco relay"
-
-#: ui/settings/network-pane.slint:260
-msgctxt "NetworkPane"
-msgid ""
-"Re-broadcasts your relay lists to every relay above. Use this if peers can't "
-"find you."
-msgstr ""
-"Ritrasmette i tuoi elenchi di relay a ogni relay qui sopra. Usalo se i peer "
-"non riescono a trovarti."
-
-#: ui/settings/notifications-pane.slint:22
-#, fuzzy
-msgctxt "NotificationsPane"
-msgid "Notifications"
-msgstr "Notifiche"
-
-#: ui/settings/notifications-pane.slint:23
-msgctxt "NotificationsPane"
-msgid "DESKTOP ALERTS"
-msgstr "AVVISI DESKTOP"
-
-#: ui/settings/notifications-pane.slint:28
-msgctxt "NotificationsPane"
-msgid "INCOMING MESSAGES"
-msgstr "MESSAGGI IN ARRIVO"
-
-#: ui/settings/notifications-pane.slint:31
-#, fuzzy
-msgctxt "NotificationsPane"
-msgid "Desktop notifications"
-msgstr "Notifiche"
-
-#: ui/settings/notifications-pane.slint:32
-msgctxt "NotificationsPane"
-msgid "Alert me about messages in chats I'm not viewing."
-msgstr "Avvisami dei messaggi nelle chat che non sto guardando."
-
-#: ui/settings/notifications-pane.slint:39
-msgctxt "NotificationsPane"
-msgid "Play a sound"
-msgstr "Riproduci un suono"
-
-#: ui/settings/notifications-pane.slint:47
-msgctxt "NotificationsPane"
-msgid "Show message preview"
-msgstr "Mostra anteprima del messaggio"
-
-#: ui/settings/notifications-pane.slint:48
-msgctxt "NotificationsPane"
-msgid "Off shows only \"New message\" without the text."
-msgstr "Disattivata mostra solo \"Nuovo messaggio\" senza il testo."
-
-#: ui/settings/settings-sidebar.slint:33
-msgctxt "SettingsSidebar"
-msgid "SETTINGS"
-msgstr "IMPOSTAZIONI"
-
-#: ui/settings/settings-sidebar.slint:44
-msgctxt "SettingsSidebar"
-msgid "General"
-msgstr "Generale"
-
-#: ui/settings/settings-sidebar.slint:50
-msgctxt "SettingsSidebar"
-msgid "Network & relays"
-msgstr "Rete e relay"
-
-#: ui/settings/settings-sidebar.slint:56
-msgctxt "SettingsSidebar"
-msgid "Appearance"
-msgstr "Aspetto"
-
-#: ui/settings/settings-sidebar.slint:62
-msgctxt "SettingsSidebar"
-msgid "Notifications"
-msgstr "Notifiche"
-
-#: ui/settings/settings-sidebar.slint:68
-msgctxt "SettingsSidebar"
-msgid "Storage"
-msgstr "Archiviazione"
-
-#: ui/settings/settings-sidebar.slint:74
-msgctxt "SettingsSidebar"
-msgid "Advanced"
-msgstr "Avanzate"
-
-#: ui/settings/settings-sidebar.slint:81
-msgctxt "SettingsSidebar"
-msgid "About"
-msgstr "Informazioni"
-
-#: ui/settings/settings-sidebar.slint:87
-msgctxt "SettingsSidebar"
-msgid "Debug"
-msgstr "Debug"
-
-#: ui/settings/storage-pane.slint:28
-#, fuzzy
-msgctxt "StoragePane"
-msgid "Storage"
-msgstr "Archiviazione"
-
-#: ui/settings/storage-pane.slint:29
-msgctxt "StoragePane"
-msgid "ON THIS DEVICE"
-msgstr "SU QUESTO DISPOSITIVO"
-
-#: ui/settings/storage-pane.slint:34
-msgctxt "StoragePane"
-msgid "MEDIA CACHE"
-msgstr "CACHE DEI MEDIA"
-
-#: ui/settings/storage-pane.slint:37
 msgctxt "StoragePane"
 msgid "Cached attachments"
 msgstr "Allegati in cache"
 
-#: ui/settings/storage-pane.slint:38
-msgctxt "StoragePane"
-msgid "Decrypted images and files, sealed with your vault key."
-msgstr ""
-"Immagini e file decifrati, sigillati con la chiave della tua cassaforte."
+msgctxt "ErrorCopy"
+msgid "Can't reach your relays right now. Check your network and relay settings, then try again."
+msgstr "Non riesco a raggiungere i tuoi relay in questo momento. Controlla la rete e le impostazioni dei relay, poi riprova."
 
-#: ui/settings/storage-pane.slint:42
+#, fuzzy
+msgctxt "AddAccountModal"
+msgid "Cancel"
+msgstr "Annulla"
+
+#, fuzzy
+msgctxt "AddContactModal"
+msgid "Cancel"
+msgstr "Annulla"
+
+#, fuzzy
+msgctxt "BackupCreateModal"
+msgid "Cancel"
+msgstr "Annulla"
+
+#, fuzzy
+msgctxt "ConfirmModal"
+msgid "Cancel"
+msgstr "Annulla"
+
+#, fuzzy
+msgctxt "ImportBackupModal"
+msgid "Cancel"
+msgstr "Annulla"
+
+#, fuzzy
+msgctxt "NicknameModal"
+msgid "Cancel"
+msgstr "Annulla"
+
+msgctxt "ProfilePage"
+msgid "Cancel"
+msgstr "Annulla"
+
+msgctxt "StartNewChatModal"
+msgid "Cancel"
+msgstr "Annulla"
+
+msgctxt "Composer"
+msgid "Cancel edit"
+msgstr "Annulla modifica"
+
+#, fuzzy
+msgctxt "Composer"
+msgid "Cancel recording"
+msgstr "Annulla modifica"
+
+msgctxt "Composer"
+msgid "Cancel reply"
+msgstr "Annulla risposta"
+
+msgctxt "ThemePicker"
+msgid "Chalkboard"
+msgstr ""
+
+msgctxt "language picker button"
+msgid "Change"
+msgstr "Modifica"
+
+#, fuzzy
+msgctxt "GroupSettingsCard"
+msgid "Change image"
+msgstr "Modifica"
+
+msgctxt "ChatRequestBanner"
+msgid "Chat request"
+msgstr "Richiesta chat"
+
+msgctxt "LeftRail"
+msgid "Chats"
+msgstr "Chat"
+
+msgctxt "ArchivedPage"
+msgid "Chats you archive are kept here, out of your main list."
+msgstr "Le chat che archivi vengono conservate qui, fuori dall'elenco principale."
+
+msgctxt "LoginScreen"
+msgid "Choose a password"
+msgstr "Scegli una password"
+
+msgctxt "NativeDialogStrings"
+msgid "Choose a profile picture"
+msgstr "Scegli un'immagine del profilo"
+
+msgctxt "ImportBackupModal"
+msgid "Choose file…"
+msgstr "Scegli file…"
+
+msgctxt "BackupCreateModal"
+msgid "Choose location…"
+msgstr "Scegli posizione…"
+
+msgctxt "StoragePane"
+msgid "Clear cache"
+msgstr "Svuota cache"
+
 #, fuzzy
 msgctxt "StoragePane"
 msgid "Clearing…"
 msgstr "Salvataggio…"
 
-#: ui/settings/storage-pane.slint:42
-msgctxt "StoragePane"
-msgid "Clear cache"
-msgstr "Svuota cache"
+msgctxt "AccountSwitcherModal"
+msgid "Close"
+msgstr "Chiudi"
 
-#: ui/settings/storage-pane.slint:51
-msgctxt "StoragePane"
-msgid "SECRET VAULT"
-msgstr "CASSAFORTE SEGRETA"
+msgctxt "command palette footer"
+msgid "Close"
+msgstr "Chiudi"
 
-#: ui/settings/storage-pane.slint:54
-msgctxt "StoragePane"
-msgid "Vault location"
-msgstr "Posizione cassaforte"
+msgctxt "KeysPage"
+msgid "Configure key-package relays first."
+msgstr "Configura prima i relay per i pacchetti chiave."
 
-#: ui/settings/storage-pane.slint:58
-msgctxt "StoragePane"
-msgid "Open folder"
-msgstr "Apri cartella"
+msgctxt "BackupCreateModal"
+msgid "Confirm your vault password"
+msgstr "Conferma la password della cassaforte"
 
-#: ui/settings/storage-pane.slint:63
-msgctxt "StoragePane"
-msgid "Back up everything"
-msgstr "Esegui il backup di tutto"
+#, fuzzy
+msgctxt "GetStartedScreen"
+msgid "Connect a relay"
+msgstr "Connessione ai relay…"
 
-#: ui/settings/storage-pane.slint:64
-msgctxt "StoragePane"
-msgid "Pack accounts, chats, and settings into one encrypted file."
-msgstr "Racchiudi account, chat e impostazioni in un unico file crittografato."
+msgctxt "AboutPane"
+msgid "Connect to Nostr relays you choose."
+msgstr "Connettiti ai relay Nostr che scegli."
 
-#: ui/settings/storage-pane.slint:67
+#, fuzzy
+msgctxt "GetStartedScreen"
+msgid "Connected · {}/{}"
+msgstr "Connesso · {}/{}"
+
+msgctxt "NetworkPane"
+msgid "Connected · {}/{}"
+msgstr "Connesso · {}/{}"
+
+msgctxt "DarkMatterLinux"
+msgid "Connecting to relays…"
+msgstr "Connessione ai relay…"
+
+msgctxt "SplashScreen"
+msgid "Connecting to relays…"
+msgstr "Connessione ai relay…"
+
+msgctxt "ContactDetail"
+msgid "Contact"
+msgstr "Contatto"
+
+#, fuzzy
+msgctxt "ProfileModal"
+msgid "Contacting relays…"
+msgstr "Connessione ai relay…"
+
+#, fuzzy
+msgctxt "LeftRail"
+msgid "Contacts"
+msgstr "Contatto"
+
+msgctxt "LoginScreen"
+msgid "Continue"
+msgstr "Continua"
+
+msgctxt "ProfileModal"
+msgid "Copied ✓"
+msgstr "Copiato ✓"
+
+#, fuzzy
+msgctxt "QrModal"
+msgid "Copied ✓"
+msgstr "Copiato ✓"
+
+msgctxt "ContactDetail"
+msgid "Copy"
+msgstr "Copia"
+
+msgctxt "KeysPage"
+msgid "Copy"
+msgstr "Copia"
+
+msgctxt "LoginScreen"
+msgid "Copy"
+msgstr "Copia"
+
+msgctxt "ProfilePage"
+msgid "Copy"
+msgstr "Copia"
+
+msgctxt "WalletAddressRow"
+msgid "Copy"
+msgstr "Copia"
+
+msgctxt "DebugPane"
+msgid "Copy JSON"
+msgstr "Copia JSON"
+
+msgctxt "AppearancePane"
+msgid "Coral"
+msgstr "Corallo"
+
+msgctxt "ErrorCopy"
+msgid "Couldn't accept the invitation. Please try again in a moment."
+msgstr "Impossibile accettare l'invito. Riprova tra un momento."
+
+msgctxt "ErrorCopy"
+msgid "Couldn't add that account. Please check the key and try again."
+msgstr "Impossibile aggiungere questo account. Controlla la chiave e riprova."
+
+msgctxt "ErrorCopy"
+msgid "Couldn't add that contact. Please try again."
+msgstr "Impossibile aggiungere questo contatto. Riprova."
+
+msgctxt "ErrorCopy"
+msgid "Couldn't add that member. Please try again."
+msgstr "Impossibile aggiungere questo membro. Riprova."
+
+msgctxt "ErrorCopy"
+msgid "Couldn't add your reaction. Please try again."
+msgstr "Impossibile aggiungere la reazione. Riprova."
+
+msgctxt "ErrorCopy"
+msgid "Couldn't archive this chat. Please try again."
+msgstr "Impossibile archiviare questa chat. Riprova."
+
+msgctxt "ErrorCopy"
+msgid "Couldn't create the chat. Please try again."
+msgstr "Impossibile creare la chat. Riprova."
+
+msgctxt "ErrorCopy"
+msgid "Couldn't decline the invitation. Please try again in a moment."
+msgstr "Impossibile rifiutare l'invito. Riprova tra un momento."
+
+#. Tier 2 — operation-specific fallbacks.
+msgctxt "ErrorCopy"
+msgid "Couldn't finish syncing. We'll keep retrying — check your relay settings if this keeps happening."
+msgstr "Sincronizzazione non completata. Continueremo a riprovare — se il problema persiste, controlla le impostazioni dei relay."
+
+msgctxt "ErrorCopy"
+msgid "Couldn't publish your key package. Check your relay settings and try again."
+msgstr "Impossibile pubblicare il tuo key package. Controlla le impostazioni dei relay e riprova."
+
+msgctxt "ErrorCopy"
+msgid "Couldn't refresh your key packages. Check your relay settings and try again."
+msgstr "Impossibile aggiornare i tuoi key package. Controlla le impostazioni dei relay e riprova."
+
+msgctxt "ErrorCopy"
+msgid "Couldn't remove your reaction. Please try again."
+msgstr "Impossibile rimuovere la reazione. Riprova."
+
+msgctxt "ErrorCopy"
+msgid "Couldn't republish to your relays. Check your relay settings and try again."
+msgstr "Impossibile ripubblicare sui tuoi relay. Controlla le impostazioni dei relay e riprova."
+
+msgctxt "ErrorCopy"
+msgid "Couldn't restore this chat. Please try again."
+msgstr "Impossibile ripristinare questa chat. Riprova."
+
+msgctxt "ErrorCopy"
+msgid "Couldn't rotate your key package. Check your relay settings and try again."
+msgstr "Impossibile ruotare il tuo key package. Controlla le impostazioni dei relay e riprova."
+
+msgctxt "ErrorCopy"
+msgid "Couldn't save your edit. Check your connection and try again."
+msgstr "Impossibile salvare la modifica. Controlla la connessione e riprova."
+
+msgctxt "ErrorCopy"
+msgid "Couldn't save your profile. Check your connection and try again."
+msgstr "Impossibile salvare il profilo. Controlla la connessione e riprova."
+
+msgctxt "ErrorCopy"
+msgid "Couldn't save your relay list. Please try again."
+msgstr "Impossibile salvare la lista dei relay. Riprova."
+
+msgctxt "ErrorCopy"
+msgid "Couldn't send your message. Check your connection and try again."
+msgstr "Impossibile inviare il messaggio. Controlla la connessione e riprova."
+
+msgctxt "ErrorCopy"
+msgid "Couldn't start up. Check your network and relay settings, then try again."
+msgstr "Avvio non riuscito. Controlla la rete e le impostazioni dei relay, poi riprova."
+
+msgctxt "ErrorCopy"
+msgid "Couldn't switch accounts. Please try again in a moment."
+msgstr "Impossibile cambiare account. Riprova tra un momento."
+
+msgctxt "ErrorCopy"
+msgid "Couldn't update the group image. Please try again."
+msgstr "Impossibile aggiornare l'immagine del gruppo. Riprova."
+
+msgctxt "ErrorCopy"
+msgid "Couldn't update the group settings. Please try again."
+msgstr "Impossibile aggiornare le impostazioni del gruppo. Riprova."
+
+msgctxt "ErrorCopy"
+msgid "Couldn't upload your picture. Please try again."
+msgstr "Impossibile caricare l'immagine. Riprova."
+
+msgctxt "StartNewChatModal"
+msgid "Create"
+msgstr "Crea"
+
+msgctxt "AdvancedPane"
+msgid "Create and send group audit log files. Applies immediately."
+msgstr "Crea e invia i file di log di audit del gruppo. Si applica subito."
+
+msgctxt "BackupCreateModal"
+msgid "Create backup"
+msgstr "Crea backup"
+
 msgctxt "StoragePane"
 msgid "Create backup…"
 msgstr "Crea backup…"
 
-#: ui/settings/storage-pane.slint:72
-msgctxt "StoragePane"
-msgid "Import a backup"
-msgstr "Importa un backup"
+msgctxt "LoginScreen"
+msgid "Create vault"
+msgstr "Crea cassaforte"
 
-#: ui/settings/storage-pane.slint:73
-msgctxt "StoragePane"
-msgid "Merge the accounts from a backup file into this install."
-msgstr "Unisci gli account di un file di backup a questa installazione."
+#, fuzzy
+msgctxt "StartNewChatModal"
+msgid "Creating…"
+msgstr "Salvataggio…"
 
-#: ui/settings/storage-pane.slint:76
-msgctxt "StoragePane"
-msgid "Import…"
-msgstr "Importa…"
+msgctxt "KeysPage"
+msgid "DANGER ZONE"
+msgstr "ZONA PERICOLOSA"
 
-#: ui/settings/theme-picker.slint:45
+msgctxt "NotificationsPane"
+msgid "DESKTOP ALERTS"
+msgstr "AVVISI DESKTOP"
+
+msgctxt "AdvancedPane"
+msgid "DEVELOPER"
+msgstr "SVILUPPATORE"
+
 #, fuzzy
 msgctxt "ThemePicker"
 msgid "Dark"
 msgstr "Scuro"
 
-#: ui/settings/theme-picker.slint:45
+msgctxt "AboutPane"
+msgid "Dark Matter is a native desktop client for private group chat. Messages are encrypted with MLS before they leave your machine, routed over Nostr relays, and decrypted only for the people in the room."
+msgstr "Dark Matter è un client desktop nativo per chat di gruppo private. I messaggi vengono crittografati con MLS prima di lasciare la tua macchina, instradati sui relay Nostr e decifrati solo per le persone nella stanza."
+
+msgctxt "KeysPage"
+msgid "Dark Matter never sees your private key. It lives only on this device and any signer you connect."
+msgstr "Dark Matter non vede mai la tua chiave privata. Resta solo su questo dispositivo e su qualsiasi firmatario collegato."
+
+msgctxt "GeneralPane"
+msgid "Date format"
+msgstr "Formato data"
+
+msgctxt "DebugPane"
+msgid "Debug"
+msgstr "Debug"
+
+msgctxt "SettingsSidebar"
+msgid "Debug"
+msgstr "Debug"
+
+msgctxt "AboutPane"
+msgid "Decentralized network"
+msgstr "Rete decentralizzata"
+
+msgctxt "StoragePane"
+msgid "Decrypted images and files, sealed with your vault key."
+msgstr "Immagini e file decifrati, sigillati con la chiave della tua cassaforte."
+
+msgctxt "ArchivedDetail"
+msgid "Delete"
+msgstr "Elimina"
+
+msgctxt "AdvancedPane"
+msgid "Deleting the file being recorded rotates it — recording continues in a fresh file."
+msgstr "Eliminare il file in registrazione lo ruota — la registrazione continua in un nuovo file."
+
+#, fuzzy
+msgctxt "NotificationsPane"
+msgid "Desktop notifications"
+msgstr "Notifiche"
+
+#, fuzzy
+msgctxt "AdvancedPane"
+msgid "Developer mode"
+msgstr "Flag sviluppatore"
+
+msgctxt "ProfilePage"
+msgid "Display name"
+msgstr "Nome visualizzato"
+
+msgctxt "ProfilePage"
+msgid "EDIT"
+msgstr "MODIFICA"
+
+msgctxt "ProfilePage"
+msgid "EDITING · BROADCAST TO RELAYS ON SAVE"
+msgstr "MODIFICA · TRASMETTE AI RELAY AL SALVATAGGIO"
+
+msgctxt "EditHistoryModal"
+msgid "Edit history"
+msgstr "Cronologia modifiche"
+
+#, fuzzy
+msgctxt "MessageContextMenu"
+msgid "Edit message"
+msgstr "Ultimo messaggio"
+
+msgctxt "ProfilePage"
+msgid "Edit profile"
+msgstr "Modifica profilo"
+
+msgctxt "Composer"
+msgid "Editing message  ·  Enter to save"
+msgstr "Modifica messaggio  ·  Invio per salvare"
+
+msgctxt "AboutPane"
+msgid "Encrypted group chat on Nostr"
+msgstr "Chat di gruppo crittografata su Nostr"
+
+#, fuzzy
+msgctxt "AboutPane"
+msgid "End-to-end encrypted group messaging for Linux."
+msgstr "Crittografato end-to-end con"
+
+msgctxt "EncryptionBanner"
+msgid "End-to-end encrypted with"
+msgstr "Crittografato end-to-end con"
+
+#, fuzzy
+msgctxt "AboutPane"
+msgid "End-to-end encryption"
+msgstr "Crittografato end-to-end con"
+
+msgctxt "LoginScreen"
+msgid "Enter your password"
+msgstr "Inserisci la tua password"
+
+msgctxt "LoginScreen"
+msgid "Enter your password to unlock"
+msgstr "Inserisci la password per sbloccare"
+
+msgctxt "EncryptionBanner"
+msgid "Forward secret"
+msgstr "Segreto forward"
+
+msgctxt "StartNewChatModal"
+msgid "GROUP NAME (OPTIONAL)"
+msgstr "NOME DEL GRUPPO (OPZIONALE)"
+
+msgctxt "GeneralPane"
+msgid "General"
+msgstr "Generale"
+
+msgctxt "SettingsSidebar"
+msgid "General"
+msgstr "Generale"
+
+#, fuzzy
+msgctxt "AddAccountModal"
+msgid "Generate a new key"
+msgstr "Genera una nuova chiave"
+
+msgctxt "LoginScreen"
+msgid "Generate a new key"
+msgstr "Genera una nuova chiave"
+
+msgctxt "ArchivedDetail"
+msgid "Group id"
+msgstr "ID gruppo"
+
+#, fuzzy
+msgctxt "GroupSettingsCard"
+msgid "Group name"
+msgstr "ID gruppo"
+
+#, fuzzy
+msgctxt "GroupSettingsCard"
+msgid "Group settings"
+msgstr "ID gruppo"
+
+msgctxt "ProfilePage"
+msgid "How your name appears in chats"
+msgstr "Come appare il tuo nome nelle chat"
+
+msgctxt "LoginScreen"
+msgid "I have an nsec"
+msgstr "Ho un nsec"
+
+msgctxt "ContactDetail"
+msgid "IDENTITY"
+msgstr "IDENTITÀ"
+
+msgctxt "KeysPage"
+msgid "IDENTITY"
+msgstr "IDENTITÀ"
+
+msgctxt "ProfilePage"
+msgid "IDENTITY"
+msgstr "IDENTITÀ"
+
+msgctxt "NotificationsPane"
+msgid "INCOMING MESSAGES"
+msgstr "MESSAGGI IN ARRIVO"
+
+msgctxt "ImportBackupModal"
+msgid "Import"
+msgstr "Importa"
+
+msgctxt "LoginScreen"
+msgid "Import a backup"
+msgstr "Importa un backup"
+
+msgctxt "StoragePane"
+msgid "Import a backup"
+msgstr "Importa un backup"
+
+msgctxt "LoginScreen"
+msgid "Import a key & set a password"
+msgstr "Importa una chiave e imposta una password"
+
+msgctxt "ImportBackupModal"
+msgid "Import backup"
+msgstr "Importa backup"
+
+#, fuzzy
+msgctxt "ImportBackupModal"
+msgid "Importing…"
+msgstr "Salvataggio…"
+
+msgctxt "StoragePane"
+msgid "Import…"
+msgstr "Importa…"
+
+msgctxt "GeneralPane"
+msgid "Interface language"
+msgstr "Lingua interfaccia"
+
+msgctxt "LanguagePickerModal"
+msgid "Interface language"
+msgstr "Lingua interfaccia"
+
+msgctxt "KeysPage"
+msgid "Invalidates the current package and uploads a fresh one to your relays."
+msgstr "Invalida il pacchetto attuale e ne carica uno nuovo sui tuoi relay."
+
+msgctxt "AddMemberCard"
+msgid "Invite"
+msgstr "Invita"
+
+msgctxt "GetStartedScreen"
+msgid "Invite someone by their npub and say hello."
+msgstr "Invita qualcuno tramite il suo npub e saluta."
+
+#, fuzzy
+msgctxt "AddMemberCard"
+msgid "Inviting…"
+msgstr "Salvataggio…"
+
+msgctxt "ArchivedDetail"
+msgid "It stays end-to-end encrypted. Unarchiving returns it to your main list and resumes notifications."
+msgstr "Resta crittografata end-to-end. Ripristinandola torna nell'elenco principale e riprendono le notifiche."
+
+msgctxt "KeysPage"
+msgid "KEY PACKAGES"
+msgstr "PACCHETTI CHIAVE"
+
+msgctxt "ContactDetail"
+msgid "Key package"
+msgstr "Pacchetto chiavi"
+
+msgctxt "LeftRail"
+msgid "Keys"
+msgstr "Chiavi"
+
+msgctxt "KeysPage"
+msgid "Keys & identity"
+msgstr "Chiavi e identità"
+
+msgctxt "GeneralPane"
+msgid "LANGUAGE"
+msgstr "LINGUA"
+
+msgctxt "ArchivedDetail"
+msgid "LAST ACTIVITY"
+msgstr "ULTIMA ATTIVITÀ"
+
+msgctxt "KeysPage"
+msgid "LINKED DEVICES"
+msgstr "DISPOSITIVI COLLEGATI"
+
+msgctxt "ArchivedDetail"
+msgid "Last message"
+msgstr "Ultimo messaggio"
+
+msgctxt "GeneralPane"
+msgid "Launch at login"
+msgstr "Avvia all'accesso"
+
+msgctxt "AppearancePane"
+msgid "Lavender"
+msgstr "Lavanda"
+
 msgctxt "ThemePicker"
 msgid "Light"
 msgstr "Chiaro"
 
-#: ui/settings/theme-picker.slint:45
+msgctxt "ProfilePage"
+msgid "Lightning"
+msgstr "Lightning"
+
+msgctxt "WalletAddressRow"
+msgid "Lightning address"
+msgstr "Indirizzo Lightning"
+
+msgctxt "ProfilePage"
+msgid "Lightning address (LUD-16)"
+msgstr "Indirizzo Lightning (LUD-16)"
+
 #, fuzzy
-msgctxt "ThemePicker"
-msgid "Retro"
-msgstr "Modalità retro"
+msgctxt "MessagesArea"
+msgid "Load earlier messages"
+msgstr "Ultimo messaggio"
 
-#: ui/settings/theme-picker.slint:45
-msgctxt "ThemePicker"
-msgid "Terminal"
-msgstr "Terminale"
+#, fuzzy
+msgctxt "ImageViewerModal"
+msgid "Loading…"
+msgstr "Salvataggio…"
 
-#: ui/settings/theme-picker.slint:45
-msgctxt "ThemePicker"
-msgid "Sketch"
+#, fuzzy
+msgctxt "VideoViewerModal"
+msgid "Loading…"
+msgstr "Salvataggio…"
+
+msgctxt "AboutPane"
+msgid "Local key custody"
+msgstr "Custodia locale delle chiavi"
+
+msgctxt "StoragePane"
+msgid "MEDIA CACHE"
+msgstr "CACHE DEI MEDIA"
+
+msgctxt "ArchivedDetail"
+msgid "MEMBER LIST"
+msgstr "ELENCO MEMBRI"
+
+#, fuzzy
+msgctxt "StartNewChatModal"
+msgid "MEMBERS"
+msgstr "ELENCO MEMBRI"
+
+msgctxt "AppearancePane"
+msgid "MESSAGES"
+msgstr "MESSAGGI"
+
+msgctxt "KeysPage"
+msgid "MLS  ·  YOUR KEY MATERIAL"
+msgstr "MLS  ·  IL TUO MATERIALE CHIAVE"
+
+msgctxt "AboutPane"
+msgid "MLS group keys; no server in the trust path."
+msgstr "Chiavi di gruppo MLS; nessun server nella catena di fiducia."
+
+msgctxt "AboutPane"
+msgid "Made with marmots, math, and a little purple liquid."
+msgstr "Fatto con marmotte, matematica e un po' di liquido viola."
+
+msgctxt "GroupMemberRow"
+msgid "Make admin"
+msgstr "Rendi admin"
+
+msgctxt "ArchivedDetail"
+msgid "Members"
+msgstr "Membri"
+
+#, fuzzy
+msgctxt "GroupMembersHeader"
+msgid "Members"
+msgstr "Membri"
+
+msgctxt "GroupMembersPanel"
+msgid "Members"
+msgstr "Membri"
+
+msgctxt "StoragePane"
+msgid "Merge the accounts from a backup file into this install."
+msgstr "Unisci gli account di un file di backup a questa installazione."
+
+msgctxt "ImportBackupModal"
+msgid "Merge the accounts from an encrypted backup into this install. Use the password the backup was created with."
+msgstr "Unisci gli account di un backup crittografato a questa installazione. Usa la password con cui è stato creato il backup."
+
+msgctxt "AppearancePane"
+msgid "Mint"
+msgstr "Menta"
+
+msgctxt "ContactDetail"
+msgid "Mute"
+msgstr "Silenzia"
+
+msgctxt "ContactDetail"
+msgid "Mutual relays"
+msgstr "Relay condivisi"
+
+msgctxt "NicknameModal"
+msgid "NICKNAME"
+msgstr "SOPRANNOME"
+
+msgctxt "ProfilePage"
+msgid "NIP-05"
 msgstr ""
 
-#: ui/settings/theme-picker.slint:45
-msgctxt "ThemePicker"
-msgid "Synthwave"
+#, fuzzy
+msgctxt "ChatListPanel"
+msgid "NO RELAYS"
+msgstr "RELAY"
+
+msgctxt "LoginScreen"
+msgid "NSEC"
 msgstr ""
 
-#: ui/settings/theme-picker.slint:45
-msgctxt "ThemePicker"
-msgid "Chalkboard"
-msgstr ""
+#. are translated.
+msgctxt "command palette footer"
+msgid "Navigate"
+msgstr "Naviga"
 
-#: ui/shells/side-panel.slint:14
-msgctxt "SidePanel"
-msgid "Search…"
-msgstr "Cerca…"
+msgctxt "NetworkPane"
+msgid "Network & relays"
+msgstr "Rete e relay"
 
-#: ui/shells/side-panel.slint:18
-msgctxt "SidePanel"
-msgid "Add"
-msgstr "Aggiungi"
+msgctxt "SettingsSidebar"
+msgid "Network & relays"
+msgstr "Rete e relay"
 
-#: ui/splash.slint:6
-msgctxt "SplashScreen"
-msgid "Connecting to relays…"
-msgstr "Connessione ai relay…"
+msgctxt "GetStartedScreen"
+msgid "New chat"
+msgstr "Nuova chat"
 
-#: ui/status-bar.slint:41
-msgctxt "StatusBar"
-msgid "ONLINE"
-msgstr "ONLINE"
+msgctxt "LeftRail"
+msgid "New chat"
+msgstr "Nuova chat"
 
-#: ui/status-bar.slint:42
-msgctxt "StatusBar"
-msgid "CONNECTING"
-msgstr "CONNESSIONE"
+msgctxt "StartNewChatModal"
+msgid "New chat or group"
+msgstr "Nuova chat o gruppo"
 
-#: ui/status-bar.slint:42
+msgctxt "ContactDetail"
+msgid "Nickname"
+msgstr "Soprannome"
+
+msgctxt "NicknameModal"
+msgid "Nickname"
+msgstr "Soprannome"
+
+#, fuzzy
+msgctxt "ArchivedPage"
+msgid "No archived chats"
+msgstr "Archivia chat"
+
+msgctxt "AdvancedPane"
+msgid "No audit log files on disk."
+msgstr "Nessun file di log di audit su disco."
+
+#, fuzzy
+msgctxt "ContactsPage"
+msgid "No contacts yet"
+msgstr "Rimuovi contatto"
+
+msgctxt "ImportBackupModal"
+msgid "No file selected"
+msgstr "Nessun file selezionato"
+
+msgctxt "KeysPage"
+msgid "No key packages yet"
+msgstr "Nessun pacchetto chiave"
+
+msgctxt "CommandPalette"
+msgid "No matches"
+msgstr "Nessun risultato"
+
+msgctxt "ProfileModal"
+msgid "No profile found on relays."
+msgstr "Nessun profilo trovato sui relay."
+
+msgctxt "NetworkPane"
+msgid "No relays configured"
+msgstr "Nessun relay configurato"
+
+#, fuzzy
+msgctxt "GetStartedScreen"
+msgid "No relays yet"
+msgstr "Nessun relay configurato"
+
+msgctxt "NetworkPane"
+msgid "No relays yet. Add one above."
+msgstr "Nessun relay. Aggiungine uno sopra."
+
+#, fuzzy
+msgctxt "AddAccountModal"
+msgid "No second key yet?"
+msgstr "Rimuovi contatto"
+
+#. Network-pane status copy (also Rust-set).
+msgctxt "ErrorCopy"
+msgid "Not connected yet. Please wait a moment and try again."
+msgstr "Non ancora connesso. Attendi un momento e riprova."
+
+msgctxt "ProfilePage"
+msgid "Not set"
+msgstr "Non impostato"
+
+#, fuzzy
+msgctxt "NotificationsPane"
+msgid "Notifications"
+msgstr "Notifiche"
+
+msgctxt "SettingsSidebar"
+msgid "Notifications"
+msgstr "Notifiche"
+
 #, fuzzy
 msgctxt "StatusBar"
 msgid "OFFLINE"
 msgstr "ONLINE"
 
-#: ui/status-bar.slint:52
+msgctxt "StoragePane"
+msgid "ON THIS DEVICE"
+msgstr "SU QUESTO DISPOSITIVO"
+
+msgctxt "StatusBar"
+msgid "ONLINE"
+msgstr "ONLINE"
+
+msgctxt "AppearancePane"
+msgid "Ocean"
+msgstr "Oceano"
+
+msgctxt "NotificationsPane"
+msgid "Off shows only \"New message\" without the text."
+msgstr "Disattivata mostra solo \"Nuovo messaggio\" senza il testo."
+
+msgctxt "StoragePane"
+msgid "Open folder"
+msgstr "Apri cartella"
+
+msgctxt "MessageBubble"
+msgid "Original message"
+msgstr "Messaggio originale"
+
+msgctxt "AppearancePane"
+msgid "Own messages on the right"
+msgstr "I tuoi messaggi a destra"
+
+msgctxt "ProfilePage"
+msgid "PROFILE"
+msgstr "PROFILO"
+
+msgctxt "AddContactModal"
+msgid "PUBLIC KEY"
+msgstr "CHIAVE PUBBLICA"
+
+msgctxt "StoragePane"
+msgid "Pack accounts, chats, and settings into one encrypted file."
+msgstr "Racchiudi account, chat e impostazioni in un unico file crittografato."
+
+msgctxt "BackupCreateModal"
+msgid "Pack everything — accounts, chats, settings — into one encrypted file, sealed with your vault password. The media cache is left out."
+msgstr "Racchiudi tutto — account, chat, impostazioni — in un unico file crittografato, sigillato con la password della cassaforte. La cache dei media è esclusa."
+
+#, fuzzy
+msgctxt "GetStartedScreen"
+msgid "Partial · {}/{} connected"
+msgstr "Parziale · {}/{} connessi"
+
+msgctxt "NetworkPane"
+msgid "Partial · {}/{} connected"
+msgstr "Parziale · {}/{} connessi"
+
+msgctxt "ImportBackupModal"
+msgid "Password the backup was sealed with"
+msgstr "Password con cui è stato sigillato il backup"
+
+msgctxt "AddAccountModal"
+msgid "Paste another secret key, or generate a fresh one. It's sealed into the same vault and stays signed in alongside your other accounts."
+msgstr "Incolla un'altra chiave segreta, o generane una nuova. Viene sigillata nella stessa cassaforte e resta connessa insieme agli altri account."
+
+msgctxt "StartNewChatModal"
+msgid "Paste one npub for a direct chat, or several (one per line) plus a group name."
+msgstr "Incolla un npub per una chat diretta, o diversi (uno per riga) più un nome per il gruppo."
+
+msgctxt "AddContactModal"
+msgid "Paste their npub or hex public key. They'll appear in your contacts on every device."
+msgstr "Incolla il loro npub o la chiave pubblica esadecimale. Compariranno tra i tuoi contatti su ogni dispositivo."
+
+msgctxt "WalletAddressRow"
+msgid "People can zap you via this address."
+msgstr "Le persone possono zaparti tramite questo indirizzo."
+
+msgctxt "ContactsPage"
+msgid "People you start chats with will show up here."
+msgstr "Le persone con cui avvii una chat compariranno qui."
+
+msgctxt "AppearancePane"
+msgid "Pick the whole app's look."
+msgstr "Scegli l'aspetto di tutta l'app."
+
+#, fuzzy
+msgctxt "PictureField"
+msgid "Picture"
+msgstr "Immagine"
+
+msgctxt "ProfilePage"
+msgid "Picture"
+msgstr "Immagine"
+
+msgctxt "AppearancePane"
+msgid "Place your sent messages on the right side."
+msgstr "Posiziona i messaggi che invii sul lato destro."
+
+msgctxt "NotificationsPane"
+msgid "Play a sound"
+msgstr "Riproduci un suono"
+
+#, fuzzy
+msgctxt "AdvancedPane"
+msgid "Privacy & developer flags"
+msgstr "Flag sviluppatore"
+
+msgctxt "AboutPane"
+msgid "Private material lives in your OS keychain or encrypted store."
+msgstr "Il materiale privato risiede nel portachiavi del sistema operativo o in un archivio crittografato."
+
+#, fuzzy
+msgctxt "ProfileTile"
+msgid "Profile"
+msgstr "Il tuo profilo"
+
+msgctxt "KeysPage"
+msgid "Public key (npub)"
+msgstr "Chiave pubblica (npub)"
+
+msgctxt "ContactDetail"
+msgid "Public key, safe to share."
+msgstr "Chiave pubblica, sicura da condividere."
+
+msgctxt "KeysPage"
+msgid "Publish"
+msgstr "Pubblica"
+
+#, fuzzy
+msgctxt "GetStartedScreen"
+msgid "Publish key package"
+msgstr "Pacchetto chiavi"
+
+msgctxt "KeysPage"
+msgid "Publish one so other users can invite you to groups."
+msgstr "Pubblicane uno così altri utenti possono invitarti nei gruppi."
+
+#, fuzzy
+msgctxt "GetStartedScreen"
+msgid "Publish your key package"
+msgstr "Nessun pacchetto chiave"
+
+#, fuzzy
+msgctxt "GetStartedScreen"
+msgid "Published"
+msgstr "Pubblica"
+
+#, fuzzy
+msgctxt "GetStartedScreen"
+msgid "Publishing…"
+msgstr "Pubblicazione…"
+
+msgctxt "KeysPage"
+msgid "Publishing…"
+msgstr "Pubblicazione…"
+
+#, fuzzy
+msgctxt "ChatListPanel"
+msgid "RELAYS"
+msgstr "RELAY"
+
+msgctxt "NetworkPane"
+msgid "RELAYS"
+msgstr "RELAY"
+
 msgctxt "StatusBar"
 msgid "RELAYS"
 msgstr "RELAY"
 
-#: ui/status-bar.slint:84
-msgctxt "StatusBar"
-msgid "COMMAND"
-msgstr "COMANDO"
+msgctxt "NetworkPane"
+msgid "Re-broadcasts your relay lists to every relay above. Use this if peers can't find you."
+msgstr "Ritrasmette i tuoi elenchi di relay a ogni relay qui sopra. Usalo se i peer non riescono a trovarti."
 
-#. Tier 1 — content-based classification.
-#: ui/tokens.slint:557
-msgctxt "ErrorCopy"
-msgid ""
-"That doesn't look like a valid npub or public key. Double-check it and try "
-"again."
-msgstr ""
-"Non sembra un npub o una chiave pubblica valida. Controllala e riprova."
+msgctxt "LoginScreen"
+msgid "Re-enter password"
+msgstr "Reinserisci la password"
 
-#: ui/tokens.slint:558
-msgctxt "ErrorCopy"
-msgid ""
-"Can't reach your relays right now. Check your network and relay settings, "
-"then try again."
-msgstr ""
-"Non riesco a raggiungere i tuoi relay in questo momento. Controlla la rete e "
-"le impostazioni dei relay, poi riprova."
+msgctxt "Composer"
+msgid "Record voice message"
+msgstr "Registra messaggio vocale"
 
-#. Tier 2 — operation-specific fallbacks.
-#: ui/tokens.slint:560
-msgctxt "ErrorCopy"
-msgid ""
-"Couldn't finish syncing. We'll keep retrying — check your relay settings if "
-"this keeps happening."
-msgstr ""
-"Sincronizzazione non completata. Continueremo a riprovare — se il problema "
-"persiste, controlla le impostazioni dei relay."
+#, fuzzy
+msgctxt "AdvancedPane"
+msgid "Refresh"
+msgstr "Aggiorna"
 
-#: ui/tokens.slint:561
-msgctxt "ErrorCopy"
-msgid ""
-"Couldn't start up. Check your network and relay settings, then try again."
-msgstr ""
-"Avvio non riuscito. Controlla la rete e le impostazioni dei relay, poi "
-"riprova."
+msgctxt "ContactDetail"
+msgid "Refresh"
+msgstr "Aggiorna"
 
-#: ui/tokens.slint:562
-msgctxt "ErrorCopy"
-msgid "Couldn't switch accounts. Please try again in a moment."
-msgstr "Impossibile cambiare account. Riprova tra un momento."
+msgctxt "DebugPane"
+msgid "Refresh"
+msgstr "Aggiorna"
 
-#: ui/tokens.slint:563
-msgctxt "ErrorCopy"
-msgid "Couldn't accept the invitation. Please try again in a moment."
-msgstr "Impossibile accettare l'invito. Riprova tra un momento."
+msgctxt "KeysPage"
+msgid "Refresh"
+msgstr "Aggiorna"
 
-#: ui/tokens.slint:564
-msgctxt "ErrorCopy"
-msgid "Couldn't decline the invitation. Please try again in a moment."
-msgstr "Impossibile rifiutare l'invito. Riprova tra un momento."
+msgctxt "NetworkPane"
+msgid "Refresh"
+msgstr "Aggiorna"
 
-#: ui/tokens.slint:565
-msgctxt "ErrorCopy"
-msgid "Couldn't archive this chat. Please try again."
-msgstr "Impossibile archiviare questa chat. Riprova."
+msgctxt "LoginScreen"
+msgid "Regenerate"
+msgstr "Rigenera"
 
-#: ui/tokens.slint:566
-msgctxt "ErrorCopy"
-msgid "Couldn't restore this chat. Please try again."
-msgstr "Impossibile ripristinare questa chat. Riprova."
-
-#: ui/tokens.slint:567
-msgctxt "ErrorCopy"
-msgid "Couldn't send your message. Check your connection and try again."
-msgstr "Impossibile inviare il messaggio. Controlla la connessione e riprova."
-
-#: ui/tokens.slint:568
-msgctxt "ErrorCopy"
-msgid "Couldn't save your edit. Check your connection and try again."
-msgstr "Impossibile salvare la modifica. Controlla la connessione e riprova."
-
-#: ui/tokens.slint:569
-msgctxt "ErrorCopy"
-msgid "Couldn't add your reaction. Please try again."
-msgstr "Impossibile aggiungere la reazione. Riprova."
-
-#: ui/tokens.slint:570
-msgctxt "ErrorCopy"
-msgid "Couldn't remove your reaction. Please try again."
-msgstr "Impossibile rimuovere la reazione. Riprova."
-
-#: ui/tokens.slint:571
-msgctxt "ErrorCopy"
-msgid ""
-"Couldn't publish your key package. Check your relay settings and try again."
-msgstr ""
-"Impossibile pubblicare il tuo key package. Controlla le impostazioni dei "
-"relay e riprova."
-
-#: ui/tokens.slint:572
-msgctxt "ErrorCopy"
-msgid ""
-"Couldn't rotate your key package. Check your relay settings and try again."
-msgstr ""
-"Impossibile ruotare il tuo key package. Controlla le impostazioni dei relay "
-"e riprova."
-
-#: ui/tokens.slint:573
-msgctxt "ErrorCopy"
-msgid ""
-"Couldn't refresh your key packages. Check your relay settings and try again."
-msgstr ""
-"Impossibile aggiornare i tuoi key package. Controlla le impostazioni dei "
-"relay e riprova."
-
-#: ui/tokens.slint:574
-msgctxt "ErrorCopy"
-msgid ""
-"Couldn't republish to your relays. Check your relay settings and try again."
-msgstr ""
-"Impossibile ripubblicare sui tuoi relay. Controlla le impostazioni dei relay "
-"e riprova."
-
-#: ui/tokens.slint:575
-msgctxt "ErrorCopy"
-msgid "Couldn't add that account. Please check the key and try again."
-msgstr "Impossibile aggiungere questo account. Controlla la chiave e riprova."
-
-#: ui/tokens.slint:576
-msgctxt "ErrorCopy"
-msgid "Couldn't create the chat. Please try again."
-msgstr "Impossibile creare la chat. Riprova."
-
-#: ui/tokens.slint:577
-msgctxt "ErrorCopy"
-msgid "Couldn't add that contact. Please try again."
-msgstr "Impossibile aggiungere questo contatto. Riprova."
-
-#: ui/tokens.slint:578
-msgctxt "ErrorCopy"
-msgid "Couldn't add that member. Please try again."
-msgstr "Impossibile aggiungere questo membro. Riprova."
-
-#: ui/tokens.slint:579
-msgctxt "ErrorCopy"
-msgid "Couldn't update the group settings. Please try again."
-msgstr "Impossibile aggiornare le impostazioni del gruppo. Riprova."
-
-#: ui/tokens.slint:580
-msgctxt "ErrorCopy"
-msgid "Couldn't update the group image. Please try again."
-msgstr "Impossibile aggiornare l'immagine del gruppo. Riprova."
-
-#: ui/tokens.slint:581
-msgctxt "ErrorCopy"
-msgid "Couldn't save your profile. Check your connection and try again."
-msgstr "Impossibile salvare il profilo. Controlla la connessione e riprova."
-
-#: ui/tokens.slint:582
-msgctxt "ErrorCopy"
-msgid "Couldn't upload your picture. Please try again."
-msgstr "Impossibile caricare l'immagine. Riprova."
-
-#: ui/tokens.slint:583
-msgctxt "ErrorCopy"
-msgid "Something went wrong. Please try again."
-msgstr "Qualcosa è andato storto. Riprova."
-
-#. Network-pane status copy (also Rust-set).
-#: ui/tokens.slint:585
-msgctxt "ErrorCopy"
-msgid "Not connected yet. Please wait a moment and try again."
-msgstr "Non ancora connesso. Attendi un momento e riprova."
-
-#: ui/tokens.slint:586
-msgctxt "ErrorCopy"
-msgid "That relay is already in your list."
-msgstr "Questo relay è già nella tua lista."
-
-#: ui/tokens.slint:587
-msgctxt "ErrorCopy"
-msgid "Couldn't save your relay list. Please try again."
-msgstr "Impossibile salvare la lista dei relay. Riprova."
-
-#: ui/tokens.slint:588
 msgctxt "ErrorCopy"
 msgid "Relay added."
 msgstr "Relay aggiunto."
 
-#: ui/tokens.slint:589
 msgctxt "ErrorCopy"
 msgid "Relay removed."
 msgstr "Relay rimosso."
 
-#: ui/tokens.slint:590
+msgctxt "GetStartedScreen"
+msgid "Relays carry your encrypted messages. Add at least one to get online."
+msgstr "I relay trasportano i tuoi messaggi crittografati. Aggiungine almeno uno per andare online."
+
+msgctxt "Composer"
+msgid "Remove"
+msgstr "Rimuovi"
+
+#, fuzzy
+msgctxt "GroupMemberRow"
+msgid "Remove admin"
+msgstr "Rimuovi contatto"
+
+msgctxt "ContactDetail"
+msgid "Remove contact"
+msgstr "Rimuovi contatto"
+
+#, fuzzy
+msgctxt "GroupSettingsCard"
+msgid "Remove image"
+msgstr "Rimuovi contatto"
+
+msgctxt "MessageContextMenu"
+msgid "Reply"
+msgstr "Rispondi"
+
+msgctxt "Composer"
+msgid "Replying to message:"
+msgstr "Risposta al messaggio:"
+
+msgctxt "Composer"
+msgid "Replying to {}:"
+msgstr "Risposta a {}:"
+
+msgctxt "NetworkPane"
+msgid "Republish relay list"
+msgstr "Ripubblica elenco relay"
+
 msgctxt "ErrorCopy"
 msgid "Republishing…"
 msgstr "Ripubblicazione…"
 
-#: ui/tokens.slint:624
-msgctxt "NativeDialogStrings"
-msgid "Choose a profile picture"
-msgstr "Scegli un'immagine del profilo"
+msgctxt "NetworkPane"
+msgid "Restart darkmatter to apply relay changes."
+msgstr "Riavvia darkmatter per applicare le modifiche ai relay."
 
-#~ msgctxt "ContactDetail"
-#~ msgid "Fetched from relay.damus.io · refreshed 4m ago"
-#~ msgstr "Recuperato da relay.damus.io · aggiornato 4 min fa"
+msgctxt "ImportBackupModal"
+msgid "Restore"
+msgstr "Ripristina"
 
-#~ msgctxt "ContactDetail"
-#~ msgid "up to date"
-#~ msgstr "aggiornato"
+msgctxt "ImportBackupModal"
+msgid "Restore everything from an encrypted backup. Use the password the backup was created with."
+msgstr "Ripristina tutto da un backup crittografato. Usa la password con cui è stato creato il backup."
+
+msgctxt "GeneralPane"
+msgid "Restore last selected chat on launch"
+msgstr "Ripristina l'ultima chat selezionata all'avvio"
+
+#, fuzzy
+msgctxt "ImportBackupModal"
+msgid "Restoring…"
+msgstr "Salvataggio…"
+
+#, fuzzy
+msgctxt "ThemePicker"
+msgid "Retro"
+msgstr "Modalità retro"
+
+msgctxt "DeviceRow"
+msgid "Revoke"
+msgstr "Revoca"
+
+msgctxt "KeysPage"
+msgid "Rotate"
+msgstr "Ruota"
+
+msgctxt "KeysPage"
+msgid "Rotate key package now"
+msgstr "Ruota pacchetto chiavi ora"
+
+msgctxt "AddAccountModal"
+msgid "SECRET KEY (NSEC)"
+msgstr "CHIAVE SEGRETA (NSEC)"
+
+msgctxt "StoragePane"
+msgid "SECRET VAULT"
+msgstr "CASSAFORTE SEGRETA"
+
+msgctxt "AdvancedPane"
+msgid "SECURITY & PRIVACY"
+msgstr "SICUREZZA E PRIVACY"
+
+msgctxt "MainPane"
+msgid "SESSION ESTABLISHED"
+msgstr "SESSIONE STABILITA"
+
+msgctxt "SettingsSidebar"
+msgid "SETTINGS"
+msgstr "IMPOSTAZIONI"
+
+msgctxt "GeneralPane"
+msgid "STARTUP"
+msgstr "AVVIO"
+
+msgctxt "DebugPane"
+msgid "STATE SNAPSHOT"
+msgstr "ISTANTANEA STATO"
+
+msgctxt "NetworkPane"
+msgid "STATUS"
+msgstr "STATO"
+
+msgctxt "GetStartedScreen"
+msgid "SUGGESTED"
+msgstr "SUGGERITI"
+
+msgctxt "ChatListPanel"
+msgid "SYNCED"
+msgstr "SINCRONIZZATO"
+
+msgctxt "ChatListPanel"
+msgid "SYNCING…"
+msgstr "SINCRONIZZAZIONE…"
+
+msgctxt "KeysPage"
+msgid "Safe to share. This is how people find you."
+msgstr "Sicura da condividere. Così ti trovano gli altri."
+
+#, fuzzy
+msgctxt "NicknameModal"
+msgid "Save"
+msgstr "Salva"
+
+msgctxt "ProfilePage"
+msgid "Save"
+msgstr "Salva"
+
+#, fuzzy
+msgctxt "GroupSettingsCard"
+msgid "Save name"
+msgstr "Salva"
+
+msgctxt "LoginScreen"
+msgid "Save your new key"
+msgstr "Salva la tua nuova chiave"
+
+#, fuzzy
+msgctxt "BackupCreateModal"
+msgid "Saving…"
+msgstr "Salvataggio…"
+
+#, fuzzy
+msgctxt "GroupSettingsCard"
+msgid "Saving…"
+msgstr "Salvataggio…"
+
+msgctxt "LoginScreen"
+msgid "Saving…"
+msgstr "Salvataggio…"
+
+msgctxt "ProfilePage"
+msgid "Saving…"
+msgstr "Salvataggio…"
+
+msgctxt "ProfilePage"
+msgid "Scan to add me from another device"
+msgstr "Scansiona per aggiungermi da un altro dispositivo"
+
+#, fuzzy
+msgctxt "QrModal"
+msgid "Scan to add or message on another device"
+msgstr "Scansiona per aggiungermi da un altro dispositivo"
+
+msgctxt "LoginScreen"
+msgid "Sealed with your password on this device. Keep your own copy of the nsec too — lose both and this identity is gone."
+msgstr "Sigillato con la tua password su questo dispositivo. Tieni anche una tua copia del nsec — se perdi entrambi, questa identità è persa."
+
+msgctxt "ChatListPanel"
+msgid "Search chats…"
+msgstr "Cerca chat…"
+
+msgctxt "ContactsSidebar"
+msgid "Search contacts…"
+msgstr "Cerca contatti…"
+
+msgctxt "SidePanel"
+msgid "Search…"
+msgstr "Cerca…"
+
+msgctxt "command palette footer"
+msgid "Select"
+msgstr "Seleziona"
+
+msgctxt "Composer"
+msgid "Send"
+msgstr "Invia"
+
+#, fuzzy
+msgctxt "Composer"
+msgid "Send a message…"
+msgstr "Ultimo messaggio"
+
+msgctxt "Composer"
+msgid "Send message"
+msgstr "Invia messaggio"
+
+msgctxt "ProfilePage"
+msgid "Set"
+msgstr "Imposta"
+
+msgctxt "LeftRail"
+msgid "Settings"
+msgstr "Impostazioni"
+
+msgctxt "AdvancedPane"
+msgid "Share anonymous app telemetry"
+msgstr "Condividi telemetria anonima dell'app"
+
+msgctxt "AdvancedPane"
+msgid "Share relay connection telemetry."
+msgstr "Condividi la telemetria di connessione ai relay."
+
+#, fuzzy
+msgctxt "Composer"
+msgid "Shift+Enter for newline"
+msgstr "per a capo"
+
+msgctxt "ProfilePage"
+msgid "Short handle (no spaces)"
+msgstr "Handle breve (senza spazi)"
+
+msgctxt "ContactDetail"
+msgid "Show as QR"
+msgstr "Mostra come QR"
+
+msgctxt "NotificationsPane"
+msgid "Show message preview"
+msgstr "Mostra anteprima del messaggio"
+
+#, fuzzy
+msgctxt "AdvancedPane"
+msgid "Shows diagnostics and MLS internals. Adds a Debug entry with account, key-packages, and group state."
+msgstr "Aggiunge una voce Debug sotto. Mostra account, pacchetti chiave e stato gruppi."
+
+msgctxt "LoginScreen"
+msgid "Sign in to your Nostr identity"
+msgstr "Accedi alla tua identità Nostr"
+
+msgctxt "KeysPage"
+msgid "Sign out"
+msgstr "Esci"
+
+msgctxt "LoginScreen"
+msgid "Signing in…"
+msgstr "Accesso…"
+
+msgctxt "ThemePicker"
+msgid "Sketch"
+msgstr ""
+
+msgctxt "ErrorCopy"
+msgid "Something went wrong. Please try again."
+msgstr "Qualcosa è andato storto. Riprova."
+
+msgctxt "ContactDetail"
+msgid "Start chat"
+msgstr "Avvia chat"
+
+msgctxt "GeneralPane"
+msgid "Start minimized to tray"
+msgstr "Avvia minimizzato nella tray"
+
+#, fuzzy
+msgctxt "GetStartedScreen"
+msgid "Start your first chat"
+msgstr "Avvia una nuova chat"
+
+msgctxt "GroupMemberRow"
+msgid "Step down"
+msgstr "Rinuncia"
+
+msgctxt "SettingsSidebar"
+msgid "Storage"
+msgstr "Archiviazione"
+
+#, fuzzy
+msgctxt "StoragePane"
+msgid "Storage"
+msgstr "Archiviazione"
+
+msgctxt "ThemePicker"
+msgid "Synthwave"
+msgstr ""
+
+msgctxt "AppearancePane"
+msgid "THEME"
+msgstr "TEMA"
+
+msgctxt "ThemePicker"
+msgid "Terminal"
+msgstr "Terminale"
+
+#. Tier 1 — content-based classification.
+msgctxt "ErrorCopy"
+msgid "That doesn't look like a valid npub or public key. Double-check it and try again."
+msgstr "Non sembra un npub o una chiave pubblica valida. Controllala e riprova."
+
+msgctxt "ErrorCopy"
+msgid "That relay is already in your list."
+msgstr "Questo relay è già nella tua lista."
+
+msgctxt "AppearancePane"
+msgid "Theme"
+msgstr "Tema"
+
+msgctxt "ArchivedDetail"
+msgid "This chat is archived"
+msgstr "Questa chat è archiviata"
+
+msgctxt "KeysPage"
+msgid "This computer"
+msgstr "Questo computer"
+
+msgctxt "DarkMatterLinux"
+msgid "This declines the invite from {}. It can't be restored unless they invite you again."
+msgstr "Questo rifiuta l'invito di {}. Non potrà essere ripristinato a meno che non ti invitino di nuovo."
+
+msgctxt "GetStartedScreen"
+msgid "This is what lets other people start an encrypted chat with you."
+msgstr "È ciò che permette agli altri di avviare una chat crittografata con te."
+
+msgctxt "AddAccountModal"
+msgid "This key was just generated and exists nowhere else yet. Copy it somewhere safe before adding it — there is no recovery."
+msgstr "Questa chiave è stata appena generata e non esiste ancora altrove. Copiala in un posto sicuro prima di aggiungerla — non c'è modo di recuperarla."
+
+msgctxt "ChatRequestBanner"
+msgid "This sender isn't in your contacts. Accept to start an"
+msgstr "Questo mittente non è nei tuoi contatti. Accetta per avviare una"
+
+msgctxt "GetStartedScreen"
+msgid "Three quick steps and you're ready to message — end-to-end encrypted, no servers in the middle."
+msgstr "Tre rapidi passaggi e sei pronto a messaggiare — crittografia end-to-end, nessun server di mezzo."
+
+msgctxt "GeneralPane"
+msgid "Time format"
+msgstr "Formato ora"
+
+msgctxt "CommandPalette"
+msgid "Type a command…"
+msgstr "Digita un comando…"
+
+msgctxt "AboutPane"
+msgid "UNDER THE HOOD"
+msgstr "SOTTO IL COFANO"
+
+msgctxt "ArchivedDetail"
+msgid "Unarchive"
+msgstr "Ripristina"
+
+msgctxt "LoginScreen"
+msgid "Unlock"
+msgstr "Sblocca"
+
+msgctxt "LoginScreen"
+msgid "Unlocking…"
+msgstr "Sblocco in corso…"
+
+msgctxt "PictureField"
+msgid "Upload"
+msgstr "Carica"
+
+#, fuzzy
+msgctxt "AvatarEditable"
+msgid "Uploading…"
+msgstr "Salvataggio…"
+
+#, fuzzy
+msgctxt "GroupSettingsCard"
+msgid "Uploading…"
+msgstr "Salvataggio…"
+
+#, fuzzy
+msgctxt "PictureField"
+msgid "Uploading…"
+msgstr "Salvataggio…"
+
+msgctxt "LoginScreen"
+msgid "Use another key"
+msgstr "Usa un'altra chiave"
+
+msgctxt "ContactDetail"
+msgid "Used to deliver messages between you."
+msgstr "Usati per consegnare i messaggi tra voi."
+
+msgctxt "ProfilePage"
+msgid "Username"
+msgstr "Nome utente"
+
+msgctxt "BackupCreateModal"
+msgid "VAULT PASSWORD"
+msgstr "PASSWORD CASSAFORTE"
+
+msgctxt "LoginScreen"
+msgid "VAULT PASSWORD"
+msgstr "PASSWORD CASSAFORTE"
+
+msgctxt "ProfilePage"
+msgid "VISIBLE TO ANYONE YOU CHAT WITH"
+msgstr "VISIBILE A CHIUNQUE CHATTI"
+
+msgctxt "StoragePane"
+msgid "Vault location"
+msgstr "Posizione cassaforte"
+
+msgctxt "AboutPane"
+msgid "WHAT IT IS"
+msgstr "COS'È"
+
+msgctxt "GetStartedScreen"
+msgid "Welcome to darkmatter"
+msgstr "Benvenuto in darkmatter"
+
+msgctxt "NetworkPane"
+msgid "Where your messages land."
+msgstr "Dove arrivano i tuoi messaggi."
+
+msgctxt "GroupMemberRow"
+msgid "YOU"
+msgstr "TU"
+
+msgctxt "LoginScreen"
+msgid "YOUR DISPLAY NAME"
+msgstr "IL TUO NOME VISUALIZZATO"
+
+msgctxt "OutgoingRow"
+msgid "You"
+msgstr "Tu"
+
+msgctxt "KeysPage"
+msgid "Your identity is sovereign"
+msgstr "La tua identità è sovrana"
+
+msgctxt "LoginScreen"
+msgid "Your key never leaves this device."
+msgstr "La tua chiave non lascia mai questo dispositivo."
+
+msgctxt "AboutPane"
+msgid "Your keys stay on this device — we never see them."
+msgstr "Le tue chiavi restano su questo dispositivo — noi non le vediamo mai."
+
+msgctxt "ProfilePage"
+msgid "Your profile"
+msgstr "Il tuo profilo"
+
+msgctxt "ProfilePage"
+msgid "Your public key. Safe to share."
+msgstr "La tua chiave pubblica. Sicura da condividere."
+
+msgctxt "ContactDetail"
+msgid "aka {}"
+msgstr "alias {}"
+
+msgctxt "KeysPage"
+msgid "current"
+msgstr "attuale"
+
+msgctxt "MessageBubble"
+msgid "decrypting…"
+msgstr "decifrazione…"
+
+msgctxt "StartNewChatModal"
+msgid "e.g. friday-crew"
+msgstr "es. squadra-venerdì"
+
+msgctxt "MessageBubble"
+msgid "edited"
+msgstr "modificato"
+
+msgctxt "MessageBubble"
+msgid "failed · tap to retry"
+msgstr "fallito · tocca per riprovare"
+
+msgctxt "PictureField"
+msgid "https://… or upload a file →"
+msgstr "https://… o carica un file →"
+
+msgctxt "KeysPage"
+msgid "local only"
+msgstr "solo locale"
+
+msgctxt "ProfilePage"
+msgid "no handle yet"
+msgstr "nessun handle ancora"
+
+msgctxt "EmojiPicker"
+msgid "no matches"
+msgstr "nessun risultato"
+
+msgctxt "EncryptionBanner"
+msgid "post-compromise secure"
+msgstr "sicuro dopo compromissione"
+
+msgctxt "EmojiPicker"
+msgid "search…"
+msgstr "cerca…"
+
+msgctxt "ChatRequestBanner"
+msgid "session."
+msgstr "sessione."
+
+msgctxt "MessageBubble"
+msgid "tap to load"
+msgstr "tocca per caricare"
+
+#, fuzzy
+msgctxt "MessageBubble"
+msgid "tap to retry"
+msgstr "fallito · tocca per riprovare"
+
+msgctxt "KeysPage"
+msgid "{n} relay"
+msgid_plural "{n} relays"
+msgstr[0] "{n} relay"
+msgstr[1] "{n} relay"
+
+msgctxt "ContactDetail"
+msgid "{} RELAYS"
+msgstr "{} RELAY"
+
+msgctxt "ContactDetail"
+msgid "{} relays"
+msgstr "{} relay"
+
+msgctxt "Composer"
+msgid "{}s"
+msgstr "{}s"
+
+msgctxt "KeysPage"
+msgid "…"
+msgstr "…"
+
+msgctxt "ProfileModal"
+msgid "✓ In your contacts"
+msgstr "✓ Nei tuoi contatti"
+
+msgctxt "ContactDetail"
+msgid "✓ VERIFIED"
+msgstr "✓ VERIFICATO"
+
+#~ msgctxt "ProfilePage"
+#~ msgid "(no nip-05)"
+#~ msgstr "(nessun nip-05)"
+
+#~ msgctxt "SettingsPage"
+#~ msgid "About"
+#~ msgstr "Informazioni"
 
 #~ msgctxt "AppearancePane"
-#~ msgid "FUN"
-#~ msgstr "DIVERTIMENTO"
-
-#~ msgctxt "AppearancePane"
-#~ msgid "Retro mode"
-#~ msgstr "Modalità retro"
-
-#~ msgctxt "AppearancePane"
-#~ msgid "Turn the whole app into SNES style."
-#~ msgstr "Trasforma tutta l'app in stile SNES."
+#~ msgid "Comfortable"
+#~ msgstr "Comoda"
 
 #, fuzzy
 #~ msgctxt "SettingsPage"
@@ -2494,70 +1926,74 @@ msgstr "Scegli un'immagine del profilo"
 #~ msgstr "Regole notifiche per chat, suoni, modalità focus."
 
 #~ msgctxt "SettingsPage"
-#~ msgid "Local cache, message retention, attachments."
-#~ msgstr "Cache locale, conservazione messaggi, allegati."
-
-#~ msgctxt "Composer"
-#~ msgid "Send a message  ·  encrypted with"
-#~ msgstr "Invia un messaggio  ·  crittografato con"
-
-#, fuzzy
-#~ msgctxt "GroupMembersPanel"
-#~ msgid "Saving…"
-#~ msgstr "Salvataggio…"
-
-#~ msgctxt "LoginScreen"
-#~ msgid "Paste your nsec"
-#~ msgstr "Incolla il tuo nsec"
-
-#~ msgctxt "LoginScreen"
-#~ msgid "Save to keyring"
-#~ msgstr "Salva nel portachiavi"
-
-#~ msgctxt "StartNewChatModal"
-#~ msgid ""
-#~ "Paste an npub or scan a QR. A key package will be fetched from your "
-#~ "relays."
-#~ msgstr ""
-#~ "Incolla un npub o scansiona un QR. Un pacchetto chiavi verrà recuperato "
-#~ "dai tuoi relay."
-
-#~ msgctxt "StartNewChatModal"
-#~ msgid "or"
-#~ msgstr "oppure"
-
-#~ msgctxt "StartNewChatModal"
-#~ msgid "Start chat"
-#~ msgstr "Avvia chat"
-
-#~ msgctxt "ProfilePage"
-#~ msgid "(no nip-05)"
-#~ msgstr "(nessun nip-05)"
-
-#~ msgctxt "ProfilePage"
-#~ msgid "Picture URL"
-#~ msgstr "URL immagine"
-
-#~ msgctxt "AdvancedPane"
-#~ msgid "Show debug pane"
-#~ msgstr "Mostra pannello debug"
-
-#~ msgctxt "AppearancePane"
-#~ msgid "SNES yellow"
-#~ msgstr "Giallo SNES"
+#~ msgid "Dark Matter v0.1.0"
+#~ msgstr "Dark Matter v0.1.0"
 
 #~ msgctxt "AppearancePane"
 #~ msgid "Density"
 #~ msgstr "Densità"
 
 #~ msgctxt "AppearancePane"
-#~ msgid "Comfortable"
-#~ msgstr "Comoda"
+#~ msgid "FUN"
+#~ msgstr "DIVERTIMENTO"
+
+#~ msgctxt "ContactDetail"
+#~ msgid "Fetched from relay.damus.io · refreshed 4m ago"
+#~ msgstr "Recuperato da relay.damus.io · aggiornato 4 min fa"
 
 #~ msgctxt "SettingsPage"
-#~ msgid "About"
-#~ msgstr "Informazioni"
+#~ msgid "Local cache, message retention, attachments."
+#~ msgstr "Cache locale, conservazione messaggi, allegati."
 
-#~ msgctxt "SettingsPage"
-#~ msgid "Dark Matter v0.1.0"
-#~ msgstr "Dark Matter v0.1.0"
+#~ msgctxt "StartNewChatModal"
+#~ msgid "Paste an npub or scan a QR. A key package will be fetched from your relays."
+#~ msgstr "Incolla un npub o scansiona un QR. Un pacchetto chiavi verrà recuperato dai tuoi relay."
+
+#~ msgctxt "LoginScreen"
+#~ msgid "Paste your nsec"
+#~ msgstr "Incolla il tuo nsec"
+
+#~ msgctxt "ProfilePage"
+#~ msgid "Picture URL"
+#~ msgstr "URL immagine"
+
+#~ msgctxt "AppearancePane"
+#~ msgid "Retro mode"
+#~ msgstr "Modalità retro"
+
+#~ msgctxt "AppearancePane"
+#~ msgid "SNES yellow"
+#~ msgstr "Giallo SNES"
+
+#~ msgctxt "LoginScreen"
+#~ msgid "Save to keyring"
+#~ msgstr "Salva nel portachiavi"
+
+#, fuzzy
+#~ msgctxt "GroupMembersPanel"
+#~ msgid "Saving…"
+#~ msgstr "Salvataggio…"
+
+#~ msgctxt "Composer"
+#~ msgid "Send a message  ·  encrypted with"
+#~ msgstr "Invia un messaggio  ·  crittografato con"
+
+#~ msgctxt "AdvancedPane"
+#~ msgid "Show debug pane"
+#~ msgstr "Mostra pannello debug"
+
+#~ msgctxt "StartNewChatModal"
+#~ msgid "Start chat"
+#~ msgstr "Avvia chat"
+
+#~ msgctxt "AppearancePane"
+#~ msgid "Turn the whole app into SNES style."
+#~ msgstr "Trasforma tutta l'app in stile SNES."
+
+#~ msgctxt "StartNewChatModal"
+#~ msgid "or"
+#~ msgstr "oppure"
+
+#~ msgctxt "ContactDetail"
+#~ msgid "up to date"
+#~ msgstr "aggiornato"

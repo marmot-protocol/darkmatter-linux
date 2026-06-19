@@ -61,7 +61,9 @@ def dm(vm, *cmd)
   return nil unless ok
   JSON.parse(out)
 rescue JSON::ParserError
-  out.strip
+  # Callers (retry_until, etc.) treat nil as "not ready / failed", so a response
+  # we can't parse as JSON must be nil — not the raw string, which is truthy.
+  nil
 end
 
 # Retry a block until it returns truthy, or give up.
@@ -102,7 +104,13 @@ def spin_up_vms
     dmvm!(vm, 'clone', GOLDEN)
   end
   log "booting #{N} clones in parallel…"
-  VMS.map { |vm| Thread.new { dmvm(vm, 'up') } }.each(&:join)
+  # Thread#value joins and re-raises any exception that killed the thread, so a
+  # crash in dmvm surfaces here instead of being swallowed. We also surface a
+  # non-zero `up` (ok=false) as a warning rather than letting it vanish.
+  VMS.map { |vm| Thread.new { [vm, dmvm(vm, 'up').last] } }.each do |t|
+    vm, ok = t.value
+    warn_("#{vm} failed to boot (continuing; whoami will catch a dead clone)") unless ok
+  end
 
   npubs = {}
   VMS.each do |vm|

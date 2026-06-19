@@ -1,0 +1,6 @@
+# The scenario harness (scripts/dmvm.rb, scripts/scenarios/*.rb) uses Ruby 3.0+
+# endless method definitions (`def foo = expr`). Pin the analysis target to the
+# Ruby on the dev machine so RuboCop stops flagging that syntax as an error.
+AllCops:
+  TargetRubyVersion: 3.4
+  NewCops: enable

@@ -264,6 +264,12 @@ fn serve() -> Result<()> {
     let path = sock_path();
     let _ = std::fs::remove_file(&path);
     let listener = UnixListener::bind(&path).with_context(|| format!("bind {}", path.display()))?;
+    // The socket exposes account operations (send, group management, secrets), so
+    // restrict it to the owning user (mode 0600) before accepting connections.
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600));
+    }
     eprintln!("[dm-ctl] listening on {}", path.display());
 
     for conn in listener.incoming() {

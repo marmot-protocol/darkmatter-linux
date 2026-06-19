@@ -9,6 +9,9 @@
 # inside the VM's display — all driven from the CLI via SSH + the QEMU QMP/serial
 # sockets.
 #
+# Requires Ruby 3.0+ (uses endless method definitions, `def foo = expr`).
+# Developed/run against the repo's pinned RuboCop target (see .rubocop.yml).
+#
 # Stdlib only (json, socket, fileutils, open3) — no gems.
 #
 # Quick start:
@@ -219,6 +222,11 @@ module DMVM
     ['ssh', *SSH_OPTS, '-i', ssh_key, '-p', ssh_port.to_s, "#{GUEST_USER}@127.0.0.1"]
   end
 
+  # ssh_exec / ssh_capture intentionally pass `remote_cmd` as a single shell
+  # string so callers can run arbitrary guest command lines (pipes, globs, &&).
+  # Static analysers flag this as command injection; it's safe here — this is a
+  # local dev/test tool driving an ephemeral, isolated VM with developer-authored
+  # commands, never untrusted external input.
   def ssh_exec(remote_cmd, tty: false)
     cmd = ssh_base
     cmd << '-t' if tty
@@ -540,6 +548,7 @@ module DMVM
     log = File.open(log_file, 'w')
     pid = Process.spawn(*qemu, in: :close, out: log, err: log, pgroup: true)
     Process.detach(pid)
+    log.close # fd is now owned by the spawned qemu; release the parent's handle
     sleep 1
     die("qemu failed to start (see #{log_file})") unless running?
 
@@ -1005,14 +1014,18 @@ module DMVM
   def cmd_console(_args)
     require_running
     info 'serial console — Ctrl-C to detach'
+    threads = []
     UNIXSocket.open(serial_sock) do |s|
-      threads = []
       threads << Thread.new { IO.copy_stream(s, $stdout) }
       threads << Thread.new { IO.copy_stream($stdin, s) }
       threads.each(&:join)
     end
   rescue Interrupt
     puts
+  ensure
+    # On Ctrl-C the copy threads would otherwise keep blocking on I/O; stop them
+    # explicitly rather than waiting for the socket to close.
+    threads&.each(&:kill)
   end
 
   def cmd_qmp(args)

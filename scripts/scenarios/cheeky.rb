@@ -82,18 +82,40 @@ def cheeky_loop(vm, group, others, st, end_at, counters, lock)
 end
 
 # After the storm, poll until every VM reports an IDENTICAL (name, admins,
-# members) view — i.e. the group has quiesced and converged. Returns
-# [converged?, views_by_vm].
-def await_convergence(joined, group, tries: 30)
+# members) view — i.e. the group has quiesced and converged. Mirrors
+# verify_all_received's fork detection: if the VMs stay split the same way for
+# `fork_after` checks, the group has FORKED on its state, not just lagging.
+# Returns [status, views_by_vm] with status :converged / :forked / :incomplete.
+def await_convergence(joined, group, tries: 30, fork_after: 5)
   log 'waiting for all VMs to converge on one group state…'
   views = {}
-  ok = retry_until('all VMs agree on group state', tries: tries, wait: 8) do
+  status = :incomplete
+  prev_sig = nil
+  stuck = 0
+  retry_until('all VMs agree on group state', tries: tries, wait: 8) do
     joined.each { |vm| views[vm] = group_view(vm, group) }
     present = views.values.compact
-    next false unless present.size == joined.size
-    present.uniq.size == 1
+    if present.size == joined.size && present.uniq.size == 1
+      status = :converged
+      next true
+    end
+    if views == prev_sig
+      stuck += 1
+    else
+      stuck = 1
+      prev_sig = views.dup
+    end
+    distinct = present.uniq.size
+    log "  …not agreed yet (#{distinct} distinct views among #{present.size}/#{joined.size})" \
+        "#{stuck > 1 ? " (no change ×#{stuck})" : ''}"
+    if stuck >= fork_after
+      log "  🔱 FORK DETECTED — group state stuck split across #{distinct} views"
+      status = :forked
+      next true
+    end
+    false
   end
-  [!!ok, views]
+  [status, views]
 end
 
 def run_cheeky(npubs)
@@ -121,31 +143,37 @@ def run_cheeky(npubs)
   # 1) message delivery: everyone got every sent message.
   expected = joined.flat_map { |vm| st[vm] }.to_set
   log "sent during storm: #{expected.size} messages (#{joined.map { |vm| "#{vm}:#{st[vm].size}" }.join(' ')})"
-  missing = verify_all_received(joined, group, expected, tries: 45)
-  msgs_ok = report_delivery(joined, expected, missing, "message delivery: #{expected.size} messages")
+  missing, msg_status = verify_all_received(joined, group, expected, tries: 45)
+  msg_outcome = report_delivery(joined, expected, missing, "message delivery: #{expected.size} messages",
+                                status: msg_status)
 
   # 2) state convergence: everyone agrees on name + admins + members.
-  converged, views = await_convergence(joined, group)
+  conv_status, views = await_convergence(joined, group)
   log '─' * 60
   log 'final agreed state:'
-  if converged
+  if conv_status == :converged
     v = views[joined.first]
     log "  🎉 PASS — all #{joined.size} VMs agree:"
     log "    name:    #{v[:name].inspect}"
     log "    admins:  #{v[:admins].size} (#{v[:admins].map { |a| a[0, 8] }.join(', ')})"
     log "    members: #{v[:members]&.size}"
   else
-    log '  ❌ FAIL — VMs did not converge on one state:'
+    log(conv_status == :forked ? '  🔱 FORK — VMs wedged on different group states:' \
+                               : '  ❌ FAIL — VMs did not converge on one state:')
     views.each do |vm, view|
       log "    #{vm}: name=#{view&.dig(:name).inspect} admins=#{view&.dig(:admins)&.size} members=#{view&.dig(:members)&.size}"
     end
   end
   log '─' * 60
 
-  [group, msgs_ok && converged]
+  # Either a wedged message set or a wedged group state is a fork — exactly the
+  # divergence this scenario exists to surface.
+  forked = msg_outcome == :fork || conv_status == :forked
+  passed = msg_outcome == :pass && conv_status == :converged
+  [group, passed, forked]
 end
 
 log 'mode: cheeky admins'
 npubs = boot_scenario
-group, passed = run_cheeky(npubs)
-finish(group, passed)
+group, passed, forked = run_cheeky(npubs)
+finish(group, passed, forked: forked)

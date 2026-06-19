@@ -201,12 +201,25 @@ end
 # Confirm EVERY VM eventually sees EVERY message in `expected` (order
 # irrelevant). For each VM we fetch its message list and check the set of kind-9
 # plaintexts against the expected set, retrying because relay + MLS delivery is
-# eventually consistent. Returns a per-VM map of the still-missing payloads
-# (empty array = fully caught up).
-def verify_all_received(joined, group, expected, tries: 30)
+# eventually consistent.
+#
+# Fork detection: if the per-VM missing counts don't change for `fork_after`
+# (default 5) consecutive checks, delivery has wedged — the group has FORKED
+# (diverged into states that can't reconcile). That's a distinct, useful outcome
+# in dev (not just "slow"), so we stop early and report it rather than burning
+# the whole retry budget.
+#
+# Returns [missing, status] where status is one of:
+#   :converged  — every VM has every message
+#   :forked     — no progress for `fork_after` checks (stuck, diverged)
+#   :incomplete — still trickling in but ran out of retries
+def verify_all_received(joined, group, expected, tries: 30, fork_after: 5)
   log "verifying all #{joined.size} VMs each received all #{expected.size} messages…"
   limit = (expected.size + 100).to_s
   missing = {}
+  status = :incomplete
+  prev_sig = nil
+  stuck = 0 # consecutive checks with an identical missing-count signature
 
   retry_until('every VM has every message', tries: tries, wait: 8) do
     all_done = true
@@ -219,33 +232,56 @@ def verify_all_received(joined, group, expected, tries: 30)
     end
     if all_done
       log '  ✅ all VMs are fully caught up'
-      true
-    else
-      behind = missing.select { |_, g| g.any? }.transform_values(&:size)
-      log "  …waiting: #{behind.map { |vm, n| "#{vm} missing #{n}" }.join(', ')}"
-      false
+      status = :converged
+      next true
     end
+
+    behind = missing.transform_values(&:size)
+    # Signature = exactly what's outstanding per VM. Identical signature across
+    # checks ⇒ nothing moved ⇒ progress has stalled.
+    if behind == prev_sig
+      stuck += 1
+    else
+      stuck = 1
+      prev_sig = behind
+    end
+    short = behind.select { |_, n| n.positive? }
+    log "  …waiting: #{short.map { |vm, n| "#{vm} missing #{n}" }.join(', ')}" \
+        "#{stuck > 1 ? " (no progress ×#{stuck})" : ''}"
+
+    if stuck >= fork_after
+      log "  🔱 FORK DETECTED — no delivery progress for #{fork_after} checks; the group has diverged"
+      status = :forked
+      next true
+    end
+    false
   end
 
-  missing
+  [missing, status]
 end
 
-# Standard pass/fail print for the set-delivery scenarios. Returns whether it
-# passed.
-def report_delivery(joined, expected, missing, headline)
+# Standard pass/fail print for the set-delivery scenarios. `status` comes from
+# verify_all_received. A fork is reported as its own (failing, but informative)
+# outcome rather than a plain miss. Returns the pass/outcome symbol so callers
+# can choose an exit code (:pass / :fail / :fork).
+def report_delivery(joined, expected, missing, headline, status: :converged)
   log '─' * 60
   log headline
   failures = missing.select { |_, g| g.any? }
-  if failures.empty?
+  if status == :converged && failures.empty?
     log '  🎉 PASS — every VM received every message'
+    return :pass
+  end
+  if status == :forked
+    log '  🔱 FORK — VMs wedged at different message sets (diverged, not converging):'
   else
     log '  ❌ FAIL — some VMs never received all messages:'
-    failures.each do |vm, gap|
-      log "    #{vm} missing #{gap.size}: #{gap.first(5).join(', ')}#{gap.size > 5 ? ', …' : ''}"
-    end
+  end
+  failures.each do |vm, gap|
+    log "    #{vm} missing #{gap.size}: #{gap.first(5).join(', ')}#{gap.size > 5 ? ', …' : ''}"
   end
   log '─' * 60
-  failures.empty?
+  status == :forked ? :fork : :fail
 end
 
 # ---- report + screenshots ---------------------------------------------------
@@ -287,9 +323,10 @@ def capture_screenshots
 end
 
 # Shared tail of a scenario: report state, grab screenshots, exit with a code
-# reflecting pass/fail.
-def finish(group, passed)
+# reflecting the outcome. A detected fork gets its own exit code (2) so harnesses
+# can tell "diverged" apart from "plain failure" (1) and success (0).
+def finish(group, passed, forked: false)
   report(group)
   capture_screenshots
-  exit(passed ? 0 : 1)
+  exit(forked ? 2 : (passed ? 0 : 1))
 end

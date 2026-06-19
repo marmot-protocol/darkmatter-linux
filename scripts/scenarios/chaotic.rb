@@ -42,14 +42,15 @@ def run_chaotic(npubs)
   group, joined = build_full_group(npubs, name: 'Chaos')
   chaos_blast(joined, group)
   expected = joined.flat_map { |vm| (0...CHAOS_MSGS).map { |k| chaos_text(vm, k) } }.to_set
-  missing = verify_all_received(joined, group, expected)
-  passed = report_delivery(joined, expected, missing,
-                           "chaos result: #{joined.size} VMs, #{expected.size} unique messages each")
-  [group, passed]
+  missing, status = verify_all_received(joined, group, expected)
+  outcome = report_delivery(joined, expected, missing,
+                            "chaos result: #{joined.size} VMs, #{expected.size} unique messages each",
+                            status: status)
+  [group, outcome]
 end
 
 die("need at least 2 VMs (got #{N})") if N < 2
 log 'mode: chaotic blast'
 npubs = boot_scenario
-group, passed = run_chaotic(npubs)
-finish(group, passed)
+group, outcome = run_chaotic(npubs)
+finish(group, outcome == :pass, forked: outcome == :fork)

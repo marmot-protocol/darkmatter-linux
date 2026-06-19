@@ -106,14 +106,15 @@ def run_soak(npubs)
   log "sent during soak: #{expected.size} messages (#{sent_per_vm}), #{counter[:n]} renames"
   # Longer retry budget than the blast: offline VMs may have a lot of backlog to
   # resync after their last reconnect.
-  missing = verify_all_received(joined, group, expected, tries: 45)
-  passed = report_delivery(joined, expected, missing,
-                           "soak result: #{joined.size} VMs, #{expected.size} messages sent, #{counter[:n]} renames")
-  [group, passed]
+  missing, status = verify_all_received(joined, group, expected, tries: 45)
+  outcome = report_delivery(joined, expected, missing,
+                            "soak result: #{joined.size} VMs, #{expected.size} messages sent, #{counter[:n]} renames",
+                            status: status)
+  [group, outcome]
 end
 
 die("need at least 2 VMs (got #{N})") if N < 2
 log 'mode: soak / endurance'
 npubs = boot_scenario
-group, passed = run_soak(npubs)
-finish(group, passed)
+group, outcome = run_soak(npubs)
+finish(group, outcome == :pass, forked: outcome == :fork)

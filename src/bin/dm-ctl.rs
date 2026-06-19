@@ -63,8 +63,8 @@ use std::sync::mpsc::RecvTimeoutError;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use anyhow::{anyhow, Context, Result};
-use serde_json::{json, Value};
+use anyhow::{Context, Result, anyhow};
+use serde_json::{Value, json};
 
 use backend::Backend;
 
@@ -120,7 +120,10 @@ fn client(cmd: &str, args: &[String]) -> i32 {
     };
     let mut writer = stream.try_clone().expect("clone socket");
     let mut reader = BufReader::new(stream);
-    if writeln!(writer, "{req}").and_then(|_| writer.flush()).is_err() {
+    if writeln!(writer, "{req}")
+        .and_then(|_| writer.flush())
+        .is_err()
+    {
         eprintln!("dm-ctl: failed to send request");
         return 3;
     }
@@ -155,7 +158,10 @@ fn client(cmd: &str, args: &[String]) -> i32 {
                 println!("{}", serde_json::to_string_pretty(&result).unwrap());
                 0
             } else {
-                let err = v.get("error").and_then(Value::as_str).unwrap_or("unknown error");
+                let err = v
+                    .get("error")
+                    .and_then(Value::as_str)
+                    .unwrap_or("unknown error");
                 eprintln!("dm-ctl: {err}");
                 1
             }
@@ -209,10 +215,15 @@ fn boot_with_setup() -> Result<(Backend, bool)> {
     };
     eprintln!("[dm-ctl] vault ready (first_run={first_run})");
 
-    let secret_store = Arc::new(vault::VaultSecretStore::new(Arc::new(Mutex::new(vault_obj))));
-    let backend = Backend::boot(&nsec, relays, secret_store, None, |_r| {}, None)
-        .context("boot backend")?;
-    eprintln!("[dm-ctl] backend booted, account {}", backend.account().account_id_hex);
+    let secret_store = Arc::new(vault::VaultSecretStore::new(Arc::new(Mutex::new(
+        vault_obj,
+    ))));
+    let backend =
+        Backend::boot(&nsec, relays, secret_store, None, |_r| {}, None).context("boot backend")?;
+    eprintln!(
+        "[dm-ctl] backend booted, account {}",
+        backend.account().account_id_hex
+    );
 
     // Policy: telemetry + audit logs ON by default on a freshly created identity.
     if first_run {
@@ -285,15 +296,27 @@ fn handle_conn(stream: UnixStream, backend: &Backend) -> bool {
     let req: Value = match serde_json::from_str(&line) {
         Ok(v) => v,
         Err(e) => {
-            let _ = writeln!(writer, "{}", json!({"ok": false, "error": format!("bad request: {e}")}));
+            let _ = writeln!(
+                writer,
+                "{}",
+                json!({"ok": false, "error": format!("bad request: {e}")})
+            );
             return false;
         }
     };
-    let cmd = req.get("cmd").and_then(Value::as_str).unwrap_or("").to_string();
+    let cmd = req
+        .get("cmd")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .to_string();
     let args: Vec<String> = req
         .get("args")
         .and_then(Value::as_array)
-        .map(|a| a.iter().filter_map(|v| v.as_str().map(str::to_string)).collect())
+        .map(|a| {
+            a.iter()
+                .filter_map(|v| v.as_str().map(str::to_string))
+                .collect()
+        })
         .unwrap_or_default();
 
     // `watch` is a long-lived stream, not a single request/reply: hold the
@@ -324,7 +347,11 @@ fn stream_watch(
     let group = match args.first() {
         Some(g) => g.clone(),
         None => {
-            let _ = writeln!(writer, "{}", json!({"ok": false, "error": "watch needs a group_hex"}));
+            let _ = writeln!(
+                writer,
+                "{}",
+                json!({"ok": false, "error": "watch needs a group_hex"})
+            );
             return;
         }
     };
@@ -369,7 +396,11 @@ fn stream_watch(
     }
 
     // Confirm the subscription is live so the client can print a banner.
-    let _ = writeln!(writer, "{}", json!({"type": "ready", "group_id_hex": group}));
+    let _ = writeln!(
+        writer,
+        "{}",
+        json!({"type": "ready", "group_id_hex": group})
+    );
     let _ = writer.flush();
 
     loop {
@@ -378,7 +409,10 @@ fn stream_watch(
         }
         match rx.recv_timeout(Duration::from_millis(500)) {
             Ok(v) => {
-                if writeln!(writer, "{v}").and_then(|_| writer.flush()).is_err() {
+                if writeln!(writer, "{v}")
+                    .and_then(|_| writer.flush())
+                    .is_err()
+                {
                     break;
                 }
             }
@@ -392,7 +426,9 @@ fn stream_watch(
 // ---- command dispatch ---------------------------------------------------
 
 fn arg<'a>(args: &'a [String], i: usize, name: &str) -> Result<&'a str> {
-    args.get(i).map(String::as_str).ok_or_else(|| anyhow!("missing argument: {name}"))
+    args.get(i)
+        .map(String::as_str)
+        .ok_or_else(|| anyhow!("missing argument: {name}"))
 }
 
 fn parse_bool(s: &str) -> Result<bool> {
@@ -406,7 +442,10 @@ fn parse_bool(s: &str) -> Result<bool> {
 /// Split "k=v" tokens into pairs.
 fn kv_pairs(args: &[String]) -> Vec<(String, String)> {
     args.iter()
-        .filter_map(|a| a.split_once('=').map(|(k, v)| (k.to_string(), v.to_string())))
+        .filter_map(|a| {
+            a.split_once('=')
+                .map(|(k, v)| (k.to_string(), v.to_string()))
+        })
         .collect()
 }
 
@@ -440,12 +479,14 @@ fn dispatch(backend: &Backend, cmd: &str, args: &[String]) -> Result<Value> {
             let list: Vec<Value> = backend
                 .accounts()
                 .into_iter()
-                .map(|a| json!({
-                    "label": a.label,
-                    "account_id_hex": a.account_id_hex.clone(),
-                    "npub": npub_of(&a.account_id_hex),
-                    "local_signing": a.local_signing,
-                }))
+                .map(|a| {
+                    json!({
+                        "label": a.label,
+                        "account_id_hex": a.account_id_hex.clone(),
+                        "npub": npub_of(&a.account_id_hex),
+                        "local_signing": a.local_signing,
+                    })
+                })
                 .collect();
             Ok(json!(list))
         }
@@ -457,9 +498,7 @@ fn dispatch(backend: &Backend, cmd: &str, args: &[String]) -> Result<Value> {
             backend.add_account_async(nsec, move |r| {
                 let _ = tx.send(r.map(|a| a.account_id_hex));
             });
-            let id = rx
-                .recv()
-                .map_err(|_| anyhow!("worker dropped"))??;
+            let id = rx.recv().map_err(|_| anyhow!("worker dropped"))??;
             Ok(json!({ "account_id_hex": id.clone(), "npub": npub_of(&id) }))
         }
 

@@ -80,7 +80,6 @@ impl UnreadState {
     pub fn total(&self) -> u32 {
         self.lock_counts().values().copied().sum()
     }
-
 }
 
 /// Render an unread count for the rail badge: empty when zero, the number up to

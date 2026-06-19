@@ -8824,9 +8824,7 @@ fn refresh_chats_from(
         .iter()
         .zip(snap.latest.iter())
         .zip(snap.unread.iter())
-        .map(|((r, latest), &unread)| {
-            chat_meta_from(r, latest.as_ref(), &my_id, backend, unread)
-        })
+        .map(|((r, latest), &unread)| chat_meta_from(r, latest.as_ref(), &my_id, backend, unread))
         .collect();
     let mut messages_outer: Vec<ModelRc<ChatMessage>> = Vec::with_capacity(records.len());
     let mut ids: Vec<String> = Vec::with_capacity(records.len());

@@ -2021,6 +2021,27 @@ impl Backend {
         })
     }
 
+    /// Fetch a *contact's* latest published key package from their relays
+    /// (broad discovery set), returning the event's created-at (unix secs) and
+    /// the relays it was found on — the real freshness data the contact-detail
+    /// IDENTITY panel shows. Sync + blocking: call from a worker thread, never
+    /// the UI thread. Accepts npub or hex (normalized internally by marmot).
+    pub fn fetch_contact_key_package(&self, account_id: &str) -> Result<(u64, Vec<String>)> {
+        let account_id_hex = nostr::PublicKey::parse(account_id)
+            .map(|pk| pk.to_hex())
+            .map_err(|_| anyhow!("not a valid npub or hex pubkey"))?;
+        let broad = self.discovery_relays();
+        let app = self.app.clone();
+        let fetched = self
+            .tokio
+            .block_on(async move {
+                app.fetch_latest_key_package_for_account_id(&account_id_hex, broad)
+                    .await
+            })
+            .map_err(|e| anyhow!("fetch_latest_key_package_for_account_id: {e}"))?;
+        Ok((fetched.created_at, fetched.source_relays))
+    }
+
     /// True when there is at least one locally-recorded key package for the
     /// active account. Used at boot to decide whether to bootstrap-publish.
     pub fn has_local_key_package(&self) -> bool {

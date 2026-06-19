@@ -20,6 +20,9 @@ import { PencilIcon } from "../icons/pencil-icon.slint";
 
 export component ContactDetail inherits DetailPage {
     callback edit-nickname();
+    callback copy-npub();
+    callback refresh-key-package();
+    callback show-qr();
     in property <Contact> contact;
 
     PageHeader {
@@ -137,15 +140,17 @@ export component ContactDetail inherits DetailPage {
                 MicroButton {
                     label: @tr("Copy");
                     CopyIcon { stroke: Palette.text-mid; }
+                    clicked => { root.copy-npub(); }
                 }
             }
             InfoRow {
                 label: @tr("Key package");
-                sublabel: @tr("Fetched from relay.damus.io · refreshed 4m ago");
-                value: @tr("up to date");
+                sublabel: root.contact.kp-detail;
+                value: root.contact.kp-status;
                 MicroButton {
                     label: @tr("Refresh");
                     RefreshIcon { stroke: Palette.text-mid; }
+                    clicked => { root.refresh-key-package(); }
                 }
             }
             InfoRow {
@@ -163,6 +168,7 @@ export component ContactDetail inherits DetailPage {
                     MicroButton {
                         label: @tr("Show as QR");
                         QRIcon { stroke: Palette.text-mid; }
+                        clicked => { root.show-qr(); }
                     }
                 }
             }

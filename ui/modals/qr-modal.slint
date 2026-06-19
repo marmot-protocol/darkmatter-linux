@@ -1,0 +1,89 @@
+import { Palette, Theme } from "../tokens.slint";
+import { Modal } from "modal.slint";
+import { CopyIcon } from "../icons/copy-icon.slint";
+
+// Contact QR card — opened from the contact detail "Show as QR" action. Shows
+// the contact's `nostr:npub` rasterized into a QR (see `qr_image` in main.rs)
+// on a permanently white plate so it scans in every theme, plus a tap-to-copy
+// npub chip. Single-purpose picker → compact 360px width.
+export component QrModal inherits Modal {
+    in property <image> qr;
+    in property <string> npub-short;
+    in property <string> name;
+    callback copy-npub;
+
+    card-width: 360px;
+    title: root.name;
+    subtitle: @tr("Scan to add or message on another device");
+
+    // Transient "Copied ✓" feedback on the npub chip.
+    property <bool> copied: false;
+    copy-reset := Timer {
+        interval: 1.4s;
+        running: root.copied;
+        triggered => { root.copied = false; }
+    }
+
+    VerticalLayout {
+        spacing: 18px;
+        alignment: center;
+
+        // QR plate — white in every theme so the code stays scannable.
+        HorizontalLayout {
+            alignment: center;
+            Rectangle {
+                width: 224px;
+                height: 224px;
+                background: #FFFFFF;
+                border-radius: (12px) * Theme.r-scale;
+                border-width: Theme.border-w;
+                border-color: Palette.field-border;
+                Image {
+                    width: 196px;
+                    height: 196px;
+                    source: root.qr;
+                    image-rendering: pixelated;
+                }
+            }
+        }
+
+        // npub chip — tap to copy, flashes "Copied ✓".
+        HorizontalLayout {
+            alignment: center;
+            chip := Rectangle {
+                height: 30px;
+                width: chip-row.preferred-width + 28px;
+                border-radius: (15px) * Theme.r-scale;
+                background: chip-touch.has-hover ? Palette.field-hover : Palette.field;
+                border-width: Theme.border-w;
+                border-color: root.copied ? Palette.mint : Palette.field-border;
+                animate background, border-color { duration: 120ms; }
+                chip-row := HorizontalLayout {
+                    x: 14px;
+                    width: self.preferred-width;
+                    spacing: 7px;
+                    alignment: center;
+                    Text {
+                        text: root.copied ? @tr("Copied ✓") : root.npub-short;
+                        color: root.copied ? Palette.mint : Palette.text-mid;
+                        font-size: (10.5px) * Theme.fs-scale;
+                        font-weight: 700;
+                        font-family: Theme.font;
+                        vertical-alignment: center;
+                    }
+                    if !root.copied : VerticalLayout {
+                        alignment: center;
+                        CopyIcon { stroke: Palette.text-lo; }
+                    }
+                }
+                chip-touch := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        root.copy-npub();
+                        root.copied = true;
+                    }
+                }
+            }
+        }
+    }
+}

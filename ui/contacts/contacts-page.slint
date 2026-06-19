@@ -8,6 +8,9 @@ export component ContactsPage inherits Rectangle {
     callback contact-clicked(int);
     callback add-contact-clicked();
     callback edit-nickname-clicked();
+    callback copy-npub-clicked();
+    callback refresh-key-package-clicked();
+    callback show-qr-clicked();
     in property <[Contact]> contacts;
     in property <int> active-contact;
 
@@ -42,6 +45,9 @@ export component ContactsPage inherits Rectangle {
             preferred-width: 0px;
             contact: root.contacts[root.active-contact];
             edit-nickname => { root.edit-nickname-clicked(); }
+            copy-npub => { root.copy-npub-clicked(); }
+            refresh-key-package => { root.refresh-key-package-clicked(); }
+            show-qr => { root.show-qr-clicked(); }
         }
     }
 }

@@ -2,7 +2,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-06-18 23:38+0000\n"
+"POT-Creation-Date: 2026-06-19 03:42+0000\n"
 "PO-Revision-Date: 2026-05-27 13:20+0000\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -120,128 +120,118 @@ msgctxt "ChatListPanel"
 msgid "AGO"
 msgstr "FA"
 
-#: ui/contacts/contact-detail.slint:26
+#: ui/contacts/contact-detail.slint:29
 msgctxt "ContactDetail"
 msgid "Contact"
 msgstr "Contatto"
 
-#: ui/contacts/contact-detail.slint:27
+#: ui/contacts/contact-detail.slint:30
 msgctxt "ContactDetail"
 msgid "ADDED {}  ·  {} RELAYS"
 msgstr "AGGIUNTO {}  ·  {} RELAY"
 
-#: ui/contacts/contact-detail.slint:77
+#: ui/contacts/contact-detail.slint:80
 msgctxt "ContactDetail"
 msgid "aka {}"
 msgstr "alias {}"
 
-#: ui/contacts/contact-detail.slint:83
+#: ui/contacts/contact-detail.slint:86
 msgctxt "ContactDetail"
 msgid "✓ VERIFIED"
 msgstr "✓ VERIFICATO"
 
-#: ui/contacts/contact-detail.slint:90
+#: ui/contacts/contact-detail.slint:93
 msgctxt "ContactDetail"
 msgid "Nickname"
 msgstr "Soprannome"
 
-#: ui/contacts/contact-detail.slint:97
+#: ui/contacts/contact-detail.slint:100
 msgctxt "ContactDetail"
 msgid "{} RELAYS"
 msgstr "{} RELAY"
 
-#: ui/contacts/contact-detail.slint:119
+#: ui/contacts/contact-detail.slint:122
 msgctxt "ContactDetail"
 msgid "Start chat"
 msgstr "Avvia chat"
 
-#: ui/contacts/contact-detail.slint:131
+#: ui/contacts/contact-detail.slint:134
 msgctxt "ContactDetail"
 msgid "IDENTITY"
 msgstr "IDENTITÀ"
 
-#: ui/contacts/contact-detail.slint:135
+#: ui/contacts/contact-detail.slint:138
 msgctxt "ContactDetail"
 msgid "Public key, safe to share."
 msgstr "Chiave pubblica, sicura da condividere."
 
-#: ui/contacts/contact-detail.slint:138
+#: ui/contacts/contact-detail.slint:141
 msgctxt "ContactDetail"
 msgid "Copy"
 msgstr "Copia"
 
-#: ui/contacts/contact-detail.slint:143
+#: ui/contacts/contact-detail.slint:147
 msgctxt "ContactDetail"
 msgid "Key package"
 msgstr "Pacchetto chiavi"
 
-#: ui/contacts/contact-detail.slint:144
-msgctxt "ContactDetail"
-msgid "Fetched from relay.damus.io · refreshed 4m ago"
-msgstr "Recuperato da relay.damus.io · aggiornato 4 min fa"
-
-#: ui/contacts/contact-detail.slint:145
-msgctxt "ContactDetail"
-msgid "up to date"
-msgstr "aggiornato"
-
-#: ui/contacts/contact-detail.slint:147
+#: ui/contacts/contact-detail.slint:151
 msgctxt "ContactDetail"
 msgid "Refresh"
 msgstr "Aggiorna"
 
-#: ui/contacts/contact-detail.slint:152
+#: ui/contacts/contact-detail.slint:157
 msgctxt "ContactDetail"
 msgid "Mutual relays"
 msgstr "Relay condivisi"
 
-#: ui/contacts/contact-detail.slint:153
+#: ui/contacts/contact-detail.slint:158
 msgctxt "ContactDetail"
 msgid "Used to deliver messages between you."
 msgstr "Usati per consegnare i messaggi tra voi."
 
-#: ui/contacts/contact-detail.slint:154
+#: ui/contacts/contact-detail.slint:159
 msgctxt "ContactDetail"
 msgid "{} relays"
 msgstr "{} relay"
 
-#: ui/contacts/contact-detail.slint:164
+#: ui/contacts/contact-detail.slint:169
 msgctxt "ContactDetail"
 msgid "Show as QR"
 msgstr "Mostra come QR"
 
-#: ui/contacts/contact-detail.slint:173
+#: ui/contacts/contact-detail.slint:179
 msgctxt "ContactDetail"
 msgid "ACTIONS"
 msgstr "AZIONI"
 
-#: ui/contacts/contact-detail.slint:178
+#: ui/contacts/contact-detail.slint:184
 msgctxt "ContactDetail"
 msgid "Mute"
 msgstr "Silenzia"
 
-#: ui/contacts/contact-detail.slint:182
+#: ui/contacts/contact-detail.slint:188
 msgctxt "ContactDetail"
 msgid "Archive chat"
 msgstr "Archivia chat"
 
-#: ui/contacts/contact-detail.slint:187
+#: ui/contacts/contact-detail.slint:193
 msgctxt "ContactDetail"
 msgid "Block"
 msgstr "Blocca"
 
-#: ui/contacts/contact-detail.slint:196
+#: ui/contacts/contact-detail.slint:202
 msgctxt "ContactDetail"
 msgid "Remove contact"
 msgstr "Rimuovi contatto"
 
-#: ui/contacts/contacts-page.slint:36
+#: ui/contacts/contacts-page.slint:39
 #, fuzzy
 msgctxt "ContactsPage"
 msgid "No contacts yet"
 msgstr "Rimuovi contatto"
 
-#: ui/contacts/contacts-page.slint:37
+#: ui/contacts/contacts-page.slint:40
 msgctxt "ContactsPage"
 msgid "People you start chats with will show up here."
 msgstr "Le persone con cui avvii una chat compariranno qui."
@@ -256,18 +246,18 @@ msgctxt "ContactsSidebar"
 msgid "Search contacts…"
 msgstr "Cerca contatti…"
 
-#: ui/dark-matter-linux.slint:376
+#: ui/dark-matter-linux.slint:377
 msgctxt "DarkMatterLinux"
 msgid "Connecting to relays…"
 msgstr "Connessione ai relay…"
 
-#: ui/dark-matter-linux.slint:1005
+#: ui/dark-matter-linux.slint:1020
 #, fuzzy
 msgctxt "DarkMatterLinux"
 msgid "Block this chat request?"
 msgstr "Richiesta chat"
 
-#: ui/dark-matter-linux.slint:1006
+#: ui/dark-matter-linux.slint:1021
 msgctxt "DarkMatterLinux"
 msgid ""
 "This declines the invite from {}. It can't be restored unless they invite "
@@ -276,7 +266,7 @@ msgstr ""
 "Questo rifiuta l'invito di {}. Non potrà essere ripristinato a meno che non "
 "ti invitino di nuovo."
 
-#: ui/dark-matter-linux.slint:1007
+#: ui/dark-matter-linux.slint:1022
 #, fuzzy
 msgctxt "DarkMatterLinux"
 msgid "Block"
@@ -644,7 +634,6 @@ msgid "NSEC"
 msgstr ""
 
 #: ui/login/login-screen.slint:274 ui/login/login-screen.slint:492
-#: ui/login/login-screen.slint:274 ui/login/login-screen.slint:492
 msgctxt "LoginScreen"
 msgid "VAULT PASSWORD"
 msgstr "PASSWORD CASSAFORTE"
@@ -945,7 +934,6 @@ msgid "Remove image"
 msgstr "Rimuovi contatto"
 
 #: ui/main-pane/group-settings-card.slint:78
-#: ui/main-pane/group-settings-card.slint:78
 #, fuzzy
 msgctxt "GroupSettingsCard"
 msgid "Group name"
@@ -1021,7 +1009,7 @@ msgctxt "AddAccountModal"
 msgid "Add account"
 msgstr "Contatto"
 
-#: ui/modals/add-account-modal.slint:59
+#: ui/modals/add-account-modal.slint:16
 msgctxt "AddAccountModal"
 msgid ""
 "Paste another secret key, or generate a fresh one. It's sealed into the same "
@@ -1190,7 +1178,7 @@ msgctxt "ImportBackupModal"
 msgid "Import backup"
 msgstr "Importa backup"
 
-#: ui/modals/import-backup-modal.slint:25
+#: ui/modals/import-backup-modal.slint:24
 msgctxt "ImportBackupModal"
 msgid ""
 "Restore everything from an encrypted backup. Use the password the backup was "
@@ -1331,6 +1319,18 @@ msgctxt "ProfileModal"
 msgid "No profile found on relays."
 msgstr "Nessun profilo trovato sui relay."
 
+#: ui/modals/qr-modal.slint:17
+#, fuzzy
+msgctxt "QrModal"
+msgid "Scan to add or message on another device"
+msgstr "Scansiona per aggiungermi da un altro dispositivo"
+
+#: ui/modals/qr-modal.slint:67
+#, fuzzy
+msgctxt "QrModal"
+msgid "Copied ✓"
+msgstr "Copiato ✓"
+
 #: ui/modals/start-new-chat-modal.slint:14
 msgctxt "StartNewChatModal"
 msgid "New chat or group"
@@ -1409,9 +1409,6 @@ msgctxt "MessageBubble"
 msgid "(message unavailable)"
 msgstr "(messaggio non disponibile)"
 
-#: ui/primitives/message-bubble.slint:635
-#: ui/primitives/message-bubble.slint:635
-#: ui/primitives/message-bubble.slint:635
 #: ui/primitives/message-bubble.slint:635
 msgctxt "MessageBubble"
 msgid "failed · tap to retry"
@@ -1765,7 +1762,7 @@ msgctxt "AdvancedPane"
 msgid "Refresh"
 msgstr "Aggiorna"
 
-#: ui/settings/advanced-pane.slint:160
+#: ui/settings/advanced-pane.slint:148
 msgctxt "AdvancedPane"
 msgid ""
 "Deleting the file being recorded rotates it — recording continues in a fresh "
@@ -2278,7 +2275,7 @@ msgid "COMMAND"
 msgstr "COMANDO"
 
 #. Tier 1 — content-based classification.
-#: ui/tokens.slint:568
+#: ui/tokens.slint:557
 msgctxt "ErrorCopy"
 msgid ""
 "That doesn't look like a valid npub or public key. Double-check it and try "
@@ -2286,7 +2283,7 @@ msgid ""
 msgstr ""
 "Non sembra un npub o una chiave pubblica valida. Controllala e riprova."
 
-#: ui/tokens.slint:568
+#: ui/tokens.slint:558
 msgctxt "ErrorCopy"
 msgid ""
 "Can't reach your relays right now. Check your network and relay settings, "
@@ -2296,7 +2293,7 @@ msgstr ""
 "le impostazioni dei relay, poi riprova."
 
 #. Tier 2 — operation-specific fallbacks.
-#: ui/tokens.slint:568
+#: ui/tokens.slint:560
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't finish syncing. We'll keep retrying — check your relay settings if "
@@ -2305,7 +2302,7 @@ msgstr ""
 "Sincronizzazione non completata. Continueremo a riprovare — se il problema "
 "persiste, controlla le impostazioni dei relay."
 
-#: ui/tokens.slint:568
+#: ui/tokens.slint:561
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't start up. Check your network and relay settings, then try again."
@@ -2313,52 +2310,52 @@ msgstr ""
 "Avvio non riuscito. Controlla la rete e le impostazioni dei relay, poi "
 "riprova."
 
-#: ui/tokens.slint:556
+#: ui/tokens.slint:562
 msgctxt "ErrorCopy"
 msgid "Couldn't switch accounts. Please try again in a moment."
 msgstr "Impossibile cambiare account. Riprova tra un momento."
 
-#: ui/tokens.slint:557
+#: ui/tokens.slint:563
 msgctxt "ErrorCopy"
 msgid "Couldn't accept the invitation. Please try again in a moment."
 msgstr "Impossibile accettare l'invito. Riprova tra un momento."
 
-#: ui/tokens.slint:558
+#: ui/tokens.slint:564
 msgctxt "ErrorCopy"
 msgid "Couldn't decline the invitation. Please try again in a moment."
 msgstr "Impossibile rifiutare l'invito. Riprova tra un momento."
 
-#: ui/tokens.slint:559
+#: ui/tokens.slint:565
 msgctxt "ErrorCopy"
 msgid "Couldn't archive this chat. Please try again."
 msgstr "Impossibile archiviare questa chat. Riprova."
 
-#: ui/tokens.slint:560
+#: ui/tokens.slint:566
 msgctxt "ErrorCopy"
 msgid "Couldn't restore this chat. Please try again."
 msgstr "Impossibile ripristinare questa chat. Riprova."
 
-#: ui/tokens.slint:561
+#: ui/tokens.slint:567
 msgctxt "ErrorCopy"
 msgid "Couldn't send your message. Check your connection and try again."
 msgstr "Impossibile inviare il messaggio. Controlla la connessione e riprova."
 
-#: ui/tokens.slint:562
+#: ui/tokens.slint:568
 msgctxt "ErrorCopy"
 msgid "Couldn't save your edit. Check your connection and try again."
 msgstr "Impossibile salvare la modifica. Controlla la connessione e riprova."
 
-#: ui/tokens.slint:563
+#: ui/tokens.slint:569
 msgctxt "ErrorCopy"
 msgid "Couldn't add your reaction. Please try again."
 msgstr "Impossibile aggiungere la reazione. Riprova."
 
-#: ui/tokens.slint:564
+#: ui/tokens.slint:570
 msgctxt "ErrorCopy"
 msgid "Couldn't remove your reaction. Please try again."
 msgstr "Impossibile rimuovere la reazione. Riprova."
 
-#: ui/tokens.slint:568
+#: ui/tokens.slint:571
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't publish your key package. Check your relay settings and try again."
@@ -2366,7 +2363,7 @@ msgstr ""
 "Impossibile pubblicare il tuo key package. Controlla le impostazioni dei "
 "relay e riprova."
 
-#: ui/tokens.slint:568
+#: ui/tokens.slint:572
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't rotate your key package. Check your relay settings and try again."
@@ -2374,7 +2371,7 @@ msgstr ""
 "Impossibile ruotare il tuo key package. Controlla le impostazioni dei relay "
 "e riprova."
 
-#: ui/tokens.slint:568
+#: ui/tokens.slint:573
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't refresh your key packages. Check your relay settings and try again."
@@ -2382,7 +2379,7 @@ msgstr ""
 "Impossibile aggiornare i tuoi key package. Controlla le impostazioni dei "
 "relay e riprova."
 
-#: ui/tokens.slint:568
+#: ui/tokens.slint:574
 msgctxt "ErrorCopy"
 msgid ""
 "Couldn't republish to your relays. Check your relay settings and try again."
@@ -2390,86 +2387,94 @@ msgstr ""
 "Impossibile ripubblicare sui tuoi relay. Controlla le impostazioni dei relay "
 "e riprova."
 
-#: ui/tokens.slint:569
+#: ui/tokens.slint:575
 msgctxt "ErrorCopy"
 msgid "Couldn't add that account. Please check the key and try again."
 msgstr "Impossibile aggiungere questo account. Controlla la chiave e riprova."
 
-#: ui/tokens.slint:570
+#: ui/tokens.slint:576
 msgctxt "ErrorCopy"
 msgid "Couldn't create the chat. Please try again."
 msgstr "Impossibile creare la chat. Riprova."
 
-#: ui/tokens.slint:571
+#: ui/tokens.slint:577
 msgctxt "ErrorCopy"
 msgid "Couldn't add that contact. Please try again."
 msgstr "Impossibile aggiungere questo contatto. Riprova."
 
-#: ui/tokens.slint:572
+#: ui/tokens.slint:578
 msgctxt "ErrorCopy"
 msgid "Couldn't add that member. Please try again."
 msgstr "Impossibile aggiungere questo membro. Riprova."
 
-#: ui/tokens.slint:573
+#: ui/tokens.slint:579
 msgctxt "ErrorCopy"
 msgid "Couldn't update the group settings. Please try again."
 msgstr "Impossibile aggiornare le impostazioni del gruppo. Riprova."
 
-#: ui/tokens.slint:574
+#: ui/tokens.slint:580
 msgctxt "ErrorCopy"
 msgid "Couldn't update the group image. Please try again."
 msgstr "Impossibile aggiornare l'immagine del gruppo. Riprova."
 
-#: ui/tokens.slint:575
+#: ui/tokens.slint:581
 msgctxt "ErrorCopy"
 msgid "Couldn't save your profile. Check your connection and try again."
 msgstr "Impossibile salvare il profilo. Controlla la connessione e riprova."
 
-#: ui/tokens.slint:576
+#: ui/tokens.slint:582
 msgctxt "ErrorCopy"
 msgid "Couldn't upload your picture. Please try again."
 msgstr "Impossibile caricare l'immagine. Riprova."
 
-#: ui/tokens.slint:577
+#: ui/tokens.slint:583
 msgctxt "ErrorCopy"
 msgid "Something went wrong. Please try again."
 msgstr "Qualcosa è andato storto. Riprova."
 
 #. Network-pane status copy (also Rust-set).
-#: ui/tokens.slint:579
+#: ui/tokens.slint:585
 msgctxt "ErrorCopy"
 msgid "Not connected yet. Please wait a moment and try again."
 msgstr "Non ancora connesso. Attendi un momento e riprova."
 
-#: ui/tokens.slint:580
+#: ui/tokens.slint:586
 msgctxt "ErrorCopy"
 msgid "That relay is already in your list."
 msgstr "Questo relay è già nella tua lista."
 
-#: ui/tokens.slint:581
+#: ui/tokens.slint:587
 msgctxt "ErrorCopy"
 msgid "Couldn't save your relay list. Please try again."
 msgstr "Impossibile salvare la lista dei relay. Riprova."
 
-#: ui/tokens.slint:582
+#: ui/tokens.slint:588
 msgctxt "ErrorCopy"
 msgid "Relay added."
 msgstr "Relay aggiunto."
 
-#: ui/tokens.slint:583
+#: ui/tokens.slint:589
 msgctxt "ErrorCopy"
 msgid "Relay removed."
 msgstr "Relay rimosso."
 
-#: ui/tokens.slint:584
+#: ui/tokens.slint:590
 msgctxt "ErrorCopy"
 msgid "Republishing…"
 msgstr "Ripubblicazione…"
 
-#: ui/tokens.slint:618
+#: ui/tokens.slint:624
 msgctxt "NativeDialogStrings"
 msgid "Choose a profile picture"
 msgstr "Scegli un'immagine del profilo"
+
+#~ msgctxt "ContactDetail"
+#~ msgid "Fetched from relay.damus.io · refreshed 4m ago"
+#~ msgstr "Recuperato da relay.damus.io · aggiornato 4 min fa"
+
+#~ msgctxt "ContactDetail"
+#~ msgid "up to date"
+#~ msgstr "aggiornato"
 
 #~ msgctxt "AppearancePane"
 #~ msgid "FUN"

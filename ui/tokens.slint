@@ -437,6 +437,12 @@ export struct Contact {
     // Profile picture, lazily bound from the process-wide picture cache.
     picture: image,
     has-picture: bool,
+    // Real key-package state for the IDENTITY panel, computed Rust-side from
+    // the directory record (never hardcoded). `kp-status` is the value column
+    // ("Available" / "Not found" / "Checking…"); `kp-detail` is the sublabel
+    // ("From <relay> · <when>" or an honest empty/loading line).
+    kp-status: string,
+    kp-detail: string,
 }
 
 // One on-disk forensic audit-log file (Settings → Advanced). `path` is the

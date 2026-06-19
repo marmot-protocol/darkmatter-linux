@@ -2859,6 +2859,93 @@ fn main() -> Result<(), slint::PlatformError> {
             refresh();
         }
     });
+    // Contact detail → "Show as QR": rasterize the contact's nostr:npub and
+    // open the QrModal. Reuses `qr_image` (UI-thread only — Image is !Send).
+    ui.on_contact_show_qr({
+        let weak = ui.as_weak();
+        let contacts = contacts.clone();
+        move || {
+            let Some(ui) = weak.upgrade() else { return };
+            let Some(row) = contacts.row_data(ui.get_active_contact() as usize) else {
+                return;
+            };
+            let npub = row.npub_full.to_string();
+            if npub.is_empty() {
+                return;
+            }
+            ui.set_contact_qr(qr_image(&format!("nostr:{npub}")));
+            ui.set_contact_qr_npub(s(&npub));
+            ui.set_contact_qr_npub_short(row.npub_short.clone());
+            ui.set_contact_qr_name(row.name.clone());
+            ui.set_contact_qr_open(true);
+        }
+    });
+    ui.on_contact_qr_dismissed({
+        let weak = ui.as_weak();
+        move || {
+            if let Some(ui) = weak.upgrade() {
+                ui.set_contact_qr_open(false);
+            }
+        }
+    });
+    // Contact detail → "Refresh" key package: re-fetch the peer's latest key
+    // package from their relays off-thread, then patch the row with the real
+    // freshness state (matched by account-id, since the index may have moved).
+    ui.on_contact_refresh_key_package({
+        let weak = ui.as_weak();
+        let contacts = contacts.clone();
+        let backend_cell = backend_cell.clone();
+        move || {
+            let Some(ui) = weak.upgrade() else { return };
+            let idx = ui.get_active_contact() as usize;
+            let Some(mut row) = contacts.row_data(idx) else {
+                return;
+            };
+            let account_id = row.account_id.to_string();
+            if account_id.is_empty() {
+                return;
+            }
+            let Some(b) = backend_cell.lock().unwrap().clone() else {
+                return;
+            };
+            // Honest in-flight state instead of a frozen placeholder.
+            row.kp_status = s("Checking…");
+            row.kp_detail = s("Contacting relays…");
+            contacts.set_row_data(idx, row);
+
+            let weak = ui.as_weak();
+            std::thread::spawn(move || {
+                let result = b.fetch_contact_key_package(&account_id);
+                let (status, detail) = match result {
+                    Ok((created_at, relays)) => kp_labels(created_at, &relays),
+                    Err(e) => {
+                        eprintln!("[backend] fetch_contact_key_package failed: {e:#}");
+                        (
+                            "Not found".to_string(),
+                            "No key package on relays yet".to_string(),
+                        )
+                    }
+                };
+                let _ = slint::invoke_from_event_loop(move || {
+                    let Some(ui) = weak.upgrade() else { return };
+                    let contacts = ui.get_contacts();
+                    let Some(vm) = contacts.as_any().downcast_ref::<VecModel<Contact>>() else {
+                        return;
+                    };
+                    for i in 0..vm.row_count() {
+                        let Some(mut r) = vm.row_data(i) else { continue };
+                        if r.account_id != account_id {
+                            continue;
+                        }
+                        r.kp_status = s(&status);
+                        r.kp_detail = s(&detail);
+                        vm.set_row_data(i, r);
+                        break;
+                    }
+                });
+            });
+        }
+    });
     ui.on_add_member({
         let weak = ui.as_weak();
         let backend_cell = backend_cell.clone();
@@ -12364,6 +12451,55 @@ fn refresh_contacts_async(
     });
 }
 
+/// Strip the `wss://`/`ws://` scheme and trailing slash from a relay URL for a
+/// compact freshness label ("From relay.damus.io · 3h ago").
+fn relay_host(url: &str) -> String {
+    let h = url.trim();
+    let h = h
+        .strip_prefix("wss://")
+        .or_else(|| h.strip_prefix("ws://"))
+        .unwrap_or(h);
+    h.trim_end_matches('/').to_string()
+}
+
+/// Coarse "N units ago" for a unix-seconds timestamp. English on purpose, like
+/// the other Rust-side stamps (`format_chat_stamp`) — gettext only covers the
+/// .slint catalogs today.
+fn relative_since(secs: u64) -> String {
+    if secs == 0 {
+        return String::new();
+    }
+    let d = now_unix_secs().saturating_sub(secs);
+    if d < 60 {
+        "just now".to_string()
+    } else if d < 3600 {
+        format!("{}m ago", d / 60)
+    } else if d < 86_400 {
+        format!("{}h ago", d / 3600)
+    } else {
+        format!("{}d ago", d / 86_400)
+    }
+}
+
+/// Build the contact-detail "Key package" row's (value, sublabel) from real
+/// fetched metadata: the event's created-at + the relays it came from. Shared
+/// by `contact_from` (directory cache) and the Refresh handler (live fetch) so
+/// both render the same honest copy.
+fn kp_labels(created_at: u64, source_relays: &[String]) -> (String, String) {
+    let relay = source_relays
+        .first()
+        .map(|r| relay_host(r))
+        .unwrap_or_default();
+    let when = relative_since(created_at);
+    let detail = match (relay.is_empty(), when.is_empty()) {
+        (false, false) => format!("From {relay} · {when}"),
+        (false, true) => format!("From {relay}"),
+        (true, false) => format!("Published {when}"),
+        (true, true) => "Published".to_string(),
+    };
+    ("Available".to_string(), detail)
+}
+
 fn contact_from(
     record: &UserDirectoryRecord,
     nicknames: &std::collections::BTreeMap<String, String>,
@@ -12397,6 +12533,15 @@ fn contact_from(
         .is_some();
     let picture_url = record.profile.as_ref().and_then(|p| p.picture.clone());
     let (picture, has_picture) = bind_cached_picture(picture_url.as_deref());
+    // Real key-package state from the directory cache. Honest empty state when
+    // the peer has none published yet — never the old hardcoded placeholder.
+    let (kp_status, kp_detail) = match &record.key_package {
+        Some(kp) => kp_labels(kp.created_at, &kp.source_relays),
+        None => (
+            "Not found".to_string(),
+            "No key package on relays yet".to_string(),
+        ),
+    };
     Contact {
         name: s(&display),
         real_name: s(&published),
@@ -12413,6 +12558,8 @@ fn contact_from(
         added: s(""),
         picture,
         has_picture,
+        kp_status: s(&kp_status),
+        kp_detail: s(&kp_detail),
     }
 }
 

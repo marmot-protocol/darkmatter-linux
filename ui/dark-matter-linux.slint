@@ -28,6 +28,7 @@ import { EditHistoryModal } from "modals/edit-history-modal.slint";
 import { ImageViewerModal } from "modals/image-viewer-modal.slint";
 import { VideoViewerModal } from "modals/video-viewer-modal.slint";
 import { ProfileModal } from "modals/profile-modal.slint";
+import { QrModal } from "modals/qr-modal.slint";
 import { LoginScreen } from "login/login-screen.slint";
 import { SplashScreen } from "splash.slint";
 import { EmojiPicker } from "emoji-picker.slint";
@@ -540,6 +541,17 @@ export component DarkMatterLinux inherits Window {
     callback set-contact-nickname(string);
     callback nickname-modal-dismissed();
 
+    // Contact IDENTITY panel actions (contact detail page). Refresh re-fetches
+    // the peer's key package; show-qr opens the QrModal below. Rust owns both.
+    callback contact-refresh-key-package();
+    callback contact-show-qr();
+    callback contact-qr-dismissed();
+    in-out property <bool> contact-qr-open: false;
+    in property <image> contact-qr;            // rasterized nostr:npub QR
+    in property <string> contact-qr-npub-short;
+    in property <string> contact-qr-npub;      // full npub (copy target)
+    in property <string> contact-qr-name;
+
     // Block-chat-request confirmation. Blocking declines the invite for good
     // (the welcome can't be restored), so it's the one chat-request action
     // gated behind a confirm; Archive stays one-click because it's reversible.
@@ -759,6 +771,9 @@ export component DarkMatterLinux inherits Window {
                         contact-clicked(idx) => { root.contact-selected(idx); }
                         add-contact-clicked => { root.add-contact-requested(); }
                         edit-nickname-clicked => { root.contact-nickname-requested(); }
+                        copy-npub-clicked => { root.copy-to-clipboard(root.contacts[root.active-contact].npub-full); }
+                        refresh-key-package-clicked => { root.contact-refresh-key-package(); }
+                        show-qr-clicked => { root.contact-show-qr(); }
                     }
                 }
 
@@ -1128,6 +1143,17 @@ export component DarkMatterLinux inherits Window {
         copy-npub => { root.copy-to-clipboard(root.peer-profile-npub); }
         add-contact => { root.peer-profile-add-contact(); }
         dismissed => { root.peer-profile-dismissed(); }
+    }
+
+    if root.contact-qr-open : QrModal {
+        x: 0; y: 0;
+        width: root.width;
+        height: root.height;
+        qr: root.contact-qr;
+        npub-short: root.contact-qr-npub-short;
+        name: root.contact-qr-name;
+        copy-npub => { root.copy-to-clipboard(root.contact-qr-npub); }
+        dismissed => { root.contact-qr-dismissed(); }
     }
 
     if root.logged-in && root.booting : SplashScreen {

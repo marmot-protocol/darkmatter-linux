@@ -24,8 +24,16 @@
 
 require 'json'
 require 'open3'
+require 'fileutils'
 
-DMVM   = File.expand_path('dmvm.rb', __dir__)
+DMVM      = File.expand_path('dmvm.rb', __dir__)
+REPO_ROOT = File.expand_path('..', __dir__)
+# Filesystem-safe ISO-ish timestamp for this run's artifact folder.
+START_TAG = Time.now.utc.strftime('%Y-%m-%dT%H%M%SZ')
+# `dm-scenario.rb screenshots [N]` re-captures the GUIs of existing VMs without
+# re-running the whole scenario.
+SCREENSHOTS_ONLY = ARGV[0] == 'screenshots'
+ARGV.shift if SCREENSHOTS_ONLY
 N      = (ARGV[0] || ENV['DM_SCENARIO_N'] || '5').to_i
 GOLDEN = ENV['DM_SCENARIO_GOLDEN'] || 'default'
 VMS    = (1..N).map { |i| "vm#{i}" }
@@ -75,8 +83,9 @@ end
 
 def prepare_golden
   log "preparing golden VM '#{GOLDEN}' (provision once, then clone)…"
-  dmvm!(GOLDEN, 'up') # provisions on first run (slow); no-op if already up
-  dmvm!(GOLDEN, 'push', 'dm-ctl') # the freshly cross-built control binary
+  dmvm!(GOLDEN, 'build', '--host') # ensure both host binaries exist (incremental)
+  dmvm!(GOLDEN, 'up')              # provisions on first run (slow); no-op if already up
+  dmvm!(GOLDEN, 'push')            # push BOTH binaries (dm-ctl for the scenario, the GUI for screenshots)
   # Seed relays + wipe any identity so every clone generates its own fresh nsec.
   # NOTE: the `[d]` bracket trick stops pkill -f from matching this very ssh
   # command line (which contains the pattern) and killing its own shell before
@@ -188,9 +197,39 @@ def report(group)
   log "done. inspect any VM with:  ruby scripts/dmvm.rb --vm vm1 dm messages #{group}"
 end
 
+# ---- phase 5: per-VM GUI screenshots ----------------------------------------
+
+# Launch each VM's GUI and grab a screenshot of the open chat into
+# scenarios/<START_TAG>/<vm>.png (gitignored). The GUI and the dm-ctl daemon
+# can't share the data dir, so we stop the daemon first — but no reboot/RAM bump
+# is needed: `dmvm run` uses the Slint software renderer (~150MB), so the GUI
+# runs fine in the same low-mem VM.
+def capture_screenshots
+  dir = File.join(REPO_ROOT, 'scenarios', START_TAG)
+  FileUtils.mkdir_p(dir)
+  log "capturing per-VM screenshots → scenarios/#{START_TAG}/"
+  VMS.each do |vm|
+    dmvm(vm, 'dm', 'stop')  # release the data dir for the GUI
+    dmvm(vm, 'run')         # launches GUI, auto-unlocks, auto-opens the chat
+    out, ok = dmvm(vm, 'ssh', 'sleep 8; pgrep -f "darkmatter-linux$" >/dev/null && echo alive || echo dead')
+    warn_("#{vm} GUI not alive (#{out.strip}) — screenshot may be blank") unless ok && out.include?('alive')
+    png = File.join(dir, "#{vm}.png")
+    _, sok = dmvm(vm, 'screenshot', png)
+    sok && File.exist?(png) ? log("  📸 #{vm} → #{png}") : warn_("#{vm} screenshot failed")
+  end
+  log "screenshots in #{dir}"
+end
+
 # ---- main -------------------------------------------------------------------
 
 die("need at least 2 VMs (got #{N})") if N < 2
+
+if SCREENSHOTS_ONLY
+  log "screenshots-only: capturing GUIs of #{N} existing VMs"
+  capture_screenshots
+  exit 0
+end
+
 log "scenario: #{N} VMs, golden=#{GOLDEN}, mem=#{ENV['DMVM_MEM_MB']}MiB cpus=#{ENV['DMVM_CPUS']}"
 # Clones back onto the golden's disk, so any still running from a prior run must
 # be stopped before we touch the golden.
@@ -200,3 +239,4 @@ prepare_golden
 npubs = spin_up_vms
 group = run_scenario(npubs)
 report(group)
+capture_screenshots

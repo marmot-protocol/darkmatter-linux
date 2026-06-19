@@ -4,7 +4,7 @@
 # dmvm — spawn and control a QEMU/KVM VM that builds & runs Dark Matter Linux.
 #
 # Dark Matter Linux is a Slint GUI app, not an OS image. This tool boots a stock
-# Ubuntu cloud image, provisions it (Rust + Slint/Wayland build deps + a sway
+# Ubuntu cloud image, provisions it (Rust + Slint build deps + an i3/X11
 # session), syncs your local working copy in, builds it, and launches the GUI
 # inside the VM's display — all driven from the CLI via SSH + the QEMU QMP/serial
 # sockets.
@@ -350,15 +350,15 @@ module DMVM
         - mesa-utils
         - libinput-dev
         - libmpv-dev
-        - sway
-        - swaybg
-        - xwayland
-        - foot
-        - wtype
-        - grim
-        - wl-clipboard
+        - xserver-xorg
+        - xserver-xorg-legacy
+        - xinit
+        - i3-wm
+        - xdotool
+        - scrot
+        - x11-xserver-utils
+        - x11-utils
         - xclip
-        - seatd
         - fonts-noto-color-emoji
         - fonts-dejavu
       write_files:
@@ -376,10 +376,28 @@ module DMVM
           content: |
             [ -f ~/.bashrc ] && . ~/.bashrc
             [ -f ~/.cargo/env ] && . ~/.cargo/env
-            if [ "$(tty)" = "/dev/tty1" ] && [ -z "$WAYLAND_DISPLAY" ]; then
-              export XDG_RUNTIME_DIR=/run/user/$(id -u)
-              exec sway
+            if [ "$(tty)" = "/dev/tty1" ] && [ -z "$DISPLAY" ]; then
+              exec startx
             fi
+        - path: /home/#{GUEST_USER}/.xinitrc
+          owner: #{GUEST_USER}:#{GUEST_USER}
+          defer: true
+          content: |
+            exec i3
+        - path: /home/#{GUEST_USER}/.config/i3/config
+          owner: #{GUEST_USER}:#{GUEST_USER}
+          defer: true
+          content: |
+            # Minimal i3 for headless single-app hosting (X11, lighter than sway).
+            # No `bar` block → i3 draws no status bar (clean full-screen app).
+            font pango:monospace 8
+            default_border none
+            hide_edge_borders both
+            for_window [class=".*"] fullscreen enable
+        - path: /etc/X11/Xwrapper.config
+          content: |
+            allowed_users=anybody
+            needs_root_rights=yes
         - path: /etc/profile.d/dmvm.sh
           content: |
             export DM_HOME=#{GUEST_DM_HOME}
@@ -391,19 +409,18 @@ module DMVM
           permissions: '0755'
           content: |
             #!/bin/bash
-            # Launch the built GUI inside the running sway session.
+            # Launch the built GUI inside the running i3/X11 session.
             set -e
             export DM_HOME=#{GUEST_DM_HOME}
-            export XDG_RUNTIME_DIR=/run/user/#{GUEST_UID}
-            sock=$(ls "$XDG_RUNTIME_DIR"/wayland-* 2>/dev/null | grep -v '\\.lock' | head -1)
-            if [ -z "$sock" ]; then echo "no wayland display (is sway running on tty1?)" >&2; exit 1; fi
-            export WAYLAND_DISPLAY=$(basename "$sock")
-            export SWAYSOCK=$(ls "$XDG_RUNTIME_DIR"/sway-ipc.* 2>/dev/null | head -1)
+            # Slint software renderer: the GL backend reserves ~5GB of address
+            # space and OOMs small VMs; software rendering uses ~150MB.
+            export SLINT_BACKEND=${SLINT_BACKEND:-winit-software}
+            export DISPLAY=:0
+            if ! xdpyinfo >/dev/null 2>&1; then echo "no X display (is i3 running on tty1?)" >&2; exit 1; fi
             cd #{GUEST_DIR}
             [ -f ~/.cargo/env ] && . ~/.cargo/env
             exec ./target/debug/darkmatter-linux "$@"
       runcmd:
-        - [ systemctl, enable, --now, seatd ]
         - [ systemctl, daemon-reload ]
         - su - #{GUEST_USER} -c 'curl --proto =https --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal'
         - [ systemctl, restart, getty@tty1 ]
@@ -473,7 +490,6 @@ module DMVM
   def cmd_up(args)
     gui = args.delete('--gui') || args.delete('--window')
     args.delete('--headless') # the default now; accepted for explicitness
-    no_gl = args.delete('--no-gl')
     headless = !gui
     if running?
       info "VM '#{vm_name}' already running (pid #{File.read(pid_file).to_i}); ssh on port #{ssh_port}"
@@ -493,21 +509,11 @@ module DMVM
     accel = File.exist?('/dev/kvm') ? 'kvm' : 'tcg'
     info "no /dev/kvm — falling back to slow TCG emulation" if accel == 'tcg'
 
-    # GPU + display. virtio-vga is the PRIMARY VGA so the boot console and sway
-    # share the one visible scanout. The GL variant (virgl) gives sway a real
-    # GLES renderer — clean, accelerated, no software-render tearing. `--no-gl`
-    # falls back to software 2D if the host lacks virgl.
-    gl = !headless && !no_gl
-    if headless
-      gpu = ['-vga', 'virtio']
-      display = ['-display', 'none', '-vnc', ":#{vnc_display}"]
-    elsif gl
-      gpu = ['-vga', 'none', '-device', 'virtio-vga-gl']
-      display = ['-display', 'gtk,gl=on']
-    else
-      gpu = ['-vga', 'virtio']
-      display = ['-display', 'gtk,gl=off']
-    end
+    # GPU + display. The app renders in software (SLINT_BACKEND=winit-software)
+    # and i3/Xorg need no GL, so a plain virtio VGA is enough — no virgl/
+    # egl-headless. Headless serves the screen over VNC; --gui opens a window.
+    gpu = ['-vga', 'virtio']
+    display = headless ? ['-display', 'none', '-vnc', ":#{vnc_display}"] : ['-display', 'gtk']
 
     qemu = [
       qemu_bin,
@@ -529,7 +535,7 @@ module DMVM
       '-pidfile', pid_file
     ]
 
-    vnc_note = headless ? " [headless/vnc :#{5900 + vnc_display}]" : (gl ? ' [virgl]' : ' [soft-gl]')
+    vnc_note = headless ? " [headless/vnc :#{5900 + vnc_display}]" : ' [window]'
     info "booting VM '#{vm_name}' (#{accel}, #{CPUS} cpu, #{MEM_MB} MiB, ssh :#{ssh_port})#{vnc_note}"
     log = File.open(log_file, 'w')
     pid = Process.spawn(*qemu, in: :close, out: log, err: log, pgroup: true)
@@ -701,27 +707,26 @@ module DMVM
 
   # Type the known vault password into the app's unlock screen. The password
   # LineInput isn't auto-focused, so click it first (centered card, ~59% down),
-  # type, and Enter. Coordinates scale with the output resolution.
+  # type, and Enter. Coordinates scale with the display resolution.
   def auto_unlock
     return unless guest_vault?
-    # The app needs a moment to render the unlock screen; retry get_outputs
-    # since it can transiently report nothing right after launch.
+    # The app needs a moment to render the unlock screen; retry the geometry
+    # query since X can be momentarily unready right after launch.
     w = h = 0
     10.times do
-      m = (sway_outputs.first || {})['current_mode'] || {}
-      w = m['width'].to_i
-      h = m['height'].to_i
-      break if w.positive? && h.positive?
+      g = x_geometry
+      if g && g[0].positive?
+        w, h = g
+        break
+      end
       sleep 1
     end
     return if w.zero?
     fx = (w * 0.5).round
     fy = (h * 0.587).round
     info 'unlocking the app (vault password)…'
-    ssh_exec("#{sway_env}; " \
-             "swaymsg seat seat0 cursor set #{fx} #{fy}; " \
-             "swaymsg seat seat0 cursor press button1; swaymsg seat seat0 cursor release button1; " \
-             "sleep 0.3; wtype #{Shellwords.escape(CTL_PW)}; sleep 0.2; wtype -k Return")
+    ssh_exec("#{x_env}; xdotool mousemove #{fx} #{fy} click 1; sleep 0.3; " \
+             "xdotool type --clearmodifiers #{Shellwords.escape(CTL_PW)}; sleep 0.2; xdotool key Return")
   end
 
   def cmd_run(args)
@@ -741,55 +746,44 @@ module DMVM
     unless ssh_capture("test -x #{bin}").last
       die("app not built yet (#{bin} missing). Run `dmvm run --build`, `--host`, or `--push` first.")
     end
-    unless ssh_capture("#{sway_env}; [ -n \"$WAYLAND_DISPLAY\" ]").last
-      die('no Wayland session — sway is not up on tty1 yet. Check `dmvm screenshot` / `dmvm ssh -- pgrep sway`.')
+    unless ssh_capture("#{x_env}; xdpyinfo >/dev/null 2>&1").last
+      die('no X session — i3 is not up on tty1 yet. Check `dmvm screenshot` / `dmvm ssh -- pgrep i3`.')
     end
     ensure_relays_config
     ensure_identity
     info 'launching GUI in the VM window (logs → guest ~/dm.log)'
-    # Anchor the pattern at end-of-cmdline so this very shell command (whose
-    # text contains 'darkmatter-linux') isn't matched by pgrep.
-    started = ssh_exec("nohup dm-run >~/dm.log 2>&1 & sleep 2; " \
+    # SLINT_BACKEND=winit-software: the GL renderer reserves ~5GB of address
+    # space (OOMs a small VM); the software renderer uses ~150MB, so the GUI
+    # runs comfortably in the same 2GB the daemon uses. Anchor the pgrep pattern
+    # at end-of-cmdline so this very shell command isn't matched.
+    started = ssh_exec("SLINT_BACKEND=winit-software nohup dm-run >~/dm.log 2>&1 & sleep 2; " \
              "pgrep -f 'darkmatter-linux$' >/dev/null && echo 'app running' || " \
              "{ echo 'app exited immediately — last log:'; tail -n 15 ~/dm.log; }")
     auto_unlock if started && !no_unlock
   end
 
-  # ---- display / screen size (sway over the GUI session) ---------------
+  # ---- display / input over X11 (xdotool/xrandr against the i3 session) -
 
-  # Shell prelude exporting the running GUI session's Wayland + sway sockets,
-  # so swaymsg (needs SWAYSOCK) and wtype (needs WAYLAND_DISPLAY) both work over
-  # a non-login ssh command.
-  def sway_env
-    # SWAYSOCK must point at the RUNNING sway's socket: the name embeds sway's
-    # pid, and dead sways leave stale sockets behind, so a glob+head picks the
-    # wrong one. Build it from the live pid; pick the newest wayland socket.
-    "export XDG_RUNTIME_DIR=/run/user/#{GUEST_UID}; " \
-      "export SWAYSOCK=/run/user/#{GUEST_UID}/sway-ipc.#{GUEST_UID}.$(pgrep -x sway | head -1).sock; " \
-      "export WAYLAND_DISPLAY=$(basename $(ls -t /run/user/#{GUEST_UID}/wayland-* 2>/dev/null | grep -v '\\.lock' | head -1))"
+  def x_env = 'export DISPLAY=:0'
+
+  # [width, height] of the X display, or nil if X isn't ready.
+  def x_geometry
+    out, ok = ssh_capture("#{x_env}; xdotool getdisplaygeometry")
+    return nil unless ok
+    m = out.match(/(\d+)\s+(\d+)/) or return nil
+    [m[1].to_i, m[2].to_i]
   end
 
-  def sway_outputs
-    out, ok = ssh_capture("#{sway_env}; swaymsg -t get_outputs -r")
-    return [] unless ok
-    # Strip any leading noise (e.g. ssh warnings) before the JSON array.
-    json = out[/\[.*\]/m] or return []
-    JSON.parse(json)
-  rescue StandardError
-    []
-  end
-
-  def swaymsg!(arg)
-    ssh_exec("#{sway_env}; swaymsg #{arg}") || die("swaymsg #{arg} failed")
+  # Name of the connected X output (virtio+modesetting reports e.g. "Virtual-1").
+  def x_output
+    out, ok = ssh_capture("#{x_env}; xrandr --query")
+    return 'Virtual-1' unless ok
+    out[/^(\S+) connected/, 1] || out[/^(\S+) disconnected/, 1] || 'Virtual-1'
   end
 
   # ---- input injection (clicks, typing, keys) --------------------------
-  # Clicks go through sway's own `seat … cursor` IPC — no uinput/ydotool, so it
-  # works headless and for every concurrent VM independently. Typing uses wtype
-  # (Wayland virtual-keyboard protocol).
-
-  # sway's `cursor press` uses X button numbers (1=left, 2=middle, 3=right),
-  # not libinput event codes.
+  # All input goes through xdotool against the X server — works headless and
+  # per-VM. Button numbers are X convention (1=left, 2=middle, 3=right).
   MOUSE_BUTTONS = { 'left' => 1, 'middle' => 2, 'right' => 3 }.freeze
 
   def cmd_click(args)
@@ -801,9 +795,7 @@ module DMVM
     code = MOUSE_BUTTONS[button] or die("unknown button '#{button}' (left/right/middle)")
     x, y = args
     die('usage: dmvm click <x> <y> [--button left|right|middle]') unless x =~ /\A\d+\z/ && y =~ /\A\d+\z/
-    ssh_exec("#{sway_env}; swaymsg seat seat0 cursor set #{x} #{y}; " \
-             "swaymsg seat seat0 cursor press button#{code}; " \
-             "swaymsg seat seat0 cursor release button#{code}") || die('click failed')
+    ssh_exec("#{x_env}; xdotool mousemove #{x} #{y} click #{code}") || die('click failed')
     info "click #{button} @ #{x},#{y}"
   end
 
@@ -811,29 +803,22 @@ module DMVM
     require_running
     x, y = args
     die('usage: dmvm move <x> <y>') unless x =~ /\A\d+\z/ && y =~ /\A\d+\z/
-    swaymsg!("seat seat0 cursor set #{x} #{y}")
+    ssh_exec("#{x_env}; xdotool mousemove #{x} #{y}") || die('move failed')
   end
 
   def cmd_type(args)
     require_running
     text = args.join(' ')
     die('usage: dmvm type <text…>') if text.empty?
-    ssh_exec("#{sway_env}; wtype #{Shellwords.escape(text)}") || die('type failed (is wtype installed in the guest?)')
+    ssh_exec("#{x_env}; xdotool type --clearmodifiers #{Shellwords.escape(text)}") || die('type failed')
   end
 
-  # dmvm key Return | Escape | Tab | ctrl+a | ctrl+shift+k …
+  # dmvm key Return | Escape | Tab | ctrl+a | ctrl+shift+k … (xdotool key syntax)
   def cmd_key(args)
     require_running
     die('usage: dmvm key <keysym|mod+key> …') if args.empty?
     args.each do |combo|
-      parts = combo.split('+')
-      key = parts.pop
-      mods = parts
-      cmd = +'wtype '
-      mods.each { |m| cmd << "-M #{Shellwords.escape(m)} " }
-      cmd << "-k #{Shellwords.escape(key)} "
-      mods.reverse_each { |m| cmd << "-m #{Shellwords.escape(m)} " }
-      ssh_exec("#{sway_env}; #{cmd}") || die("key '#{combo}' failed")
+      ssh_exec("#{x_env}; xdotool key --clearmodifiers #{Shellwords.escape(combo)}") || die("key '#{combo}' failed")
     end
   end
 
@@ -858,23 +843,24 @@ module DMVM
       end
     end
 
-    outs = sway_outputs
-    die 'no sway outputs — start the GUI session first with `dmvm run`' if outs.empty?
-    name = output || outs.first['name']
+    geo = x_geometry or die 'no X display — start the GUI session first with `dmvm run`'
+    name = output || x_output
 
     if size.nil? && scale.nil?
-      outs.each do |o|
-        m = o['current_mode'] || {}
-        puts "#{o['name']}  #{m['width']}x#{m['height']}@#{(m['refresh'].to_i / 1000.0).round}Hz  scale #{o['scale']}  #{o['active'] ? '' : '(inactive)'}"
-      end
+      puts "#{name}  #{geo[0]}x#{geo[1]}"
       return
     end
 
     if size
       w, h = size.split('x')
-      swaymsg!("output #{name} mode --custom #{w}x#{h}@60Hz")
+      # Build a modeline with cvt, register it, and switch to it.
+      cmd = "ML=$(cvt #{w} #{h} 60 | sed -n 's/^Modeline //p' | tr -d '\"'); " \
+            'NAME=$(echo $ML | awk \'{print $1}\'); ' \
+            "xrandr --newmode $ML 2>/dev/null; xrandr --addmode #{name} \"$NAME\" 2>/dev/null; " \
+            "xrandr --output #{name} --mode \"$NAME\""
+      ssh_exec("#{x_env}; #{cmd}") || warn("dmvm: resize to #{size} may have failed (virtio output mode list is limited)")
     end
-    swaymsg!("output #{name} scale #{scale}") if scale
+    ssh_exec("#{x_env}; xrandr --output #{name} --scale #{scale}x#{scale}") if scale
     info "#{name}: #{size || '(size unchanged)'}#{scale ? ", scale #{scale}" : ''}"
   end
 
@@ -983,27 +969,28 @@ module DMVM
            "#{GUEST_USER}@127.0.0.1:#{remote}", local)
   end
 
-  # Wayland-native capture via grim (works with gl=on/virgl, pixel-perfect).
-  def grim_capture(out)
-    return false unless ssh_capture("#{sway_env}; command -v grim >/dev/null && [ -n \"$WAYLAND_DISPLAY\" ]").last
-    return false unless ssh_capture("#{sway_env}; grim /tmp/dmvm-shot.png").last
+  # In-guest X11 capture via scrot (PNG); works whether or not the QEMU display
+  # is shown.
+  def scrot_capture(out)
+    return false unless ssh_capture("#{x_env}; command -v scrot >/dev/null && xdpyinfo >/dev/null 2>&1").last
+    return false unless ssh_capture("#{x_env}; scrot -o /tmp/dmvm-shot.png").last
     scp_from('/tmp/dmvm-shot.png', out)
   end
 
   def cmd_screenshot(args)
     require_running
     out = args[0] || 'screenshot.png'
-    if grim_capture(out)
-      info "wrote #{out} (grim)"
+    if scrot_capture(out)
+      info "wrote #{out} (scrot)"
       return
     end
-    # Fallback: host-side QMP screendump (boot console / headless / no grim).
-    # Note: fails under gl=on (texture scanout has no readable surface).
+    # Fallback: host-side QMP screendump (boot console / headless / no scrot).
+    # Works now that nothing uses GL (the framebuffer scanout is readable).
     ppm = "#{out}.ppm"
     res = qmp('screendump', { filename: File.absolute_path(ppm) })
     if res&.key?('error')
-      die("grim unavailable and QMP screendump failed (#{res['error']['desc']}). " \
-          'Under virgl, capture needs grim in the guest — `dmvm ssh -- sudo apt install -y grim`.')
+      die("scrot unavailable and QMP screendump failed (#{res['error']['desc']}). " \
+          'Capture needs scrot in the guest — `dmvm ssh -- sudo apt install -y scrot`.')
     end
     if (conv = which('magick') || which('convert'))
       run!(conv, ppm, out)
@@ -1084,6 +1071,39 @@ module DMVM
     info "destroyed instance '#{vm_name}' (#{instance_dir}); base image + ssh key kept in #{HOME}"
   end
 
+  # Hard-stop the current instance's qemu (no graceful ACPI wait) — for teardown.
+  def kill_vm
+    return unless running?
+    pid = File.read(pid_file).to_i
+    Process.kill('TERM', pid) rescue nil
+    40.times { running? ? sleep(0.1) : break }
+    (Process.kill('KILL', pid) rescue nil) if running?
+  end
+
+  def cmd_rm_all(args)
+    purge = args.delete('--purge')
+    names = all_instances
+    if names.empty?
+      info 'no VMs to remove'
+    else
+      names.each do |n|
+        self.vm_name = n
+        @ports&.delete(n)
+        kill_vm
+        FileUtils.rm_rf(instance_dir)
+        info "removed #{n}"
+      end
+      info "removed #{names.size} VM(s)"
+    end
+    if purge
+      [base_image, ssh_key, ssh_pub].each { |f| File.unlink(f) if File.exist?(f) }
+      FileUtils.rm_rf(instances_root)
+      info "purged base image + ssh key (#{HOME})"
+    else
+      info "kept base image + ssh key in #{HOME} (use `rm-all --purge` to remove those too)"
+    end
+  end
+
   def cmd_help(_args = nil)
     puts <<~TXT
       dmvm — spawn & control a Dark Matter Linux build/run VM (QEMU/KVM)
@@ -1118,7 +1138,8 @@ module DMVM
         status              show this VM's state and connection info
         ls                  list all VM instances and their state/ports
         down                graceful ACPI shutdown (force-quit fallback)
-        destroy             remove this instance's overlay/state (keeps base image)
+        destroy | rm        remove this instance's overlay/state (keeps base image)
+        rm-all [--purge]    remove ALL instances (--purge also deletes the base image + key)
         help                this message
 
       Multiple VMs: pass `--vm <name>` (or set DMVM_VM) to target a named
@@ -1139,7 +1160,8 @@ module DMVM
     'click' => :cmd_click, 'move' => :cmd_move, 'type' => :cmd_type, 'key' => :cmd_key,
     'ssh' => :cmd_ssh, 'screenshot' => :cmd_screenshot, 'shot' => :cmd_screenshot,
     'console' => :cmd_console, 'qmp' => :cmd_qmp, 'status' => :cmd_status, 'ls' => :cmd_ls,
-    'down' => :cmd_down, 'stop' => :cmd_down, 'destroy' => :cmd_destroy,
+    'down' => :cmd_down, 'stop' => :cmd_down, 'destroy' => :cmd_destroy, 'rm' => :cmd_destroy,
+    'rm-all' => :cmd_rm_all,
     'help' => :cmd_help, '-h' => :cmd_help, '--help' => :cmd_help
   }.freeze
 

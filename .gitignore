@@ -5,3 +5,6 @@
 
 # gettext msgmerge backups — regenerated on every catalog update
 *.po~
+# dmvm scenario artifacts (screenshots, etc.) — repo-root only, NOT the
+# scripts/scenarios/ source dir.
+/scenarios/

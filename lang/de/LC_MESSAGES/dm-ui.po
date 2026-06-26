@@ -1185,6 +1185,10 @@ msgctxt "AddContactModal"
 msgid "PUBLIC KEY"
 msgstr "ÖFFENTLICHER SCHLÜSSEL"
 
+msgctxt "LoginScreen"
+msgid "PUBLIC KEY (NPUB)"
+msgstr "ÖFFENTLICHER SCHLÜSSEL (NPUB)"
+
 msgctxt "StoragePane"
 msgid "Pack accounts, chats, and settings into one encrypted file."
 msgstr "Packe Konten, Chats und Einstellungen in eine verschlüsselte Datei."
@@ -1440,6 +1444,10 @@ msgid "Rotate key package now"
 msgstr "Schlüsselpaket jetzt rotieren"
 
 msgctxt "AddAccountModal"
+msgid "SECRET KEY (NSEC)"
+msgstr "GEHEIMER SCHLÜSSEL (NSEC)"
+
+msgctxt "LoginScreen"
 msgid "SECRET KEY (NSEC)"
 msgstr "GEHEIMER SCHLÜSSEL (NSEC)"
 

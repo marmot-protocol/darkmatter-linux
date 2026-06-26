@@ -1183,6 +1183,10 @@ msgctxt "AddContactModal"
 msgid "PUBLIC KEY"
 msgstr "公開鍵"
 
+msgctxt "LoginScreen"
+msgid "PUBLIC KEY (NPUB)"
+msgstr "公開鍵 (NPUB)"
+
 msgctxt "StoragePane"
 msgid "Pack accounts, chats, and settings into one encrypted file."
 msgstr "アカウント、チャット、設定を1つの暗号化ファイルにまとめます。"
@@ -1440,6 +1444,10 @@ msgstr "キーパッケージを今すぐローテーション"
 msgctxt "AddAccountModal"
 msgid "SECRET KEY (NSEC)"
 msgstr "秘密鍵 (nsec)"
+
+msgctxt "LoginScreen"
+msgid "SECRET KEY (NSEC)"
+msgstr "秘密鍵 (NSEC)"
 
 msgctxt "StoragePane"
 msgid "SECRET VAULT"

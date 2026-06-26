@@ -1131,6 +1131,10 @@ msgctxt "AddContactModal"
 msgid "PUBLIC KEY"
 msgstr ""
 
+msgctxt "LoginScreen"
+msgid "PUBLIC KEY (NPUB)"
+msgstr ""
+
 msgctxt "StoragePane"
 msgid "Pack accounts, chats, and settings into one encrypted file."
 msgstr ""
@@ -1372,6 +1376,10 @@ msgid "Rotate key package now"
 msgstr ""
 
 msgctxt "AddAccountModal"
+msgid "SECRET KEY (NSEC)"
+msgstr ""
+
+msgctxt "LoginScreen"
 msgid "SECRET KEY (NSEC)"
 msgstr ""
 

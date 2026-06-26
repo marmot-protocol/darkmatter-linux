@@ -135,11 +135,10 @@ For the deeper details (vault format, the avatar pipeline, the i18n setup, and t
 ```sh
 cargo build                      # build everything
 cargo run                        # run the app
-cargo run --bin bootbench        # boot benchmark
 scripts/update-translations.sh   # regenerate gettext catalogs after editing @tr() strings
 ```
 
-There's no automated test suite yet. `cargo test` is a no-op, and changes are checked by running the app. To develop against a local Marmot checkout, add a `[patch]` to `.cargo/config.toml` instead of editing `Cargo.toml`; the exact stanza is in `AGENTS.md`.
+There's no unit-test suite yet. `cargo test` is a no-op, and changes are checked by running the app. End-to-end testing (a QEMU VM harness, a headless control daemon, and multi-VM messaging scenarios) lives in the separate [`darkmatter-automated-testing`](https://github.com/marmot-protocol/darkmatter-automated-testing) repo, which builds this checkout. To develop against a local Marmot checkout, add a `[patch]` to `.cargo/config.toml` instead of editing `Cargo.toml`; the exact stanza is in `AGENTS.md`.
 
 ## Contributing
 

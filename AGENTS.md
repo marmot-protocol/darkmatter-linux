@@ -5,7 +5,7 @@ This file provides guidance to AI coding agents when working with code in this r
 ## Build & run
 
 - `cargo build` / `cargo run` — the workspace has two crates: the root binary and `dm-ui`, a build-time-isolation lib crate whose `dm-ui/build.rs` compiles the Slint UI tree (`ui/dark-matter-linux.slint`) with bundled gettext translations from `lang/`, and composes a Twemoji sprite sheet at `$OUT_DIR/twemoji_sprite.png` plus a `$OUT_DIR/emoji_sprite_map.rs` lookup table. The ~345k-line generated Slint module lives inside `dm-ui` (`slint::include_modules!()` in `dm-ui/src/lib.rs`), so editing Rust in `src/` rebuilds only the root crate (~2s); editing `.slint` or `lang/` files rebuilds `dm-ui` too (~25s). The first build is slow because of the marmot dependencies and the sprite composition.
-- No test suite exists (`cargo test` is a no-op). Verify changes by running the app.
+- No unit-test suite exists (`cargo test` is a no-op). Verify changes by running the app. End-to-end/automated testing lives in a separate repo, `darkmatter-automated-testing` (the `dmvm` QEMU harness, the `dm-ctl` headless control daemon, and the multi-VM scenarios). It builds this checkout — locate it via `$DARKMATTER_LINUX_DIR` (default sibling `../darkmatter-linux`) — and stages its `dm-ctl`/`bootbench` sources into `src/bin/` to build (hence `src/bin/` is gitignored here).
 - Logging: `tracing-subscriber` is installed in `main` (writes to stderr). Filter via `RUST_LOG`; default is `info`.
 - Translations: after adding/changing `@tr("…")` strings in `.slint` files, run `scripts/update-translations.sh` (requires `cargo install slint-tr-extractor` and gettext's `msgmerge`) to regenerate `lang/dm-ui.pot` and merge into the `it`/`de`/`ja` catalogs. (The gettext domain is `dm-ui` because slint-build hardwires it to the name of the crate that compiles the UI.)
 
@@ -122,7 +122,7 @@ All user-visible Slint strings use `@tr("…")`. `dm-ui/build.rs` bundles the ge
 
 ## Learned Workspace Facts
 
-- `Cargo.toml` sets `default-run = "darkmatter-linux"`; use `cargo run --bin bootbench` for the benchmark binary.
+- `Cargo.toml` sets `default-run = "darkmatter-linux"`. The `bootbench` and `dm-ctl` binaries are no longer in this repo — they live in `darkmatter-automated-testing` and are staged into `src/bin/` by its `dmvm` harness when building; run `cargo run --bin bootbench` only after staging (or via that repo).
 - Slint i18n is bundled from `lang/` via `dm-ui/build.rs`; maintain catalogs with `scripts/update-translations.sh` and edit `.po` files directly.
 - `dm-ui/build.rs` reuses `twemoji_sprite.png` and `emoji_sprite_map.rs` from `OUT_DIR` when both exist, so sprite generation should only run when an output is missing.
 - Encrypted media downloads retry Marmot redirect failures by resolving Blossom redirects in `src/backend.rs` while validating each hop before retrying.

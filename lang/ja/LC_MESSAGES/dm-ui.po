@@ -1378,10 +1378,9 @@ msgctxt "ContactDetail"
 msgid "Remove contact"
 msgstr "連絡先を削除"
 
-#, fuzzy
 msgctxt "GroupSettingsCard"
 msgid "Remove image"
-msgstr "連絡先を削除"
+msgstr "画像を削除"
 
 msgctxt "MessageContextMenu"
 msgid "Reply"

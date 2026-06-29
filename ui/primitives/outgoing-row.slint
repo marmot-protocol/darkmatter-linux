@@ -64,6 +64,7 @@ export component OutgoingRow inherits VerticalLayout {
     in property <bool> edited: false;
     in property <int> edit-count: 0;
     in property <bool> can-edit: false;
+    in property <bool> deleted: false;
     callback album-cell-clicked(string);
     callback react(string, string);
     callback unreact(string);
@@ -161,6 +162,7 @@ export component OutgoingRow inherits VerticalLayout {
                     album-h: root.album-h;
                     edited: root.edited;
                     edit-count: root.edit-count;
+                    deleted: root.deleted;
                     retry-clicked => { root.retry(); }
                     attachment-clicked => { root.attachment-clicked(root.message-id); }
                     audio-play-clicked => { root.audio-play-clicked(root.message-id); }
@@ -168,8 +170,9 @@ export component OutgoingRow inherits VerticalLayout {
                     album-cell-clicked(key) => { root.album-cell-clicked(key); }
                     show-history-clicked => { root.show-history(root.message-id); }
                     context-menu-requested(ax, ay) => {
-                        // Same gate as the hover toolbar: confirmed rows only.
-                        if (root.message-id != "" && !root.pending && !root.failed) {
+                        // Same gate as the hover toolbar: confirmed rows only,
+                        // and never on a retracted tombstone.
+                        if (root.message-id != "" && !root.pending && !root.failed && !root.deleted) {
                             root.request-context-menu(root.message-id, root.text, @tr("You"), root.can-edit, ax, ay);
                         }
                     }
@@ -183,7 +186,7 @@ export component OutgoingRow inherits VerticalLayout {
                     reply-preview-text: root.text;
                     reply-author: @tr("You");
                     can-edit: root.can-edit;
-                    visible: root.message-id != "" && !root.pending && !root.failed
+                    visible: root.message-id != "" && !root.pending && !root.failed && !root.deleted
                         && (hover.has-hover || self.hovered);
                     opacity: (hover.has-hover || self.hovered) ? 1.0 : 0.0;
                     animate opacity { duration: 100ms; }

@@ -65,6 +65,7 @@ export component IncomingRow inherits VerticalLayout {
     in property <length> album-h;
     in property <bool> edited: false;
     in property <int> edit-count: 0;
+    in property <bool> deleted: false;
     callback album-cell-clicked(string);
     callback react(string, string);
     callback unreact(string);
@@ -174,13 +175,16 @@ export component IncomingRow inherits VerticalLayout {
                     album-h: root.album-h;
                     edited: root.edited;
                     edit-count: root.edit-count;
+                    deleted: root.deleted;
                     attachment-clicked => { root.attachment-clicked(root.message-id); }
                     audio-play-clicked => { root.audio-play-clicked(root.message-id); }
                     audio-seek-clicked(fraction) => { root.audio-seek-clicked(root.message-id, fraction); }
                     album-cell-clicked(key) => { root.album-cell-clicked(key); }
                     show-history-clicked => { root.show-history(root.message-id); }
                     context-menu-requested(ax, ay) => {
-                        if (root.message-id != "") {
+                        // A retracted tombstone offers no actions, so suppress
+                        // its menu entirely (matches the hover toolbar gate).
+                        if (root.message-id != "" && !root.deleted) {
                             root.request-context-menu(root.message-id, root.text, root.av-initials, false, ax, ay);
                         }
                     }
@@ -194,7 +198,7 @@ export component IncomingRow inherits VerticalLayout {
                     reply-preview-text: root.text;
                     reply-author: root.av-initials;
                     can-edit: false;
-                    visible: root.message-id != "" && (hover.has-hover || self.hovered);
+                    visible: root.message-id != "" && !root.deleted && (hover.has-hover || self.hovered);
                     opacity: (hover.has-hover || self.hovered) ? 1.0 : 0.0;
                     animate opacity { duration: 100ms; }
                     request-picker(id, ax, ay) => { root.request-picker(id, ax, ay); }

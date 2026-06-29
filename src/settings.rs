@@ -55,6 +55,30 @@ pub struct Settings {
     /// rail/tray unread counts derive from. Local-only, like nicknames.
     #[serde(default)]
     pub last_read: BTreeMap<String, i64>,
+    /// Messages the user deleted *for themselves* ("delete for me"), keyed by
+    /// the local account hex that hid them → the set of inner event ids (hex).
+    /// Local-only — never published; the message stays on the wire for everyone
+    /// else, it's just filtered out of this client's view. Per-account so a hide
+    /// on one account doesn't leak to another account on the same machine.
+    #[serde(default)]
+    pub hidden_messages_by_account: BTreeMap<String, BTreeSet<String>>,
+    /// Legacy global hidden set (pre per-account scoping). The old `hidden_messages`
+    /// key deserializes here; at boot it's folded into the boot account's
+    /// in-memory hidden set so pre-upgrade "delete for me" hides survive. Kept in
+    /// the file (not account-attributed on disk) since it predates account scoping.
+    #[serde(default, rename = "hidden_messages")]
+    pub hidden_messages_legacy: BTreeSet<String>,
+}
+
+impl Settings {
+    /// Hide `message_id` for `account_hex`. Returns true if it wasn't already
+    /// hidden (so the caller knows to persist).
+    pub fn hide_message(&mut self, account_hex: &str, message_id: &str) -> bool {
+        self.hidden_messages_by_account
+            .entry(account_hex.to_ascii_lowercase())
+            .or_default()
+            .insert(message_id.to_string())
+    }
 }
 
 fn default_locale() -> String {
@@ -101,6 +125,8 @@ impl Default for Settings {
             notification_preview: true,
             muted_chats: BTreeSet::new(),
             last_read: BTreeMap::new(),
+            hidden_messages_by_account: BTreeMap::new(),
+            hidden_messages_legacy: BTreeSet::new(),
         }
     }
 }

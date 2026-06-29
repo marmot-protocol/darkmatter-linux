@@ -236,6 +236,9 @@ export component MessageBubble inherits Rectangle {
     // to the timestamp; tapping it asks the root to open the history modal.
     in property <bool> edited: false;
     in property <int> edit-count: 0;
+    // Retracted ("delete for everyone"): drop the body/attachments/reactions
+    // and render a muted italic tombstone, keeping only the timestamp.
+    in property <bool> deleted: false;
     // Visual grouping. `first-in-group` controls whether the top corner on the
     // avatar side is rounded (group head) or tightened (continuation). A
     // standalone bubble is the head, so it defaults true.
@@ -390,7 +393,7 @@ export component MessageBubble inherits Rectangle {
         // Quoted parent — a recessed plate inside the bubble with an accent
         // bar on the left. For outgoing (mint) bubbles the accent is dark so
         // it actually shows up; for incoming (dark) bubbles it's mint.
-        if root.reply-to-id != "" : Rectangle {
+        if root.reply-to-id != "" && !root.deleted : Rectangle {
             background: root.outgoing ? #00000018 : (Theme.light ? #F8FAFC : #ffffff0c);
             border-radius: (3px) * Theme.r-scale;
             HorizontalLayout {
@@ -430,7 +433,7 @@ export component MessageBubble inherits Rectangle {
 
         // Album grid. Each cell's rect is precomputed in Rust; we absolute-
         // position a clipped image (or a subtle placeholder until it decodes).
-        if root.album.length > 0 : Rectangle {
+        if root.album.length > 0 && !root.deleted : Rectangle {
             width: root.album-w;
             height: root.album-h;
             for cell[i] in root.album : Rectangle {
@@ -471,7 +474,7 @@ export component MessageBubble inherits Rectangle {
         // filename + size. Both fire `attachment-clicked` on tap.
         // Video attachment — poster frame (decoded first frame or imeta thumb)
         // with a ▶ play badge + optional duration. Tap opens the in-app viewer.
-        if root.has-attachment && root.att-is-video : vid-tile := Rectangle {
+        if root.has-attachment && root.att-is-video && !root.deleted : vid-tile := Rectangle {
             property <length> vid-w: min(280px, max(120px, root.text-budget));
             width: self.vid-w;
             height: 180px;
@@ -533,7 +536,7 @@ export component MessageBubble inherits Rectangle {
         // Audio attachment — inline player: play/pause, filename, scrubber,
         // size + duration. Height tracks the row's content so the bubble only
         // grows the extra rows when there's a filename to show.
-        if root.has-attachment && root.att-is-audio : aud := Rectangle {
+        if root.has-attachment && root.att-is-audio && !root.deleted : aud := Rectangle {
             property <length> audio-w: min(280px, max(180px, root.text-budget));
             // Width left for the text column: player width minus padding,
             // play button, and inter-column spacing (10 + 36 + 10 + 12).
@@ -654,7 +657,7 @@ export component MessageBubble inherits Rectangle {
             }
         }
 
-        if root.has-attachment && root.att-is-image : img-tile := Rectangle {
+        if root.has-attachment && root.att-is-image && !root.deleted : img-tile := Rectangle {
             property <length> img-w: min(280px, max(120px, root.text-budget));
             property <length> img-h: 180px;
             width: self.img-w;
@@ -699,7 +702,7 @@ export component MessageBubble inherits Rectangle {
             }
         }
 
-        if root.has-attachment && !root.att-is-image && !root.att-is-video && !root.att-is-audio : Rectangle {
+        if root.has-attachment && !root.att-is-image && !root.att-is-video && !root.att-is-audio && !root.deleted : Rectangle {
             background: root.outgoing ? #00000022 : (Theme.light ? #F1F5F9 : #ffffff0e);
             border-radius: (6px) * Theme.r-scale;
             border-width: Theme.outline-surfaces ? Theme.border-w : 0px;
@@ -761,7 +764,21 @@ export component MessageBubble inherits Rectangle {
         // estimation), so spacing matches what a plain `Text` would render.
         // Empty `lines` falls back to a plain `Text` so synthetic / legacy
         // paths still render.
-        if root.lines.length > 0 : VerticalLayout {
+        // Retraction tombstone — replaces the body (and all the blocks gated
+        // off above) with a muted italic placeholder. The timestamp in `meta`
+        // still renders so the deleted row keeps its place in the timeline.
+        if root.deleted : Text {
+            text: @tr("This message was deleted");
+            color: root.outgoing ? Palette.bubble-out-fg : Palette.text-mid;
+            font-size: root.body-fs;
+            font-family: Theme.font;
+            font-italic: true;
+            opacity: root.outgoing ? 0.7 : 0.85;
+            vertical-alignment: top;
+            wrap: word-wrap;
+            width: min(self.preferred-width, root.text-budget);
+        }
+        if root.lines.length > 0 && !root.deleted : VerticalLayout {
             spacing: 0;
             alignment: start;
             for line in root.lines : Rectangle {
@@ -820,7 +837,7 @@ export component MessageBubble inherits Rectangle {
                 }
             }
         }
-        if root.lines.length == 0 : Text {
+        if root.lines.length == 0 && !root.deleted : Text {
             text: root.message;
             color: root.outgoing ? Palette.bubble-out-fg : Palette.text-hi;
             font-size: root.body-fs;
@@ -839,7 +856,7 @@ export component MessageBubble inherits Rectangle {
                 alignment: end;
                 // "(edited)" affordance — opens the history modal on tap. Sits
                 // before the timestamp so the stamp + check stay rightmost.
-                if root.edited && !root.failed : edited-rect := Rectangle {
+                if root.edited && !root.failed && !root.deleted : edited-rect := Rectangle {
                     height: edited-label.preferred-height;
                     width: edited-label.preferred-width;
                     y: parent.height - self.height;

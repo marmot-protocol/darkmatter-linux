@@ -697,6 +697,15 @@ msgctxt "ArchivedDetail"
 msgid "Delete"
 msgstr "Löschen"
 
+msgctxt "MessageContextMenu"
+msgid "Delete for everyone"
+msgstr ""
+
+#, fuzzy
+msgctxt "MessageContextMenu"
+msgid "Delete for me"
+msgstr "Datumsformat"
+
 msgctxt "AdvancedPane"
 msgid "Deleting the file being recorded rotates it — recording continues in a fresh file."
 msgstr "Das Löschen der gerade aufgezeichneten Datei rotiert sie — die Aufzeichnung wird in einer neuen Datei fortgesetzt."
@@ -1699,6 +1708,14 @@ msgstr "Damit können andere einen verschlüsselten Chat mit dir starten."
 msgctxt "AddAccountModal"
 msgid "This key was just generated and exists nowhere else yet. Copy it somewhere safe before adding it — there is no recovery."
 msgstr "Dieser Schlüssel wurde gerade generiert und existiert noch nirgendwo sonst. Kopiere ihn an einen sicheren Ort, bevor du ihn hinzufügst — es gibt keine Wiederherstellung."
+
+msgctxt "MessageBubble"
+msgid "This message was deleted"
+msgstr ""
+
+msgctxt "MessageView"
+msgid "This message was deleted"
+msgstr ""
 
 msgctxt "ChatRequestBanner"
 msgid "This sender isn't in your contacts. Accept to start an"

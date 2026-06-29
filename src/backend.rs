@@ -1179,6 +1179,34 @@ impl Backend {
         });
     }
 
+    /// Retract `message_id_hex` for everyone: publish a kind-5 delete event
+    /// referencing the target. Marmot enforces on read that a delete is only
+    /// honored when its authenticated author matches the target's author, so
+    /// this only meaningfully retracts the user's own messages. Same optimistic-
+    /// reconciliation shape as [`edit_message_async`].
+    pub fn delete_message_async<F>(&self, group_hex: &str, message_id_hex: &str, on_done: F)
+    where
+        F: FnOnce(Result<SendSummary>) + Send + 'static,
+    {
+        let group_id = match group_id_from_hex(group_hex) {
+            Ok(g) => g,
+            Err(e) => {
+                on_done(Err(e));
+                return;
+            }
+        };
+        let label = self.active_label();
+        let runtime = self.runtime.clone();
+        let target = message_id_hex.to_string();
+        self.tokio.spawn(async move {
+            let res = runtime
+                .delete_message(&label, &group_id, &target)
+                .await
+                .map_err(|e| anyhow!("delete_message: {e}"));
+            on_done(res);
+        });
+    }
+
     /// Non-blocking variant of [`unreact`].
     pub fn unreact_async<F>(&self, group_hex: &str, message_id_hex: &str, on_done: F)
     where

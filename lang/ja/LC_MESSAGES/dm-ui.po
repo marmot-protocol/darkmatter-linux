@@ -695,6 +695,15 @@ msgctxt "ArchivedDetail"
 msgid "Delete"
 msgstr "削除"
 
+msgctxt "MessageContextMenu"
+msgid "Delete for everyone"
+msgstr ""
+
+#, fuzzy
+msgctxt "MessageContextMenu"
+msgid "Delete for me"
+msgstr "日付形式"
+
 msgctxt "AdvancedPane"
 msgid "Deleting the file being recorded rotates it — recording continues in a fresh file."
 msgstr "記録中のファイルを削除するとローテーションされ、新しいファイルに記録が続きます。"
@@ -1697,6 +1706,14 @@ msgstr "これにより、他の人があなたと暗号化されたチャット
 msgctxt "AddAccountModal"
 msgid "This key was just generated and exists nowhere else yet. Copy it somewhere safe before adding it — there is no recovery."
 msgstr "この鍵は今生成されたばかりで、まだ他のどこにも存在しません。追加する前に安全な場所にコピーしてください。復元はできません。"
+
+msgctxt "MessageBubble"
+msgid "This message was deleted"
+msgstr ""
+
+msgctxt "MessageView"
+msgid "This message was deleted"
+msgstr ""
 
 msgctxt "ChatRequestBanner"
 msgid "This sender isn't in your contacts. Accept to start an"

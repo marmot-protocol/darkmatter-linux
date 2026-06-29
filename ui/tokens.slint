@@ -745,6 +745,10 @@ export struct ChatMessage {
     edited: bool,
     edit-count: int,
     can-edit: bool,
+    // Retracted message (kind-5 "delete for everyone"). When true the bubble
+    // drops its body/attachments/reactions and renders a muted "this message
+    // was deleted" tombstone in their place.
+    deleted: bool,
     // Emoji-only body (1–3 emoji, no attachment/album/reply): renders jumbo and
     // bubble-less, Telegram-style, with the timestamp floating on hover.
     jumbo-emoji: bool,

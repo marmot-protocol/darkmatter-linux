@@ -137,6 +137,11 @@ struct PendingState {
     /// not-yet-confirmed edit of that message. Mirrors `reactions`: a single
     /// in-flight op per target; cleared when the kind-1009 send resolves.
     edits: HashMap<(String, String), String>,
+    /// (group_hex, target_message_id_hex) of my not-yet-confirmed "delete for
+    /// everyone" retractions. The target renders as a tombstone immediately;
+    /// the entry is cleared when the kind-5 send resolves (on ack the snapshot
+    /// carries the delete; on failure the row reverts).
+    deletes: HashSet<(String, String)>,
 }
 
 impl PendingState {
@@ -174,6 +179,85 @@ fn next_temp_id() -> String {
     static N: AtomicU64 = AtomicU64::new(0);
     let v = N.fetch_add(1, Ordering::Relaxed);
     format!("pending:{v}")
+}
+
+// ─── Delete-for-me (local-only hidden messages) ──────────────────────────────
+//
+// "Delete for me" never touches the wire — it just hides a message id from this
+// client, for the account that hid it. The durable store is
+// `Settings.hidden_messages_by_account`; this process-wide map (account hex →
+// hidden ids) is the fast in-memory view consulted by `is_visible_chat_message`
+// (a free fn with no settings handle). `hidden_account()` names the account
+// whose set the renderer currently consults — it follows the active account,
+// so a hide on one account never leaks to another on the same machine.
+fn hidden_messages() -> &'static Mutex<HashMap<String, HashSet<String>>> {
+    static S: OnceLock<Mutex<HashMap<String, HashSet<String>>>> = OnceLock::new();
+    S.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// The account hex whose hidden set the renderer currently consults. Set at
+/// boot and on every account switch, before the chat models are rebuilt.
+fn hidden_account() -> &'static Mutex<String> {
+    static S: OnceLock<Mutex<String>> = OnceLock::new();
+    S.get_or_init(|| Mutex::new(String::new()))
+}
+
+/// Point the renderer at `account_hex`'s hidden set (called on boot + switch).
+fn hidden_set_account(account_hex: &str) {
+    if let Ok(mut a) = hidden_account().lock() {
+        *a = account_hex.to_ascii_lowercase();
+    }
+}
+
+/// Seed `account_hex`'s in-memory hidden set from persisted settings (idempotent).
+fn hidden_init(account_hex: &str, ids: impl IntoIterator<Item = String>) {
+    if let Ok(mut m) = hidden_messages().lock() {
+        m.entry(account_hex.to_ascii_lowercase())
+            .or_default()
+            .extend(ids);
+    }
+}
+
+/// Mark a message hidden for `account_hex` in the in-memory map. Returns true if
+/// it wasn't already hidden (so the caller knows to persist + rebuild).
+fn hidden_insert(account_hex: &str, message_id: &str) -> bool {
+    hidden_messages()
+        .lock()
+        .map(|mut m| {
+            m.entry(account_hex.to_ascii_lowercase())
+                .or_default()
+                .insert(message_id.to_string())
+        })
+        .unwrap_or(false)
+}
+
+fn is_hidden_message(message_id: &str) -> bool {
+    let account = hidden_account().lock().map(|a| a.clone()).unwrap_or_default();
+    hidden_messages()
+        .lock()
+        .map(|m| m.get(&account).is_some_and(|s| s.contains(message_id)))
+        .unwrap_or(false)
+}
+
+/// Pre-upgrade global hides, stashed at startup (when the boot account isn't
+/// known yet) and folded into the boot account's set once it is. `take` drains
+/// it so the fold runs once per boot.
+fn hidden_legacy_stash() -> &'static Mutex<Vec<String>> {
+    static S: OnceLock<Mutex<Vec<String>>> = OnceLock::new();
+    S.get_or_init(|| Mutex::new(Vec::new()))
+}
+
+fn hidden_stash_legacy(ids: Vec<String>) {
+    if let Ok(mut s) = hidden_legacy_stash().lock() {
+        *s = ids;
+    }
+}
+
+fn hidden_take_legacy() -> Vec<String> {
+    hidden_legacy_stash()
+        .lock()
+        .map(|mut s| std::mem::take(&mut *s))
+        .unwrap_or_default()
 }
 
 // ─── Durable offline send queue ────────────────────────────────────────────
@@ -745,6 +829,23 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.set_outgoing_on_right(initial_settings.outgoing_on_right);
     // Drives ⌘-vs-Ctrl shortcut hints (command palette badge, etc.).
     ui.set_is_macos(cfg!(target_os = "macos"));
+    // Seed the in-memory per-account "delete for me" sets so locally-hidden
+    // messages stay hidden across restarts. The renderer's current-account
+    // pointer (`hidden_set_account`) is set once boot resolves the active
+    // account. Legacy global hides are stashed and folded into the boot account
+    // there too, so a hide on one account never leaks to another.
+    for (acct, ids) in &initial_settings.hidden_messages_by_account {
+        hidden_init(acct, ids.iter().cloned());
+    }
+    if !initial_settings.hidden_messages_legacy.is_empty() {
+        hidden_stash_legacy(
+            initial_settings
+                .hidden_messages_legacy
+                .iter()
+                .cloned()
+                .collect(),
+        );
+    }
     apply_stamp_formats(&initial_settings);
     ui.set_time_format(s(&initial_settings.time_format));
     ui.set_date_format(s(&initial_settings.date_format));
@@ -980,6 +1081,13 @@ fn main() -> Result<(), slint::PlatformError> {
                     match result {
                         Ok(b) => {
                             let b = Arc::new(b);
+                            // Point the "delete for me" renderer at the booted
+                            // account and fold any pre-upgrade global hides into
+                            // it — before the first populate so hidden rows are
+                            // filtered on the very first paint.
+                            let me = b.account().account_id_hex.clone();
+                            hidden_set_account(&me);
+                            hidden_init(&me, hidden_take_legacy());
                             // Every list is fetched on the backend runtime and
                             // applied back on the UI thread — the boot closure
                             // itself does zero sqlite/disk reads.
@@ -1158,6 +1266,9 @@ fn main() -> Result<(), slint::PlatformError> {
                 h.abort();
             }
             *pending_state.lock().unwrap() = PendingState::default();
+            // Point the "delete for me" renderer at the new account's hidden set
+            // before any rows rebuild, so hides don't leak across the switch.
+            hidden_set_account(&summary.account_id_hex);
             // Clear every per-account model + selection synchronously so
             // nothing can act on stale rows while the rebuild is in flight.
             group_ids.lock().unwrap().clear();
@@ -5929,6 +6040,147 @@ fn main() -> Result<(), slint::PlatformError> {
         }
     });
 
+    // ─── Delete for everyone (kind-5 retraction, optimistic) ───────────
+    //
+    // Same optimistic shape as `edit_op`: stamp the overlay, tombstone the row
+    // immediately, publish the kind-5 in the background, then on ack drop the
+    // overlay (the snapshot now carries the delete) and on failure drop it +
+    // refresh so the row reverts to its confirmed content.
+    ui.on_request_delete_everyone({
+        let weak = ui.as_weak();
+        let backend_cell = backend_cell.clone();
+        let group_ids = group_ids.clone();
+        let pending_state = pending_state.clone();
+        move |message_id| {
+            let Some(ui) = weak.upgrade() else { return };
+            let target = message_id.to_string();
+            if target.is_empty() {
+                return;
+            }
+            let idx = ui.get_active_chat() as usize;
+            let Some(group_hex) = group_ids.lock().unwrap().get(idx).cloned() else {
+                return;
+            };
+
+            // 1. Optimistic overlay + tombstone the row now.
+            {
+                let mut overlay = pending_state.lock().unwrap();
+                overlay
+                    .deletes
+                    .insert((group_hex.clone(), target.clone()));
+            }
+            let guard = backend_cell.lock().unwrap();
+            let Some(backend) = guard.as_ref() else {
+                return;
+            };
+            refresh_one_message_row_async(
+                backend,
+                ui.as_weak(),
+                pending_state.clone(),
+                group_ids.clone(),
+                group_hex.clone(),
+                target.clone(),
+            );
+
+            // 2. Dispatch + reconcile (surgical).
+            let weak_cb = weak.clone();
+            let group_ids_cb = group_ids.clone();
+            let pending_state_cb = pending_state.clone();
+            let backend_cell_cb = backend_cell.clone();
+            let group_hex_cb = group_hex.clone();
+            let target_cb = target.clone();
+            let on_done = move |result: anyhow::Result<marmot_app::SendSummary>| {
+                let weak = weak_cb.clone();
+                let group_ids = group_ids_cb.clone();
+                let pending_state = pending_state_cb.clone();
+                let backend_cell = backend_cell_cb.clone();
+                let group_hex = group_hex_cb.clone();
+                let target = target_cb.clone();
+                let _ = slint::invoke_from_event_loop(move || {
+                    let Some(ui) = weak.upgrade() else { return };
+                    {
+                        let mut overlay = pending_state.lock().unwrap();
+                        if let Err(e) = &result {
+                            eprintln!("[delete] {e:#}");
+                            ui.set_backend_error(friendly_error("delete", e).into());
+                        }
+                        overlay.deletes.remove(&(group_hex.clone(), target.clone()));
+                    }
+                    let Some(backend) = backend_cell.lock().unwrap().clone() else {
+                        return;
+                    };
+                    refresh_one_message_row_async(
+                        &backend,
+                        ui.as_weak(),
+                        pending_state.clone(),
+                        group_ids.clone(),
+                        group_hex,
+                        target,
+                    );
+                });
+            };
+            backend.delete_message_async(&group_hex, &target, on_done);
+        }
+    });
+
+    // ─── Delete for me (local-only hide) ───────────────────────────────
+    //
+    // Never touches the wire: record the id in the persisted hidden set + the
+    // in-memory global the renderer consults, then rebuild the active chat so
+    // the row drops out. Works on any message (own or others').
+    ui.on_request_delete_me({
+        let weak = ui.as_weak();
+        let backend_cell = backend_cell.clone();
+        let group_ids = group_ids.clone();
+        let pending_state = pending_state.clone();
+        let settings_cell = settings_cell.clone();
+        move |message_id| {
+            let Some(ui) = weak.upgrade() else { return };
+            let id = message_id.to_string();
+            if id.is_empty() {
+                return;
+            }
+            // Rebuild the active chat so the now-hidden row disappears. Window
+            // read rides the backend runtime; the UI thread never hits sqlite.
+            let idx = ui.get_active_chat() as usize;
+            let Some(group_hex) = group_ids.lock().unwrap().get(idx).cloned() else {
+                return;
+            };
+            let guard = backend_cell.lock().unwrap();
+            let Some(backend) = guard.as_ref() else {
+                return;
+            };
+            // Scope the hide to the *active account* — never the machine — so a
+            // second account on this device still sees the message.
+            let my_id = backend.account().account_id_hex;
+            if hidden_insert(&my_id, &id) {
+                let mut st = settings_cell.borrow_mut();
+                st.hide_message(&my_id, &id);
+                st.save();
+            }
+            let weak2 = ui.as_weak();
+            let pending_state = pending_state.clone();
+            let group_ids2 = group_ids.clone();
+            let b = backend.clone();
+            backend.tokio_handle().spawn(async move {
+                let msgs = b
+                    .messages(&group_hex, Some(msg_window_for(&group_hex)))
+                    .unwrap_or_default();
+                let _ = slint::invoke_from_event_loop(move || {
+                    let Some(ui) = weak2.upgrade() else { return };
+                    let ids = group_ids2.lock().unwrap();
+                    let Some(idx) = ids.iter().position(|g| g == &group_hex) else {
+                        return;
+                    };
+                    drop(ids);
+                    let chats_messages = ui.get_chats_messages();
+                    let overlay = pending_state.lock().unwrap();
+                    rebuild_chat_messages_from(&b, &overlay, &chats_messages, idx, &group_hex, &msgs);
+                });
+            });
+        }
+    });
+
     // ─── Edit history (visible to anyone) ──────────────────────────────
     //
     // Tapping a bubble's "(edited)" label asks Rust to assemble the full
@@ -9009,6 +9261,7 @@ fn refresh_chats_from(
         };
         let reactions = aggregate_reactions(msgs, &my_id);
         let edits = aggregate_edits(msgs);
+        let deletes = aggregate_deletes(msgs);
         let profiles = build_sender_profiles(backend, msgs, &my_id);
         let is_group = backend.group_member_count(&record.group_id_hex) > 2;
         let by_id: HashMap<&str, &AppMessageRecord> = msgs
@@ -9024,8 +9277,9 @@ fn refresh_chats_from(
                     .cloned()
                     .unwrap_or_default();
                 let e = edits.get(&m.message_id_hex).cloned();
+                let deleted = deletes.contains(&m.message_id_hex);
                 chat_message_from_with_reactions(
-                    m, &by_id, &my_id, &my_label, r, e, &profiles, is_group, false,
+                    m, &by_id, &my_id, &my_label, r, e, deleted, &profiles, is_group, false,
                 )
             })
             .collect();
@@ -9742,6 +9996,12 @@ fn is_visible_chat_message(record: &AppMessageRecord) -> bool {
     if record.kind != 9 {
         return false;
     }
+    // "Delete for me" — locally hidden, never rendered (the message stays on
+    // the wire for everyone else). Checked here so every render path (full
+    // rebuild, grouping keys, live append) honours it uniformly.
+    if is_hidden_message(&record.message_id_hex) {
+        return false;
+    }
     // Belt-and-suspenders: even if some other client is misbehaving and
     // shoving a token-gossip envelope into a kind-9 chat, filter it out by
     // signature.
@@ -9763,6 +10023,9 @@ fn chat_message_from_with_reactions(
     my_label: &str,
     reactions: Vec<Reaction>,
     edit: Option<EditState>,
+    // True when this message has been retracted for everyone (resolved kind-5 or
+    // optimistic overlay). The row renders as a muted tombstone.
+    deleted: bool,
     profiles: &SenderProfiles,
     is_group: bool,
     // When true this build may start a one-shot effect burst (live arrival or
@@ -9943,14 +10206,19 @@ fn chat_message_from_with_reactions(
         !has_attachment && !is_album && reply_id.is_empty() && jumbo_emoji_count(display_text) > 0;
 
     ChatMessage {
-        text: s(display_text),
-        lines,
-        jumbo_emoji,
+        // A tombstone carries no body, reactions, attachments, or affordances —
+        // the bubble swaps in the "this message was deleted" placeholder and the
+        // row hides its toolbar/reaction chips. We still null out the model
+        // fields so nothing leaks (e.g. a reaction chip row, an edit badge).
+        text: if deleted { s("") } else { s(display_text) },
+        lines: if deleted { ModelRc::new(VecModel::from(Vec::<MessageLine>::new())) } else { lines },
+        jumbo_emoji: !deleted && jumbo_emoji,
+        deleted,
         stamp: s(&format_unix(record.recorded_at)),
         outgoing,
-        edited,
-        edit_count,
-        can_edit: outgoing,
+        edited: !deleted && edited,
+        edit_count: if deleted { 0 } else { edit_count },
+        can_edit: outgoing && !deleted,
         show_avatar: true,
         av_initials: s(&init),
         av_a: a,
@@ -9965,7 +10233,7 @@ fn chat_message_from_with_reactions(
         first_in_group: true,
         last_in_group: true,
         message_id: s(&record.message_id_hex),
-        reactions: ModelRc::new(VecModel::from(reactions)),
+        reactions: ModelRc::new(VecModel::from(if deleted { Vec::new() } else { reactions })),
         pending: false,
         failed: false,
         reply_to_id: s(&reply_id),
@@ -9988,10 +10256,10 @@ fn chat_message_from_with_reactions(
         att_has_image,
         att_loading,
         att_failed: false,
-        effect_id,
+        effect_id: if deleted { 0 } else { effect_id },
         effect_clip_x,
         effect_clip_y,
-        effect_autoplay,
+        effect_autoplay: !deleted && effect_autoplay,
     }
 }
 
@@ -10152,6 +10420,8 @@ fn pending_chat_message(
         edited: false,
         edit_count: 0,
         can_edit: false,
+        // A pending row is freshly composed; it can't already be retracted.
+        deleted: false,
         show_avatar: true,
         av_initials: s(&init),
         av_a: a,
@@ -10471,6 +10741,9 @@ fn build_one_message_row(
     let mut edits = aggregate_edits(all_records);
     apply_edit_overlay(&mut edits, group_hex, overlay);
     let e = edits.get(&record.message_id_hex).cloned();
+    let mut deletes = aggregate_deletes(all_records);
+    apply_delete_overlay(&mut deletes, group_hex, overlay);
+    let deleted = deletes.contains(&record.message_id_hex);
     // Resolve just this record's sender (single-row refresh path).
     let profiles = build_sender_profiles(backend, std::slice::from_ref(record), my_id);
     let is_group = backend.group_member_count(group_hex) > 2;
@@ -10479,7 +10752,7 @@ fn build_one_message_row(
         .map(|m| (m.message_id_hex.as_str(), m))
         .collect();
     chat_message_from_with_reactions(
-        record, &by_id, my_id, my_label, r, e, &profiles, is_group, true,
+        record, &by_id, my_id, my_label, r, e, deleted, &profiles, is_group, true,
     )
 }
 
@@ -10608,6 +10881,8 @@ fn rebuild_chat_messages_from(
     apply_reaction_overlay(&mut reactions, group_hex, pending);
     let mut edits = aggregate_edits(msgs);
     apply_edit_overlay(&mut edits, group_hex, pending);
+    let mut deletes = aggregate_deletes(msgs);
+    apply_delete_overlay(&mut deletes, group_hex, pending);
     let profiles = build_sender_profiles(backend, msgs, &my_id);
     let t_profiles = t0.elapsed();
     let is_group = backend.group_member_count(group_hex) > 2;
@@ -10626,8 +10901,9 @@ fn rebuild_chat_messages_from(
                 .cloned()
                 .unwrap_or_default();
             let e = edits.get(&m.message_id_hex).cloned();
+            let deleted = deletes.contains(&m.message_id_hex);
             chat_message_from_with_reactions(
-                m, &by_id, &my_id, &my_label, r, e, &profiles, is_group, false,
+                m, &by_id, &my_id, &my_label, r, e, deleted, &profiles, is_group, false,
             )
         })
         .collect();
@@ -10774,6 +11050,61 @@ fn aggregate_edits(records: &[AppMessageRecord]) -> std::collections::HashMap<St
             (target, EditState { text, count })
         })
         .collect()
+}
+
+/// Walk all records and resolve kind-5 "delete for everyone" retractions into
+/// the set of target message ids that should render as a tombstone.
+///
+/// Authorship is enforced exactly like [`aggregate_edits`]: a delete is only
+/// honored when its authenticated author matches the *original* message's
+/// author. A kind-5 referencing someone else's message is ignored (you can't
+/// retract a message you didn't send).
+fn aggregate_deletes(records: &[AppMessageRecord]) -> std::collections::HashSet<String> {
+    use std::collections::{HashMap, HashSet};
+    // message_id → original author, for kind-9 chat messages only.
+    let mut author_of: HashMap<&str, &str> = HashMap::new();
+    for r in records {
+        if r.kind == 9 {
+            author_of.insert(r.message_id_hex.as_str(), r.sender.as_str());
+        }
+    }
+    let mut deleted: HashSet<String> = HashSet::new();
+    for r in records {
+        if r.kind != 5 {
+            continue;
+        }
+        let Some(target) = r
+            .tags
+            .iter()
+            .find(|t| t.len() >= 2 && t[0] == "e")
+            .map(|t| t[1].as_str())
+        else {
+            continue;
+        };
+        let Some(orig_author) = author_of.get(target) else {
+            continue;
+        };
+        if !r.sender.eq_ignore_ascii_case(orig_author) {
+            continue;
+        }
+        deleted.insert(target.to_string());
+    }
+    deleted
+}
+
+/// Layer the pending-delete overlay onto an aggregated delete set, so an
+/// optimistic "delete for everyone" tombstones the row before its kind-5 echoes
+/// back. Mirrors [`apply_edit_overlay`].
+fn apply_delete_overlay(
+    deleted: &mut std::collections::HashSet<String>,
+    group_hex: &str,
+    overlay: &PendingState,
+) {
+    for (g, target) in &overlay.deletes {
+        if g == group_hex {
+            deleted.insert(target.clone());
+        }
+    }
 }
 
 /// Layer the pending-edit overlay onto an aggregated edit map, so an

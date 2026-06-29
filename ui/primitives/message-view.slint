@@ -83,6 +83,7 @@ export component MessageView inherits VerticalLayout {
         album-h: root.msg.album-h;
         edited: root.msg.edited;
         edit-count: root.msg.edit-count;
+        deleted: root.msg.deleted;
         react(id, emoji) => { root.react(id, emoji); }
         unreact(id) => { root.unreact(id); }
         request-picker(id, ax, ay) => { root.request-picker(id, ax, ay); }
@@ -144,6 +145,7 @@ export component MessageView inherits VerticalLayout {
         edited: root.msg.edited;
         edit-count: root.msg.edit-count;
         can-edit: root.msg.can-edit;
+        deleted: root.msg.deleted;
         album-cell-clicked(key) => { root.album-cell-clicked(key); }
         react(id, emoji) => { root.react(id, emoji); }
         unreact(id) => { root.unreact(id); }
@@ -196,7 +198,15 @@ export component MessageView inherits VerticalLayout {
                 horizontal-stretch: 1;
                 alignment: start;
                 spacing: 1px;
-                if root.msg.text != "" : Text {
+                if root.msg.deleted : Text {
+                    text: @tr("This message was deleted");
+                    color: Palette.text-mid;
+                    font-family: Theme.font;
+                    font-size: 13px * Theme.fs-scale;
+                    font-italic: true;
+                    wrap: word-wrap;
+                }
+                if root.msg.text != "" && !root.msg.deleted : Text {
                     text: root.msg.text;
                     color: root.msg.failed ? Palette.danger : Palette.text-hi;
                     font-family: Theme.font;
@@ -205,7 +215,7 @@ export component MessageView inherits VerticalLayout {
                 }
                 // Accent-colored, clickable attachment label (the whole line is
                 // the click target — see term-touch below).
-                if line.has-media : Text {
+                if line.has-media && !root.msg.deleted : Text {
                     text: line.media-label;
                     color: Palette.mint;
                     font-family: Theme.font;

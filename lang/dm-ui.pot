@@ -665,6 +665,14 @@ msgctxt "ArchivedDetail"
 msgid "Delete"
 msgstr ""
 
+msgctxt "MessageContextMenu"
+msgid "Delete for everyone"
+msgstr ""
+
+msgctxt "MessageContextMenu"
+msgid "Delete for me"
+msgstr ""
+
 msgctxt "AdvancedPane"
 msgid "Deleting the file being recorded rotates it — recording continues in a fresh file."
 msgstr ""
@@ -1622,6 +1630,14 @@ msgstr ""
 
 msgctxt "AddAccountModal"
 msgid "This key was just generated and exists nowhere else yet. Copy it somewhere safe before adding it — there is no recovery."
+msgstr ""
+
+msgctxt "MessageBubble"
+msgid "This message was deleted"
+msgstr ""
+
+msgctxt "MessageView"
+msgid "This message was deleted"
 msgstr ""
 
 msgctxt "ChatRequestBanner"

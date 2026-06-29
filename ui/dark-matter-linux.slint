@@ -174,6 +174,8 @@ export component DarkMatterLinux inherits Window {
     callback retry-message(string);
     callback request-reply(string, string, string); // message_id, preview, author
     callback request-edit(string, string);           // message_id, current_text
+    callback request-delete-everyone(string);        // message_id (kind-5 retraction)
+    callback request-delete-me(string);              // message_id (local-only hide)
     callback show-edit-history(string);               // message_id
     callback dismiss-edit-history();
     callback attach-file(); // composer paperclip → open file picker
@@ -284,6 +286,12 @@ export component DarkMatterLinux inherits Window {
     property <bool> ctx-menu-can-edit: false;
     property <length> ctx-menu-x;
     property <length> ctx-menu-y;
+    // Delete confirmation: deletes are destructive, so the context-menu items
+    // arm this modal instead of firing immediately. `delete-confirm-everyone`
+    // picks the wording + which callback the confirm dispatches; the target is
+    // still `ctx-menu-id` (kept from when the menu opened).
+    property <bool> show-delete-confirm: false;
+    property <bool> delete-confirm-everyone: false;
     // ── Mention autocomplete ────────────────────────────────────────────────
     // Driven from Rust: as the user types, `composer-input-changed` reports the
     // caret offset, Rust detects the active `@query`, and fills `mention-*`.
@@ -1061,7 +1069,37 @@ export component DarkMatterLinux inherits Window {
             root.ctx-menu-open = false;
             root.request-edit(root.ctx-menu-id, root.ctx-menu-text);
         }
+        delete-for-everyone => {
+            root.ctx-menu-open = false;
+            root.delete-confirm-everyone = true;
+            root.show-delete-confirm = true;
+        }
+        delete-for-me => {
+            root.ctx-menu-open = false;
+            root.delete-confirm-everyone = false;
+            root.show-delete-confirm = true;
+        }
         dismissed => { root.ctx-menu-open = false; }
+    }
+
+    if root.show-delete-confirm : ConfirmModal {
+        x: 0; y: 0;
+        width: root.width;
+        height: root.height;
+        title: root.delete-confirm-everyone ? @tr("Delete for everyone?") : @tr("Delete for me?");
+        subtitle: root.delete-confirm-everyone
+            ? @tr("This removes the message for everyone in the chat. This can't be undone.")
+            : @tr("This hides the message on this device only. Other people will still see it.");
+        confirm-label: @tr("Delete");
+        confirm => {
+            root.show-delete-confirm = false;
+            if (root.delete-confirm-everyone) {
+                root.request-delete-everyone(root.ctx-menu-id);
+            } else {
+                root.request-delete-me(root.ctx-menu-id);
+            }
+        }
+        dismissed => { root.show-delete-confirm = false; }
     }
 
     // `if`-mounted so the (expensive) emoji grid doesn't paint when closed.

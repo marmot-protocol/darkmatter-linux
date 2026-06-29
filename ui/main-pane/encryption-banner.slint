@@ -44,7 +44,6 @@ export component EncryptionBanner inherits Rectangle {
         padding-left: 22px; padding-right: 22px;
         padding-top: 8px; padding-bottom: 8px;
         spacing: 12px;
-        alignment: start;
 
         Rectangle {
             width: 16px;
@@ -56,7 +55,10 @@ export component EncryptionBanner inherits Rectangle {
             }
         }
 
+        // Stretch the text column so it can shrink below its natural width on a
+        // narrow window — that's what lets the npub run elide instead of spilling.
         VerticalLayout {
+            horizontal-stretch: 1;
             spacing: 4px;
             alignment: center;
             HorizontalLayout {
@@ -93,16 +95,26 @@ export component EncryptionBanner inherits Rectangle {
                     vertical-alignment: center;
                 }
             }
+            // No `alignment: start` here: the default stretch alignment lets the
+            // npub Text (the only horizontal-stretch:1 child) absorb the free
+            // space and elide when the row is too narrow, while the fixed labels
+            // keep their natural width.
             HorizontalLayout {
                 spacing: 8px;
-                alignment: start;
                 Text { text: @tr("Forward secret"); color: Palette.text-lo; font-size: (11px) * Theme.fs-scale; vertical-alignment: center; }
                 Text { text: "·"; color: Palette.text-vlo; font-size: (11px) * Theme.fs-scale; vertical-alignment: center; }
                 Text { text: @tr("post-compromise secure"); color: Palette.text-lo; font-size: (11px) * Theme.fs-scale; vertical-alignment: center; }
                 Text { text: "·"; color: Palette.text-vlo; font-size: (11px) * Theme.fs-scale; vertical-alignment: center; }
-                Text { text: root.npub; color: Palette.mint; font-size: (11px) * Theme.fs-scale; font-weight: 600; vertical-alignment: center; }
+                Text {
+                    text: root.npub;
+                    color: Palette.mint;
+                    font-size: (11px) * Theme.fs-scale;
+                    font-weight: 600;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                    overflow: elide;
+                }
             }
         }
-        Rectangle { horizontal-stretch: 1; }
     }
 }

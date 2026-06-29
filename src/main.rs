@@ -2990,9 +2990,10 @@ fn main() -> Result<(), slint::PlatformError> {
                         Ok(group_id) => {
                             let group_hex = hex::encode(group_id.as_slice());
                             refresh_chats_async(&ui, &b, &group_ids, move |ui, _b, snap| {
-                                let pos = snap.records.iter().position(|r| {
-                                    r.group_id_hex.eq_ignore_ascii_case(&group_hex)
-                                });
+                                let pos = snap
+                                    .records
+                                    .iter()
+                                    .position(|r| r.group_id_hex.eq_ignore_ascii_case(&group_hex));
                                 if let Some(pos) = pos {
                                     // Arriving from the Contacts page — switch
                                     // to Chats so the new conversation is

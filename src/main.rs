@@ -3097,7 +3097,7 @@ fn main() -> Result<(), slint::PlatformError> {
             let weak = weak.clone();
             let group_ids = group_ids.clone();
             std::thread::spawn(move || {
-                let result = b.create_group("", &[npub.clone()]);
+                let result = b.create_group("", std::slice::from_ref(&npub));
                 let _ = slint::invoke_from_event_loop(move || {
                     let Some(ui) = weak.upgrade() else { return };
                     match result {

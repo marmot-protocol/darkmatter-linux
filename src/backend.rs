@@ -459,7 +459,6 @@ impl Backend {
                     device_label: Some(self.active_label()),
                     platform: Some("linux".to_string()),
                     app_version: Some(env!("CARGO_PKG_VERSION").to_string()),
-                    ..AuditLogUploadSource::default()
                 },
             })
         {

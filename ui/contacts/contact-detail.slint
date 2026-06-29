@@ -15,7 +15,7 @@ import { PageHeader } from "../shells/page-header.slint";
 import { Section } from "../shells/section.slint";
 import { GroupCard } from "../shells/group-card.slint";
 import { InfoRow } from "info-row.slint";
-import { MicroButton } from "../primitives/button.slint";
+import { Button, MicroButton } from "../primitives/button.slint";
 import { PencilIcon } from "../icons/pencil-icon.slint";
 
 export component ContactDetail inherits DetailPage {
@@ -23,6 +23,7 @@ export component ContactDetail inherits DetailPage {
     callback copy-npub();
     callback refresh-key-package();
     callback show-qr();
+    callback start-chat();
     in property <Contact> contact;
 
     PageHeader {
@@ -106,26 +107,21 @@ export component ContactDetail inherits DetailPage {
         }
         VerticalLayout {
             alignment: center;
-            Rectangle {
-                width: 130px; height: 40px;
-                background: Palette.mint;
-                border-radius: (7px) * Theme.r-scale;
-                HorizontalLayout {
-                    alignment: center;
-                    spacing: 8px;
-                    padding-left: 14px; padding-right: 14px;
-                    VerticalLayout {
-                        alignment: center;
-                        StartChatIcon { stroke: Palette.bubble-out-fg; }
-                    }
-                    Text {
-                        text: @tr("Start chat");
-                        color: Palette.bubble-out-fg;
-                        font-size: (13px) * Theme.fs-scale;
-                        font-weight: 700;
-                        vertical-alignment: center;
-                    }
-                }
+            Button {
+                label: @tr("Start chat");
+                button-width: 130px;
+                button-height: 40px;
+                radius: 7px;
+                bg-color: Palette.mint;
+                outline: Palette.mint;
+                hover-bg: Palette.mint-hi;
+                hover-outline: Palette.mint-hi;
+                fg: Palette.bubble-out-fg;
+                hover-fg: Palette.bubble-out-fg;
+                font-size: 13px;
+                focusable: true;
+                clicked => { root.start-chat(); }
+                StartChatIcon { stroke: Palette.bubble-out-fg; }
             }
         }
     }

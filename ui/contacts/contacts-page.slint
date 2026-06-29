@@ -11,6 +11,7 @@ export component ContactsPage inherits Rectangle {
     callback copy-npub-clicked();
     callback refresh-key-package-clicked();
     callback show-qr-clicked();
+    callback start-chat-clicked();
     in property <[Contact]> contacts;
     in property <int> active-contact;
 
@@ -48,6 +49,7 @@ export component ContactsPage inherits Rectangle {
             copy-npub => { root.copy-npub-clicked(); }
             refresh-key-package => { root.refresh-key-package-clicked(); }
             show-qr => { root.show-qr-clicked(); }
+            start-chat => { root.start-chat-clicked(); }
         }
     }
 }

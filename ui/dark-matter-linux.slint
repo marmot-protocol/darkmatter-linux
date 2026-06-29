@@ -418,6 +418,7 @@ export component DarkMatterLinux inherits Window {
     callback nav-requested(int);             // left-rail icon clicked, 0..3 or 4 (settings)
     callback profile-requested();
     callback new-chat-requested();
+    callback start-chat-with-contact();
     callback chat-selected(int);
     callback contact-selected(int);
     callback archive-selected(int);
@@ -774,6 +775,7 @@ export component DarkMatterLinux inherits Window {
                         copy-npub-clicked => { root.copy-to-clipboard(root.contacts[root.active-contact].npub-full); }
                         refresh-key-package-clicked => { root.contact-refresh-key-package(); }
                         show-qr-clicked => { root.contact-show-qr(); }
+                        start-chat-clicked => { root.start-chat-with-contact(); }
                     }
                 }
 

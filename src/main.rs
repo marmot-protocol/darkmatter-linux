@@ -2948,6 +2948,79 @@ fn main() -> Result<(), slint::PlatformError> {
             });
         }
     });
+    // Contact detail → "Start chat": create a 1:1 conversation with the
+    // selected contact and drop the user into it. Mirrors the new-chat
+    // modal's single-member path (`create_group` with one npub, empty
+    // name) but skips the modal on success — failures surface there
+    // instead, since the contact page has no inline status line.
+    ui.on_start_chat_with_contact({
+        let weak = ui.as_weak();
+        let contacts = contacts.clone();
+        let backend_cell = backend_cell.clone();
+        let group_ids = group_ids.clone();
+        move || {
+            let Some(ui) = weak.upgrade() else { return };
+            let Some(row) = contacts.row_data(ui.get_active_contact() as usize) else {
+                return;
+            };
+            let npub = row.npub_full.to_string();
+            if npub.is_empty() {
+                return;
+            }
+            let Some(b) = backend_cell.lock().unwrap().clone() else {
+                return;
+            };
+            // A contact can't be the user themselves, but guard anyway —
+            // marmot rejects self-invites.
+            let me_npub = npub_for_account_id(&b.account().account_id_hex).ok();
+            if me_npub
+                .as_deref()
+                .map(|n| n.eq_ignore_ascii_case(&npub))
+                .unwrap_or(false)
+            {
+                return;
+            }
+            let weak = weak.clone();
+            let group_ids = group_ids.clone();
+            std::thread::spawn(move || {
+                let result = b.create_group("", &[npub.clone()]);
+                let _ = slint::invoke_from_event_loop(move || {
+                    let Some(ui) = weak.upgrade() else { return };
+                    match result {
+                        Ok(group_id) => {
+                            let group_hex = hex::encode(group_id.as_slice());
+                            refresh_chats_async(&ui, &b, &group_ids, move |ui, _b, snap| {
+                                let pos = snap.records.iter().position(|r| {
+                                    r.group_id_hex.eq_ignore_ascii_case(&group_hex)
+                                });
+                                if let Some(pos) = pos {
+                                    // Arriving from the Contacts page — switch
+                                    // to Chats so the new conversation is
+                                    // visible, then select it.
+                                    ui.set_active_page(Page::Chats as i32);
+                                    refresh_breadcrumb_now(ui);
+                                    ui.set_active_chat(pos as i32);
+                                    ui.invoke_chat_selected(pos as i32);
+                                }
+                            });
+                        }
+                        Err(e) => {
+                            eprintln!("[start-chat-with-contact] {e:#}");
+                            // No status line on the contact page, so surface
+                            // the error in the new-chat modal (pre-filled
+                            // with the member) where the user can adjust or
+                            // retry.
+                            ui.set_new_chat_name(s(""));
+                            ui.set_new_chat_members(s(&npub));
+                            ui.set_new_chat_busy(false);
+                            ui.set_new_chat_status(friendly_error("create chat", &e).into());
+                            ui.set_show_new_chat(true);
+                        }
+                    }
+                });
+            });
+        }
+    });
     ui.on_add_member({
         let weak = ui.as_weak();
         let backend_cell = backend_cell.clone();

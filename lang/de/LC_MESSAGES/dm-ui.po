@@ -1380,10 +1380,9 @@ msgctxt "ContactDetail"
 msgid "Remove contact"
 msgstr "Kontakt entfernen"
 
-#, fuzzy
 msgctxt "GroupSettingsCard"
 msgid "Remove image"
-msgstr "Kontakt entfernen"
+msgstr "Bild entfernen"
 
 msgctxt "MessageContextMenu"
 msgid "Reply"

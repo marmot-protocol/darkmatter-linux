@@ -57,24 +57,24 @@ jobs:
           cache-on-failure: true
 
       # rust-cache (above) cleans workspace-member artifacts before saving, so
-      # the ~345k-line generated dm-ui Slint crate (~25s to compile) recompiles
+      # the ~345k-line generated wnl-ui Slint crate (~25s to compile) recompiles
       # every run. This content-addressed cache restores it directly. Keyed on
-      # everything that changes its output — UI/lang/dm-ui sources, locked dep
+      # everything that changes its output — UI/lang/wnl-ui sources, locked dep
       # ABIs, toolchain, plus the triple and profile (release vs debug artifacts
       # differ). Defined AFTER rust-cache so its restore overlays target/ and its
       # save runs before rust-cache cleans the workspace crates.
       - name: Record toolchain version
         shell: bash
         run: echo "RUSTC_VER=$(rustc -V | tr ' .()' '----')" >> "$GITHUB_ENV"
-      - name: Cache compiled dm-ui (Slint UI) crate
+      - name: Cache compiled wnl-ui (Slint UI) crate
         uses: actions/cache@v4
         with:
           path: |
-            target/${{ inputs.release && 'release' || 'debug' }}/build/dm-ui-*
-            target/${{ inputs.release && 'release' || 'debug' }}/deps/libdm_ui-*
-            target/${{ inputs.release && 'release' || 'debug' }}/deps/dm_ui-*
-            target/${{ inputs.release && 'release' || 'debug' }}/.fingerprint/dm-ui-*
-          key: dmui-${{ matrix.triple }}-${{ inputs.release && 'rel' || 'dev' }}-${{ env.RUSTC_VER }}-${{ hashFiles('ui/**', 'lang/**', 'dm-ui/**', 'Cargo.lock') }}
+            target/${{ inputs.release && 'release' || 'debug' }}/build/wnl-ui-*
+            target/${{ inputs.release && 'release' || 'debug' }}/deps/libwnl_ui-*
+            target/${{ inputs.release && 'release' || 'debug' }}/deps/wnl_ui-*
+            target/${{ inputs.release && 'release' || 'debug' }}/.fingerprint/wnl-ui-*
+          key: wnlui-${{ matrix.triple }}-${{ inputs.release && 'rel' || 'dev' }}-${{ env.RUSTC_VER }}-${{ hashFiles('ui/**', 'lang/**', 'wnl-ui/**', 'Cargo.lock') }}
 
       - name: Build
         run: cargo build --locked ${{ inputs.release && '--release' || '' }}

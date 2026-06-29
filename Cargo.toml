@@ -1,5 +1,5 @@
 [workspace]
-members = ["dm-ui"]
+members = ["wnl-ui"]
 
 [package]
 name = "whitenoise-linux"
@@ -11,8 +11,8 @@ license = "AGPL-3.0-or-later"
 [dependencies]
 slint = "1.8"
 # Owns the Slint compilation + the huge generated UI module, so Rust edits
-# here don't recompile the whole UI tree. See dm-ui/src/lib.rs.
-dm-ui = { path = "dm-ui" }
+# here don't recompile the whole UI tree. See wnl-ui/src/lib.rs.
+wnl-ui = { path = "wnl-ui" }
 nostr = { version = "0.44.2", default-features = false, features = [
   "std",
   "nip59",
@@ -106,7 +106,7 @@ opt-level = 3
 opt-level = 1
 debug = "line-tables-only"
 
-# dm-ui/build.rs composes the Twemoji sprite sheet with the `image` crate; optimize
+# wnl-ui/build.rs composes the Twemoji sprite sheet with the `image` crate; optimize
 # build scripts and their deps so that first build doesn't crawl either.
 [profile.dev.build-override]
 opt-level = 3

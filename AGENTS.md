@@ -4,12 +4,12 @@ Guidance for AI coding agents working in this repository.
 
 ## Build & run
 
-The workspace has two crates: the root binary (`darkmatter-linux`, the `default-run` target) and `dm-ui`, a build-time-isolation lib crate.
+The workspace has two crates: the root binary (`darkmatter-linux`, the `default-run` target) and `wnl-ui`, a build-time-isolation lib crate.
 
-- **The two-crate split exists to keep rebuilds fast.** `dm-ui/build.rs` compiles the Slint UI tree (`ui/dark-matter-linux.slint`) into a ~345k-line generated module (`slint::include_modules!()` in `dm-ui/src/lib.rs`), bundles the gettext catalogs from `lang/`, and composes the Twemoji sprite sheet. Because all of that lives in `dm-ui`, editing Rust in `src/` rebuilds only the root crate (~2s); editing `.slint` or `lang/` files rebuilds `dm-ui` too (~25s). The first build is slow (marmot deps plus sprite composition).
+- **The two-crate split exists to keep rebuilds fast.** `wnl-ui/build.rs` compiles the Slint UI tree (`ui/dark-matter-linux.slint`) into a ~345k-line generated module (`slint::include_modules!()` in `wnl-ui/src/lib.rs`), bundles the gettext catalogs from `lang/`, and composes the Twemoji sprite sheet. Because all of that lives in `wnl-ui`, editing Rust in `src/` rebuilds only the root crate (~2s); editing `.slint` or `lang/` files rebuilds `wnl-ui` too (~25s). The first build is slow (marmot deps plus sprite composition).
 - **Testing:** no unit-test suite exists (`cargo test` is a no-op), so verify changes by running the app. End-to-end/automated testing lives in a separate repo, `darkmatter-automated-testing`: the `dmvm` QEMU harness, the `dm-ctl` headless control daemon, and the multi-VM scenarios. That repo builds this checkout (located via `$DARKMATTER_LINUX_DIR`, default sibling `../darkmatter-linux`) and stages its `dm-ctl`/`bootbench` sources into `src/bin/`, which is why `src/bin/` is gitignored here and `cargo run --bin bootbench` only works after staging.
 - **Logging:** `tracing-subscriber` is installed in `main` (writes to stderr). Filter via `RUST_LOG`; default is `info`.
-- **Translations:** after adding/changing `@tr("…")` strings in `.slint` files, run `scripts/update-translations.sh` (needs `cargo install slint-tr-extractor` and gettext's `msgmerge`) to regenerate `lang/dm-ui.pot` and merge into the `it`/`de`/`ja` catalogs. The gettext domain is `dm-ui` because slint-build hardwires it to the name of the crate that compiles the UI. Edit the `.po` files directly. See [i18n](#i18n).
+- **Translations:** after adding/changing `@tr("…")` strings in `.slint` files, run `scripts/update-translations.sh` (needs `cargo install slint-tr-extractor` and gettext's `msgmerge`) to regenerate `lang/wnl-ui.pot` and merge into the `it`/`de`/`ja` catalogs. The gettext domain is `wnl-ui` because slint-build hardwires it to the name of the crate that compiles the UI. Edit the `.po` files directly. See [i18n](#i18n).
 
 ### Dependencies (marmot + whitenoise)
 
@@ -40,12 +40,13 @@ Note: changes in darkmatter must be **pushed to master** before a plain build he
 ### Layering
 
 ```
-slint UI (ui/*.slint)  ←──  dm-ui (generated Slint module)  ←──  src/main.rs (~13.5k lines of glue)  ──→  Backend (src/backend.rs)  ──→  MarmotApp (sibling crate) + tokio runtime
+slint UI (ui/*.slint)  ←──  wnl-ui (generated Slint module)  ←──  src/main.rs + UI-glue modules  ──→  Backend (src/backend.rs)  ──→  MarmotApp (sibling crate) + tokio runtime
 ```
 
-- **`dm-ui`** owns `slint::include_modules!()` and re-exports all generated Slint types; `main.rs` pulls them in with `use dm_ui::*;`. UI structs (`ChatMessage`, `ChatMeta`, `GroupMember`, `Contact`, `ArchivedChat`, `Reaction`) live in `ui/tokens.slint` and Rust constructs them directly. The split is purely for rebuild speed, so **don't put app logic in `dm-ui`.**
-- **`src/main.rs`** owns the entire callback wiring. It's flat by design: no submodules for "send", "react", "members", so the data flow for a given UI action reads top-to-bottom in one file.
-- **`Backend` (`src/backend.rs`, ~2.7k lines)** wraps `MarmotApp` plus its own multi-thread tokio runtime. It exposes `tokio_handle()` so callers can `spawn` ad-hoc background work (HTTP fetches, etc.) on that same runtime; one runtime serves all background work. All platform-specific code (clipboard, paths) lives here.
+- **`wnl-ui`** owns `slint::include_modules!()` and re-exports all generated Slint types; `main.rs` pulls them in with `use wnl_ui::*;`. UI structs (`ChatMessage`, `ChatMeta`, `GroupMember`, `Contact`, `ArchivedChat`, `Reaction`) live in `ui/tokens.slint` and Rust constructs them directly. The split is purely for rebuild speed, so **don't put app logic in `wnl-ui`.**
+- **Hard rule: no Rust source file may exceed 2000 lines.** Keeps files readable and rebuilds fast. The pre-commit hook (`.githooks/pre-commit`) enforces it on staged `*.rs`; split before you cross it.
+- **The UI glue is one logical layer split across files purely to stay under that limit.** `src/main.rs` builds the window, the shared handles (bundled in `Cx`), and the cross-section closures (bundled in `Handlers`), then calls the `wire_*` functions. The callback sections live under `src/wiring/` — `wiring/mod.rs` (the `Cx`/`Handlers`/type-alias definitions), `wiring/panes.rs` (account/settings/keys), `wiring/backup.rs` (backup + chat-request/archive/palette), `wiring/messaging.rs` (send/edit/attach/media), and `wiring/extra.rs` (reactions/delete/pickers/profile/offline); each `wire_*` takes `(&ui, &cx, &h)` and reproduces its local bindings with `let Cx { .. } = cx.clone();`. The pure row/model/render helpers live in `chatmodel.rs`, `chatlist.rs`, `chrome.rs`, `media.rs`, `render.rs`, and the optimistic-overlay state in `state.rs`. All of these share the crate-root prelude (`pub(crate) use` re-exports in `main.rs`) via `use crate::*;`, so the data flow still reads flat — treat them as one file that happens to be chaptered.
+- **`Backend` (`src/backend.rs` + `src/backend/groups.rs`)** wraps `MarmotApp` plus its own multi-thread tokio runtime. `groups.rs` is a child module holding the second half of `impl Backend` (groups/keys/admin/telemetry/watchers) plus the media-validation free fns, so it can reach `Backend`'s private fields. It exposes `tokio_handle()` so callers can `spawn` ad-hoc background work (HTTP fetches, etc.) on that same runtime; one runtime serves all background work. All platform-specific code (clipboard, paths) lives here.
 - **Support modules are thin and single-purpose** and do not own state (the UI does): `vault.rs` (password-encrypted secret vault), `settings.rs` (JSON UI prefs), `blossom.rs` (public Blossom uploads), `media_cache.rs` (encrypted attachment cache), `observability.rs` (telemetry/audit endpoint config).
 
 ### Secret vault
@@ -73,7 +74,7 @@ UI prefs as a tiny JSON blob in XDG config: `debug_enabled`, `locale` (`en`/`it`
 
 ### Optimistic overlay model
 
-All UI mutations (send, react, unreact) go through a `PendingState` overlay in `main.rs`:
+All UI mutations (send, react, unreact) go through a `PendingState` overlay (`state.rs`; the row builders below live in `chatmodel.rs`):
 
 1. The mutation is applied locally to the overlay, and the UI rebuilds the affected message rows from `backend snapshot ∪ overlay`.
 2. The real op dispatches on the tokio runtime.
@@ -92,7 +93,7 @@ Group chats add a member-list panel backed by `Backend::group_members`, `GroupMe
 
 ### Markdown rendering
 
-Chat bodies are parsed with `whitenoise-markdown` (the same CommonMark + GFM + nostr-entity parser whitenoise-rs uses) into a `Document`, then flattened in `main.rs` into the bubble's line/run model: each `MessageLine` is one visual line, each `MessageRun` an inline text/emoji cell with resolved styling; block context (heading scale, list/blockquote indent, code plates, rules) rides on the line. Line wrapping is Rust-side and greedy: character widths are *estimated* (`MD_CHAR_W`, `MD_EMOJI_W`, fractions of font-size) only to pick break points, and Slint draws with real metrics.
+Chat bodies are parsed with `whitenoise-markdown` (the same CommonMark + GFM + nostr-entity parser whitenoise-rs uses) into a `Document`, then flattened in `render.rs` into the bubble's line/run model: each `MessageLine` is one visual line, each `MessageRun` an inline text/emoji cell with resolved styling; block context (heading scale, list/blockquote indent, code plates, rules) rides on the line. Line wrapping is Rust-side and greedy: character widths are *estimated* (`MD_CHAR_W`, `MD_EMOJI_W`, fractions of font-size) only to pick break points, and Slint draws with real metrics.
 
 ### Avatar pipeline
 
@@ -107,11 +108,11 @@ Two layers:
 
 ### Build-time sprite sheet
 
-`dm-ui/build.rs` walks all `emojis::iter()`, looks up each in `twemoji-assets`, and composes a single 44-column, 72px-tile sheet. Runtime renders the picker with one shared texture and per-cell `source-clip`, never decoding individual PNGs at runtime. The emitted `EMOJI_POSITIONS` table and the sprite PNG bytes are included in `dm-ui/src/lib.rs` (`emoji_sprite_map` module, `EMOJI_SPRITE_PNG`) and re-exported to `main.rs`. The build reuses `twemoji_sprite.png` and `emoji_sprite_map.rs` from `OUT_DIR` when both exist, so sprite generation only runs when an output is missing.
+`wnl-ui/build.rs` walks all `emojis::iter()`, looks up each in `twemoji-assets`, and composes a single 44-column, 72px-tile sheet. Runtime renders the picker with one shared texture and per-cell `source-clip`, never decoding individual PNGs at runtime. The emitted `EMOJI_POSITIONS` table and the sprite PNG bytes are included in `wnl-ui/src/lib.rs` (`emoji_sprite_map` module, `EMOJI_SPRITE_PNG`) and re-exported to `main.rs`. The build reuses `twemoji_sprite.png` and `emoji_sprite_map.rs` from `OUT_DIR` when both exist, so sprite generation only runs when an output is missing.
 
 ### i18n
 
-All user-visible Slint strings use `@tr("…")`. `dm-ui/build.rs` bundles the gettext catalogs from `lang/` (`slint_build::CompilerConfiguration::new().with_bundled_translations("../lang")`); locales are `en` (source), `it`, `de`, `ja`. Runtime switching happens via `slint::select_bundled_translation` (`apply_locale` in `main.rs`), driven by `Settings.locale` and the language-picker modal. Catalog maintenance is `scripts/update-translations.sh` (see [Build & run](#build--run)).
+All user-visible Slint strings use `@tr("…")`. `wnl-ui/build.rs` bundles the gettext catalogs from `lang/` (`slint_build::CompilerConfiguration::new().with_bundled_translations("../lang")`); locales are `en` (source), `it`, `de`, `ja`. Runtime switching happens via `slint::select_bundled_translation` (`apply_locale` in `main.rs`), driven by `Settings.locale` and the language-picker modal. Catalog maintenance is `scripts/update-translations.sh` (see [Build & run](#build--run)).
 
 ### Slint conventions specific to this repo
 

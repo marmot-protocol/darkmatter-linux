@@ -6,9 +6,9 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 # The gettext domain must match the crate that compiles the Slint UI
-# (slint-build hardwires it to CARGO_PKG_NAME) — that is dm-ui, not the app.
-POT="$ROOT/lang/dm-ui.pot"
-DOMAIN="dm-ui"
+# (slint-build hardwires it to CARGO_PKG_NAME) — that is wnl-ui, not the app.
+POT="$ROOT/lang/wnl-ui.pot"
+DOMAIN="wnl-ui"
 
 if ! command -v slint-tr-extractor >/dev/null 2>&1; then
     echo "slint-tr-extractor not found — install with: cargo install slint-tr-extractor" >&2

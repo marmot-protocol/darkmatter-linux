@@ -30,7 +30,24 @@ while IFS= read -r -d '' f; do
 done < <(staged -- '*.po' '*.pot')
 [ "$po_changed" = 1 ] && echo "pre-commit: normalized staged PO/POT catalogs."
 
-# --- 2. Rust gate -------------------------------------------------------
+# --- 2. File-length gate ------------------------------------------------
+# Hard rule: no Rust source may exceed 2000 lines. Keeps files readable and
+# rebuilds fast (the UI tree already lives in its own crate). Checks the staged
+# content, so a commit can't sneak an over-long file past `wc` on the worktree.
+oversized=""
+while IFS= read -r -d '' f; do
+    [ -f "$f" ] || continue                       # skip deletions
+    n="$(git show ":$f" | wc -l)"
+    if [ "$n" -gt 2000 ]; then
+        oversized="$oversized\n  $f ($n lines)"
+    fi
+done < <(staged -- '*.rs')
+if [ -n "$oversized" ]; then
+    printf "✗ Rust files over the 2000-line limit — split them first:%b\n" "$oversized" >&2
+    exit 1
+fi
+
+# --- 3. Rust gate -------------------------------------------------------
 # Only run the (heavier) compile-based checks when staged changes can affect
 # the build: Rust sources (incl. build.rs), Cargo manifests, or the Slint UI
 # they compile. Pure translation/docs commits skip straight through.

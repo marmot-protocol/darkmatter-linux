@@ -122,7 +122,7 @@ Top to bottom:
  Slint UI (ui/*.slint)
         │   compiled once into a generated module
         ▼
-   dm-ui crate   : owns slint::include_modules!()
+   wnl-ui crate   : owns slint::include_modules!()
         │
         ▼
    src/main.rs   : ~13.5k lines of callback glue plus the optimistic-overlay state machine
@@ -134,12 +134,13 @@ Top to bottom:
   MarmotApp       : MLS groups, Nostr relays, sealed secrets
 ```
 
-It's deliberately flat. There are no `send` / `react` / `members` submodules; the full data flow for any given UI action reads straight down `main.rs`. The one real split is the `dm-ui` crate, and it exists for a single practical reason: the generated Slint module is enormous, so isolating it keeps everyday Rust edits from triggering a full UI recompile.
+It reads flat by intent: there are no per-feature abstractions, and the data flow for any UI action reads straight through. The UI glue is chaptered across a handful of files only to honor a hard rule — **no Rust file may exceed 2000 lines** (enforced by the pre-commit hook) — but they share one crate-root prelude (`pub(crate) use` re-exports, pulled in with `use crate::*;`), so they behave like one file. `main.rs` builds the window and the shared context (`Cx` handles + `Handlers` closures) and calls the `wire_*` functions; the callback sections live under `src/wiring/` (`panes.rs`, `backup.rs`, `messaging.rs`, `extra.rs`) and the pure row/render/state helpers in `chatmodel.rs` / `chatlist.rs` / `chrome.rs` / `media.rs` / `render.rs` / `state.rs`. The other real split is the `wnl-ui` crate: the generated Slint module is enormous, so isolating it keeps everyday Rust edits from triggering a full UI recompile.
 
 | Path | What's there |
 | --- | --- |
-| `src/main.rs` | UI callback wiring, the chat-row build pipeline, the optimistic overlay |
-| `src/backend.rs` | The `MarmotApp` wrapper, the tokio runtime, and all platform-specific bits (clipboard, paths) |
+| `src/main.rs`, `src/wiring/` | UI callback wiring (`main.rs` builds the context and calls the `wire_*` functions in the `wiring/` submodules) |
+| `src/chatmodel.rs`, `chatlist.rs`, `chrome.rs`, `media.rs`, `render.rs`, `state.rs` | The chat-row build pipeline, list/chrome refreshers, markdown/avatar rendering, and the optimistic overlay |
+| `src/backend.rs`, `src/backend/groups.rs` | The `MarmotApp` wrapper, the tokio runtime, and all platform-specific bits (clipboard, paths) |
 | `src/vault.rs` | The password-encrypted secret vault |
 | `src/backup.rs` | Whole-folder encrypted backup and restore (`.dmbackup`), sealed with the vault password |
 | `src/media_cache.rs` | Encrypted-at-rest cache for decrypted attachment bytes |
@@ -149,7 +150,7 @@ It's deliberately flat. There are no `send` / `react` / `members` submodules; th
 | `src/unread.rs` | Per-chat unread tracking behind the rail badges and the window-title count |
 | `src/animal_avatar.rs` | Deterministic starter avatars drawn over an npub-derived gradient |
 | `src/settings.rs`, `src/observability.rs`, `src/notify.rs` | UI prefs, telemetry config, desktop notifications |
-| `dm-ui/` | The build-isolation crate that compiles the Slint tree and the emoji sprite sheet |
+| `wnl-ui/` | The build-isolation crate that compiles the Slint tree and the emoji sprite sheet |
 | `ui/` | The Slint component tree; `tokens.slint` holds shared structs and theme globals, and `ui/CONTRACT.md` documents the theming engine |
 | `lang/` | gettext catalogs (`en`, `it`, `de`, `ja`), bundled at build time |
 | `assets/` | Logo, fonts, and the SVG starter-avatar set |

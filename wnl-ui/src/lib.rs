@@ -4,7 +4,7 @@
 //! for the full tree) — keeping it here means the root crate's Rust edits
 //! don't pay for recompiling it. Everything the generated code exports
 //! (components, structs from ui/tokens.slint, globals) lands at this crate's
-//! root; the app imports it with `use dm_ui::*;`.
+//! root; the app imports it with `use wnl_ui::*;`.
 
 slint::include_modules!();
 

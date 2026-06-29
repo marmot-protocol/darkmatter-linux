@@ -1369,10 +1369,9 @@ msgctxt "Composer"
 msgid "Remove"
 msgstr "削除"
 
-#, fuzzy
 msgctxt "GroupMemberRow"
 msgid "Remove admin"
-msgstr "連絡先を削除"
+msgstr "管理者から外す"
 
 msgctxt "ContactDetail"
 msgid "Remove contact"

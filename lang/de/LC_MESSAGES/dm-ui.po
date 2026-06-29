@@ -1371,10 +1371,9 @@ msgctxt "Composer"
 msgid "Remove"
 msgstr "Entfernen"
 
-#, fuzzy
 msgctxt "GroupMemberRow"
 msgid "Remove admin"
-msgstr "Kontakt entfernen"
+msgstr "Adminrechte entziehen"
 
 msgctxt "ContactDetail"
 msgid "Remove contact"

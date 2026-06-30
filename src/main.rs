@@ -715,6 +715,19 @@ fn main() -> Result<(), slint::PlatformError> {
                                             key.as_deref(),
                                             &banner_seen_boot,
                                         );
+                                        // The default-selected chat is shown at
+                                        // boot without a `chat-selected` click, so
+                                        // restore its saved draft here. Only when
+                                        // the composer is still untouched, so we
+                                        // never clobber typing started meanwhile.
+                                        if let Some(key) = key
+                                            && ui.get_composer_draft().is_empty()
+                                        {
+                                            let draft = Settings::load().draft(&key).to_string();
+                                            if !draft.is_empty() {
+                                                ui.set_composer_draft(s(&draft));
+                                            }
+                                        }
                                     },
                                 );
                                 // The displayed account may be the vault's
@@ -829,5 +842,18 @@ fn main() -> Result<(), slint::PlatformError> {
     wire_extra(&ui, &cx, &h);
 
     ui.run()?;
+
+    // The window is closed but `ui` is still alive: flush the on-screen chat's
+    // unsent draft so quitting (without a chat switch or send to trigger the
+    // other save paths) still preserves a half-written message for next launch.
+    if ui.get_editing_message_id().is_empty() {
+        let idx = ui.get_active_chat();
+        if let Some(group_hex) = cx.group_ids.lock().unwrap().get(idx as usize).cloned() {
+            let mut st = cx.settings_cell.borrow_mut();
+            if st.set_draft(&group_hex, &ui.get_composer_draft()) {
+                st.save();
+            }
+        }
+    }
     Ok(())
 }

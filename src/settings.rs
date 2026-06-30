@@ -55,6 +55,12 @@ pub struct Settings {
     /// rail/tray unread counts derive from. Local-only, like nicknames.
     #[serde(default)]
     pub last_read: BTreeMap<String, i64>,
+    /// Unsent composer text ("drafts"), keyed by `group_id_hex`. Written when
+    /// the user switches away from (or quits with) a half-written message, and
+    /// restored when the chat is reopened. Local-only, like nicknames — never
+    /// published to relays.
+    #[serde(default)]
+    pub composer_drafts: BTreeMap<String, String>,
     /// Messages the user deleted *for themselves* ("delete for me"), keyed by
     /// the local account hex that hid them → the set of inner event ids (hex).
     /// Local-only — never published; the message stays on the wire for everyone
@@ -78,6 +84,29 @@ impl Settings {
             .entry(account_hex.to_ascii_lowercase())
             .or_default()
             .insert(message_id.to_string())
+    }
+
+    /// Store (or clear) the unsent draft for `group_hex`. Whitespace-only text
+    /// drops the entry so an emptied composer leaves nothing behind. Returns
+    /// true when the stored value actually changed, so callers only `save()`
+    /// (a disk write) when there's something new to persist.
+    pub fn set_draft(&mut self, group_hex: &str, text: &str) -> bool {
+        if text.trim().is_empty() {
+            self.composer_drafts.remove(group_hex).is_some()
+        } else {
+            self.composer_drafts
+                .insert(group_hex.to_string(), text.to_string())
+                .as_deref()
+                != Some(text)
+        }
+    }
+
+    /// The saved draft for `group_hex`, or `""` if none.
+    pub fn draft(&self, group_hex: &str) -> &str {
+        self.composer_drafts
+            .get(group_hex)
+            .map(String::as_str)
+            .unwrap_or_default()
     }
 }
 
@@ -125,6 +154,7 @@ impl Default for Settings {
             notification_preview: true,
             muted_chats: BTreeSet::new(),
             last_read: BTreeMap::new(),
+            composer_drafts: BTreeMap::new(),
             hidden_messages_by_account: BTreeMap::new(),
             hidden_messages_legacy: BTreeSet::new(),
         }

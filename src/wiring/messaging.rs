@@ -35,6 +35,7 @@ pub(crate) fn wire_messaging(ui: &DarkMatterLinux, cx: &Cx, h: &Handlers) {
         group_ids,
         pending_state,
         staged_files,
+        settings_cell,
         ..
     } = cx.clone();
     let Handlers {
@@ -77,6 +78,7 @@ pub(crate) fn wire_messaging(ui: &DarkMatterLinux, cx: &Cx, h: &Handlers) {
         let dispatch_send = dispatch_send.clone();
         let edit_op = edit_op.clone();
         let vault_cell = vault_cell.clone();
+        let settings_cell = settings_cell.clone();
         move |text| {
             let Some(ui) = weak.upgrade() else { return };
             // A send closes the mention picker; the draft is about to clear.
@@ -174,6 +176,14 @@ pub(crate) fn wire_messaging(ui: &DarkMatterLinux, cx: &Cx, h: &Handlers) {
                     push_message_grouped(vm, pending_row)
                 });
                 ui.set_composer_draft(s(""));
+                // The draft just went out — drop any persisted copy so it can't
+                // resurrect itself on the next switch back (or restart).
+                {
+                    let mut st = settings_cell.borrow_mut();
+                    if st.set_draft(&group_hex, "") {
+                        st.save();
+                    }
+                }
                 // Force-scroll to the new bubble. The MessagesArea watches this
                 // tick and animates viewport-y to the bottom — so the user sees
                 // their message even if they were paged up reading history.

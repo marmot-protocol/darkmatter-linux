@@ -1115,12 +1115,29 @@ pub(crate) fn wire_backup(
         let settings_cell = settings_cell.clone();
         move |idx| {
             if let Some(ui) = weak.upgrade() {
+                // Persist the outgoing chat's half-written draft before the
+                // switch, so it's there when the user comes back (and, via the
+                // settings file, after a restart). Skipped while editing — the
+                // composer then holds an in-progress edit, not a draft.
+                if ui.get_editing_message_id().is_empty() {
+                    let prev_idx = ui.get_active_chat();
+                    let prev_hex = group_ids.lock().unwrap().get(prev_idx as usize).cloned();
+                    if let Some(prev_hex) = prev_hex {
+                        let mut st = settings_cell.borrow_mut();
+                        if st.set_draft(&prev_hex, &ui.get_composer_draft()) {
+                            st.save();
+                        }
+                    }
+                }
                 ui.set_active_chat(idx);
-                // Reply targets are per-chat; switching threads should not
-                // leak a stale "Replying to …" chip across conversations.
+                // Reply targets and an in-progress edit are per-chat; switching
+                // threads should not leak a stale "Replying to …" / "Editing …"
+                // banner across conversations (and the abandoned edit must clear
+                // so the restored draft below isn't masked by it).
                 ui.set_reply_target_id(s(""));
                 ui.set_reply_target_author(s(""));
                 ui.set_reply_target_preview(s(""));
+                ui.set_editing_message_id(s(""));
                 refresh();
                 let Some(backend) = backend_cell.lock().unwrap().clone() else {
                     return;
@@ -1131,6 +1148,9 @@ pub(crate) fn wire_backup(
                 trigger_encryption_banner_entrance(&ui, group_hex.as_deref(), &banner_seen);
                 if let Some(group_hex) = group_hex {
                     let t_switch = std::time::Instant::now();
+                    // Restore this chat's saved draft (empty if none), so a
+                    // half-written message reappears exactly where it was left.
+                    ui.set_composer_draft(s(settings_cell.borrow().draft(&group_hex)));
                     // Mark the chat read: advance its read marker to now, clear
                     // its unread, persist the marker (so backlog that arrives
                     // while the app is closed surfaces as unread next launch),

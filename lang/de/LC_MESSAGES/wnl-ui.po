@@ -348,6 +348,10 @@ msgctxt "ConfirmModal"
 msgid "Cancel"
 msgstr "Abbrechen"
 
+msgctxt "ForwardPickerModal"
+msgid "Cancel"
+msgstr "Abbrechen"
+
 #, fuzzy
 msgctxt "ImportBackupModal"
 msgid "Cancel"
@@ -790,9 +794,17 @@ msgctxt "LoginScreen"
 msgid "Enter your password to unlock"
 msgstr "Gib dein Passwort zum Entsperren ein"
 
+msgctxt "MessageContextMenu"
+msgid "Forward"
+msgstr "Weiterleiten"
+
 msgctxt "EncryptionBanner"
 msgid "Forward secret"
 msgstr "Forward Secret"
+
+msgctxt "ForwardPickerModal"
+msgid "Forward to…"
+msgstr "Weiterleiten an…"
 
 msgctxt "StartNewChatModal"
 msgid "GROUP NAME (OPTIONAL)"
@@ -1258,6 +1270,10 @@ msgstr "Andere können dir über diese Adresse zappen."
 msgctxt "ContactsPage"
 msgid "People you start chats with will show up here."
 msgstr "Personen, mit denen du Chats startest, erscheinen hier."
+
+msgctxt "ForwardPickerModal"
+msgid "Pick a chat to forward this message to."
+msgstr "Wähle einen Chat aus, an den diese Nachricht weitergeleitet werden soll."
 
 msgctxt "AppearancePane"
 msgid "Pick the whole app's look."

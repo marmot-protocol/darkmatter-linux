@@ -67,6 +67,7 @@ export component MessageContextMenu inherits Rectangle {
     // where the menu was.
     callback add-reaction(length, length);
     callback reply();
+    callback forward();
     callback edit();
     // "Delete for everyone" (kind-5 retraction) — author-only, so gated by
     // can-edit. "Delete for me" is a local-only hide, available on any message.
@@ -76,9 +77,9 @@ export component MessageContextMenu inherits Rectangle {
 
     // Keyboard navigation. The always-shown rows come first so the selectable
     // range stays the contiguous [0, count-1] regardless of can-edit:
-    //   0 = Add reaction, 1 = Reply, 2 = Delete for me  (always)
-    //   3 = Edit, 4 = Delete for everyone               (author-only)
-    property <int> item-count: root.can-edit ? 5 : 3;
+    //   0 = Add reaction, 1 = Reply, 2 = Forward, 3 = Delete for me  (always)
+    //   4 = Edit, 5 = Delete for everyone                            (author-only)
+    property <int> item-count: root.can-edit ? 6 : 4;
     property <int> selected-index: 0;
 
     function move-selection(delta: int) {
@@ -101,10 +102,12 @@ export component MessageContextMenu inherits Rectangle {
         } else if (root.selected-index == 1) {
             root.reply();
         } else if (root.selected-index == 2) {
+            root.forward();
+        } else if (root.selected-index == 3) {
             root.delete-for-me();
-        } else if (root.selected-index == 3 && root.can-edit) {
-            root.edit();
         } else if (root.selected-index == 4 && root.can-edit) {
+            root.edit();
+        } else if (root.selected-index == 5 && root.can-edit) {
             root.delete-for-everyone();
         }
     }
@@ -172,27 +175,34 @@ export component MessageContextMenu inherits Rectangle {
                     hovered => { root.selected-index = 1; }
                 }
                 MenuItem {
+                    glyph: "➦";
+                    label: @tr("Forward");
+                    selected: root.selected-index == 2;
+                    activated => { root.forward(); }
+                    hovered => { root.selected-index = 2; }
+                }
+                MenuItem {
                     glyph: "⌫";
                     label: @tr("Delete for me");
-                    selected: root.selected-index == 2;
+                    selected: root.selected-index == 3;
                     activated => { root.delete-for-me(); }
-                    hovered => { root.selected-index = 2; }
+                    hovered => { root.selected-index = 3; }
                 }
                 MenuItem {
                     glyph: "✎";
                     label: @tr("Edit message");
                     shown: root.can-edit;
-                    selected: root.selected-index == 3;
+                    selected: root.selected-index == 4;
                     activated => { root.edit(); }
-                    hovered => { root.selected-index = 3; }
+                    hovered => { root.selected-index = 4; }
                 }
                 MenuItem {
                     glyph: "⊘";
                     label: @tr("Delete for everyone");
                     shown: root.can-edit;
-                    selected: root.selected-index == 4;
+                    selected: root.selected-index == 5;
                     activated => { root.delete-for-everyone(); }
-                    hovered => { root.selected-index = 4; }
+                    hovered => { root.selected-index = 5; }
                 }
             }
         }

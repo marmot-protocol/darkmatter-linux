@@ -346,6 +346,10 @@ msgctxt "ConfirmModal"
 msgid "Cancel"
 msgstr "キャンセル"
 
+msgctxt "ForwardPickerModal"
+msgid "Cancel"
+msgstr "キャンセル"
+
 #, fuzzy
 msgctxt "ImportBackupModal"
 msgid "Cancel"
@@ -788,9 +792,17 @@ msgctxt "LoginScreen"
 msgid "Enter your password to unlock"
 msgstr "パスワードを入力してロックを解除"
 
+msgctxt "MessageContextMenu"
+msgid "Forward"
+msgstr "転送"
+
 msgctxt "EncryptionBanner"
 msgid "Forward secret"
 msgstr "フォワードシークレット"
+
+msgctxt "ForwardPickerModal"
+msgid "Forward to…"
+msgstr "転送先…"
 
 msgctxt "StartNewChatModal"
 msgid "GROUP NAME (OPTIONAL)"
@@ -1256,6 +1268,10 @@ msgstr "このアドレスで Zap できます。"
 msgctxt "ContactsPage"
 msgid "People you start chats with will show up here."
 msgstr "チャットを始めた相手がここに表示されます。"
+
+msgctxt "ForwardPickerModal"
+msgid "Pick a chat to forward this message to."
+msgstr "このメッセージの転送先チャットを選択してください。"
 
 msgctxt "AppearancePane"
 msgid "Pick the whole app's look."

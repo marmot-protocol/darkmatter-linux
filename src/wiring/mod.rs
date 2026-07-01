@@ -4,10 +4,12 @@ use crate::*;
 // under the 2000-line file limit; re-exported so callers see `wire_*` flat.
 mod backup;
 mod extra;
+mod forward;
 mod messaging;
 mod panes;
 pub(crate) use backup::*;
 pub(crate) use extra::*;
+pub(crate) use forward::*;
 pub(crate) use messaging::*;
 pub(crate) use panes::*;
 

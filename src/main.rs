@@ -857,6 +857,7 @@ fn main() -> Result<(), slint::PlatformError> {
     );
     wire_backup(&ui, &cx, &h, &encryption_banner_seen);
     wire_messaging(&ui, &cx, &h);
+    wire_forward(&ui, &cx);
     wire_extra(&ui, &cx, &h);
 
     ui.run()?;

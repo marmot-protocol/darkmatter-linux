@@ -328,6 +328,10 @@ msgctxt "ConfirmModal"
 msgid "Cancel"
 msgstr ""
 
+msgctxt "ForwardPickerModal"
+msgid "Cancel"
+msgstr ""
+
 msgctxt "ImportBackupModal"
 msgid "Cancel"
 msgstr ""
@@ -749,8 +753,16 @@ msgctxt "LoginScreen"
 msgid "Enter your password to unlock"
 msgstr ""
 
+msgctxt "MessageContextMenu"
+msgid "Forward"
+msgstr ""
+
 msgctxt "EncryptionBanner"
 msgid "Forward secret"
+msgstr ""
+
+msgctxt "ForwardPickerModal"
+msgid "Forward to…"
 msgstr ""
 
 msgctxt "StartNewChatModal"
@@ -1197,6 +1209,10 @@ msgstr ""
 
 msgctxt "ContactsPage"
 msgid "People you start chats with will show up here."
+msgstr ""
+
+msgctxt "ForwardPickerModal"
+msgid "Pick a chat to forward this message to."
 msgstr ""
 
 msgctxt "AppearancePane"

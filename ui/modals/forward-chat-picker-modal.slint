@@ -1,0 +1,83 @@
+import { Palette, Theme, ChatMeta } from "../tokens.slint";
+import { Modal } from "modal.slint";
+import { Avatar } from "../primitives/avatar.slint";
+
+// Forward picker. Opened from a message's context menu: pick a destination
+// chat and the selected message's content is re-sent there (text + any
+// attachments, re-encrypted for the target group — the Rust side owns that).
+// The current chat is skipped: forwarding back into the same thread is a no-op.
+export component ForwardPickerModal inherits Modal {
+    callback select(int);   // destination chat index (into `chats`)
+    in property <[ChatMeta]> chats;
+    in property <int> active-chat: -1;
+
+    card-width: 440px;
+    card-height: 520px;
+    title: @tr("Forward to…");
+    subtitle: @tr("Pick a chat to forward this message to.");
+    secondary-label: @tr("Cancel");
+
+    Flickable {
+        viewport-width: self.width;
+        viewport-height: list.preferred-height;
+        list := VerticalLayout {
+            spacing: 6px;
+            for chat[idx] in root.chats : Rectangle {
+                // Skip the chat the message is already in.
+                property <bool> shown: idx != root.active-chat;
+                height: shown ? 56px : 0px;
+                visible: shown;
+                border-radius: (10px) * Theme.r-scale;
+                background: row-touch.has-hover ? Palette.hover : transparent;
+                animate background { duration: 100ms; easing: ease-out; }
+
+                // Wraps the row content so it wins the hit-test over the card's
+                // click-swallower (nested TouchAreas beat outer ones).
+                row-touch := TouchArea {
+                    enabled: shown;
+                    mouse-cursor: pointer;
+                    clicked => { root.select(idx); }
+
+                    HorizontalLayout {
+                        padding-left: 10px;
+                        padding-right: 14px;
+                        spacing: 12px;
+
+                        VerticalLayout {
+                            alignment: center;
+                            Avatar {
+                                size: 36px;
+                                initials: chat.av-initials;
+                                color-a: chat.av-a;
+                                color-b: chat.av-b;
+                                picture: chat.picture;
+                                has-picture: chat.has-picture;
+                            }
+                        }
+
+                        VerticalLayout {
+                            alignment: center;
+                            spacing: 3px;
+                            horizontal-stretch: 1;
+                            Text {
+                                text: chat.name;
+                                color: Palette.text-hi;
+                                font-size: (12px) * Theme.fs-scale;
+                                font-weight: 700;
+                                font-family: Theme.font;
+                                overflow: elide;
+                            }
+                            Text {
+                                text: chat.preview;
+                                color: Palette.text-lo;
+                                font-size: (10px) * Theme.fs-scale;
+                                font-family: Theme.font;
+                                overflow: elide;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

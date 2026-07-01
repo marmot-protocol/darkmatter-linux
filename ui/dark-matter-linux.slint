@@ -22,6 +22,7 @@ import { AddAccountModal } from "modals/add-account-modal.slint";
 import { ImportBackupModal } from "modals/import-backup-modal.slint";
 import { BackupCreateModal } from "modals/backup-create-modal.slint";
 import { ConfirmModal } from "modals/confirm-modal.slint";
+import { ForwardPickerModal } from "modals/forward-chat-picker-modal.slint";
 import { CommandPalette, PaletteAction } from "modals/command-palette.slint";
 import { LanguagePickerModal } from "modals/language-picker-modal.slint";
 import { EditHistoryModal } from "modals/edit-history-modal.slint";
@@ -174,6 +175,7 @@ export component DarkMatterLinux inherits Window {
     callback unreact-message(string);
     callback retry-message(string);
     callback request-reply(string, string, string); // message_id, preview, author
+    callback request-forward(int);                    // destination chat index; source is `forward-src-id`
     callback request-edit(string, string);           // message_id, current_text
     callback request-delete-everyone(string);        // message_id (kind-5 retraction)
     callback request-delete-me(string);              // message_id (local-only hide)
@@ -287,6 +289,13 @@ export component DarkMatterLinux inherits Window {
     property <bool> ctx-menu-can-edit: false;
     property <length> ctx-menu-x;
     property <length> ctx-menu-y;
+    // Forward flow: the context-menu "Forward" item stashes the source message
+    // id here and opens the chat picker; picking a destination fires
+    // `request-forward(dest_idx)`, which the Rust side resolves against
+    // `forward-src-id` (the source chat is whatever's active while the picker
+    // is open).
+    in-out property <string> forward-src-id;
+    property <bool> forward-picker-open: false;
     // Rail chat-row context menu (pin / mute). Rust fills the state on
     // `request-chat-context` (it knows the pin + mute sets) and opens the menu;
     // the items dispatch back by the captured row index.
@@ -1079,6 +1088,11 @@ export component DarkMatterLinux inherits Window {
             root.ctx-menu-open = false;
             root.request-reply(root.ctx-menu-id, root.ctx-menu-text, root.ctx-menu-author);
         }
+        forward => {
+            root.ctx-menu-open = false;
+            root.forward-src-id = root.ctx-menu-id;
+            root.forward-picker-open = true;
+        }
         edit => {
             root.ctx-menu-open = false;
             root.request-edit(root.ctx-menu-id, root.ctx-menu-text);
@@ -1094,6 +1108,22 @@ export component DarkMatterLinux inherits Window {
             root.show-delete-confirm = true;
         }
         dismissed => { root.ctx-menu-open = false; }
+    }
+
+    // Forward destination picker — lists chats (minus the current one); a pick
+    // hands the chosen index to Rust, which re-sends `forward-src-id`'s content
+    // (text + re-encrypted attachments) into that chat.
+    if root.forward-picker-open : ForwardPickerModal {
+        x: 0; y: 0;
+        width: root.width;
+        height: root.height;
+        chats: root.chats;
+        active-chat: root.active-chat;
+        select(dest) => {
+            root.forward-picker-open = false;
+            root.request-forward(dest);
+        }
+        dismissed => { root.forward-picker-open = false; }
     }
 
     // Right-click rail chat-row context menu — pin/unpin and mute/unmute the

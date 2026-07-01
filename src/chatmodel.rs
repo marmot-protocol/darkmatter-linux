@@ -61,6 +61,7 @@ pub(crate) fn chat_meta_from(
         picture,
         has_picture,
         is_chat_request: record.pending_confirmation,
+        pinned: is_pinned(&record.group_id_hex),
     }
 }
 

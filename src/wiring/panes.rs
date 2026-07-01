@@ -708,6 +708,86 @@ pub(crate) fn wire_panes(
         }
     });
 
+    // Right-click a rail chat row: resolve the row's group id, read its live
+    // pin + mute state (Rust owns both sets), and open the context menu at the
+    // cursor. The menu itself is Slint; only the state lookup needs Rust.
+    ui.on_request_chat_context({
+        let weak = ui.as_weak();
+        let group_ids = group_ids.clone();
+        let notif = notif.clone();
+        move |idx, ax, ay| {
+            let Some(ui) = weak.upgrade() else { return };
+            let group_hex = group_ids.lock().unwrap().get(idx as usize).cloned();
+            let Some(group_hex) = group_hex else { return };
+            ui.set_chat_ctx_idx(idx);
+            ui.set_chat_ctx_x(ax);
+            ui.set_chat_ctx_y(ay);
+            ui.set_chat_ctx_pinned(is_pinned(&group_hex));
+            ui.set_chat_ctx_muted(notif.is_muted(&group_hex));
+            ui.set_chat_ctx_open(true);
+        }
+    });
+
+    // Pin / unpin a chat to the top of the rail. Flips the live pinned set +
+    // the persisted settings, then re-sorts the chat list — keeping whatever
+    // chat is currently open selected across the reorder.
+    ui.on_toggle_pin_chat({
+        let weak = ui.as_weak();
+        let group_ids = group_ids.clone();
+        let settings_cell = settings_cell.clone();
+        let backend_cell = backend_cell.clone();
+        move |idx| {
+            let Some(ui) = weak.upgrade() else { return };
+            let group_hex = group_ids.lock().unwrap().get(idx as usize).cloned();
+            let Some(group_hex) = group_hex else { return };
+            let now_pinned = toggle_pinned(&group_hex);
+            {
+                let mut s = settings_cell.borrow_mut();
+                if now_pinned {
+                    s.pinned_chats.insert(group_hex.clone());
+                } else {
+                    s.pinned_chats.remove(&group_hex);
+                }
+                s.save();
+            }
+            let Some(backend) = backend_cell.lock().unwrap().clone() else {
+                return;
+            };
+            // Re-order in place (preserving loaded messages + the open chat),
+            // rather than a full refresh which would blank the conversation.
+            reorder_chats_by_pin_async(&ui, &backend, &group_ids);
+        }
+    });
+
+    // Mute / unmute a specific rail row (from its context menu) — same effect
+    // as the header bell, but targets the right-clicked chat by index rather
+    // than the open one. Keeps the header in sync when they coincide.
+    ui.on_toggle_mute_chat_at({
+        let weak = ui.as_weak();
+        let group_ids = group_ids.clone();
+        let settings_cell = settings_cell.clone();
+        let notif = notif.clone();
+        move |idx| {
+            let Some(ui) = weak.upgrade() else { return };
+            let group_hex = group_ids.lock().unwrap().get(idx as usize).cloned();
+            let Some(group_hex) = group_hex else { return };
+            let now_muted = !notif.is_muted(&group_hex);
+            notif.set_muted(&group_hex, now_muted);
+            {
+                let mut s = settings_cell.borrow_mut();
+                if now_muted {
+                    s.muted_chats.insert(group_hex.clone());
+                } else {
+                    s.muted_chats.remove(&group_hex);
+                }
+                s.save();
+            }
+            if idx == ui.get_active_chat() {
+                ui.set_active_chat_muted(now_muted);
+            }
+        }
+    });
+
     ui.on_time_format_selected({
         let weak = ui.as_weak();
         let settings_cell = settings_cell.clone();

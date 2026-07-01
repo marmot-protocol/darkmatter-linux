@@ -5,6 +5,9 @@ import { SidePanel } from "shells/side-panel.slint";
 
 export component ChatListPanel inherits SidePanel {
     callback chat-clicked(int);
+    // Right-click a chat row: (idx, window-x, window-y) so the caller can open
+    // a context menu (pin / unpin) anchored at the cursor.
+    callback chat-context-menu(int, length, length);
     callback new-chat-clicked;
 
     in property <[ChatMeta]> chats;
@@ -33,5 +36,6 @@ export component ChatListPanel inherits SidePanel {
         chat: chat;
         selected: idx == root.active-chat;
         clicked => { root.chat-clicked(idx); }
+        context-menu(ax, ay) => { root.chat-context-menu(idx, ax, ay); }
     }
 }

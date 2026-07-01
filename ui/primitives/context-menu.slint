@@ -3,7 +3,7 @@ import { Palette, Theme } from "../tokens.slint";
 // One row in the message context menu. `shown` collapses the row (rather than
 // `if`-mounting it) so the TouchArea is always live — `if`-mounted TouchAreas
 // race the first click (see the cell notes in emoji-picker.slint).
-component MenuItem inherits Rectangle {
+export component MenuItem inherits Rectangle {
     in property <string> glyph;
     in property <string> label;
     in property <bool> shown: true;

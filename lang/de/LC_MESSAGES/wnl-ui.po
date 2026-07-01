@@ -697,13 +697,28 @@ msgctxt "ArchivedDetail"
 msgid "Delete"
 msgstr "Löschen"
 
+#, fuzzy
+msgctxt "DarkMatterLinux"
+msgid "Delete"
+msgstr "Löschen"
+
 msgctxt "MessageContextMenu"
 msgid "Delete for everyone"
 msgstr ""
 
 #, fuzzy
+msgctxt "DarkMatterLinux"
+msgid "Delete for everyone?"
+msgstr "Datumsformat"
+
+#, fuzzy
 msgctxt "MessageContextMenu"
 msgid "Delete for me"
+msgstr "Datumsformat"
+
+#, fuzzy
+msgctxt "DarkMatterLinux"
+msgid "Delete for me?"
 msgstr "Datumsformat"
 
 msgctxt "AdvancedPane"
@@ -1029,6 +1044,11 @@ msgctxt "AppearancePane"
 msgid "Mint"
 msgstr "Minze"
 
+#, fuzzy
+msgctxt "ChatContextMenu"
+msgid "Mute"
+msgstr "Stummschalten"
+
 msgctxt "ContactDetail"
 msgid "Mute"
 msgstr "Stummschalten"
@@ -1251,6 +1271,10 @@ msgstr "Bild"
 msgctxt "ProfilePage"
 msgid "Picture"
 msgstr "Bild"
+
+msgctxt "ChatContextMenu"
+msgid "Pin to top"
+msgstr "Oben anheften"
 
 msgctxt "AppearancePane"
 msgid "Place your sent messages on the right side."
@@ -1701,6 +1725,10 @@ msgctxt "DarkMatterLinux"
 msgid "This declines the invite from {}. It can't be restored unless they invite you again."
 msgstr "Damit lehnst du die Einladung von {} ab. Sie kann nur wiederhergestellt werden, wenn sie dich erneut einladen."
 
+msgctxt "DarkMatterLinux"
+msgid "This hides the message on this device only. Other people will still see it."
+msgstr ""
+
 msgctxt "GetStartedScreen"
 msgid "This is what lets other people start an encrypted chat with you."
 msgstr "Damit können andere einen verschlüsselten Chat mit dir starten."
@@ -1715,6 +1743,10 @@ msgstr ""
 
 msgctxt "MessageView"
 msgid "This message was deleted"
+msgstr ""
+
+msgctxt "DarkMatterLinux"
+msgid "This removes the message for everyone in the chat. This can't be undone."
 msgstr ""
 
 msgctxt "ChatRequestBanner"
@@ -1748,6 +1780,14 @@ msgstr "Entsperren"
 msgctxt "LoginScreen"
 msgid "Unlocking…"
 msgstr "Entsperre…"
+
+msgctxt "ChatContextMenu"
+msgid "Unmute"
+msgstr "Stummschaltung aufheben"
+
+msgctxt "ChatContextMenu"
+msgid "Unpin"
+msgstr "Loslösen"
 
 msgctxt "PictureField"
 msgid "Upload"

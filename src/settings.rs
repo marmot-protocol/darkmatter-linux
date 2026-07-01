@@ -49,6 +49,11 @@ pub struct Settings {
     /// notifications. Local-only, like nicknames.
     #[serde(default)]
     pub muted_chats: BTreeSet<String>,
+    /// Chats (group_id_hex) the user has pinned to the top of the rail. Kept
+    /// above the time-sorted list, in the order they were pinned. Local-only,
+    /// like nicknames — never published to relays.
+    #[serde(default)]
+    pub pinned_chats: BTreeSet<String>,
     /// Per-chat read marker: `group_id_hex` → the Unix-seconds timestamp the
     /// user last viewed that chat. Messages recorded after the marker count as
     /// unread. Written when a chat is opened; the authoritative read state the
@@ -153,6 +158,7 @@ impl Default for Settings {
             notification_sound: true,
             notification_preview: true,
             muted_chats: BTreeSet::new(),
+            pinned_chats: BTreeSet::new(),
             last_read: BTreeMap::new(),
             composer_drafts: BTreeMap::new(),
             hidden_messages_by_account: BTreeMap::new(),

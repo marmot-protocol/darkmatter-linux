@@ -665,12 +665,24 @@ msgctxt "ArchivedDetail"
 msgid "Delete"
 msgstr ""
 
+msgctxt "DarkMatterLinux"
+msgid "Delete"
+msgstr ""
+
 msgctxt "MessageContextMenu"
 msgid "Delete for everyone"
 msgstr ""
 
+msgctxt "DarkMatterLinux"
+msgid "Delete for everyone?"
+msgstr ""
+
 msgctxt "MessageContextMenu"
 msgid "Delete for me"
+msgstr ""
+
+msgctxt "DarkMatterLinux"
+msgid "Delete for me?"
 msgstr ""
 
 msgctxt "AdvancedPane"
@@ -981,6 +993,10 @@ msgctxt "AppearancePane"
 msgid "Mint"
 msgstr ""
 
+msgctxt "ChatContextMenu"
+msgid "Mute"
+msgstr ""
+
 msgctxt "ContactDetail"
 msgid "Mute"
 msgstr ""
@@ -1193,6 +1209,10 @@ msgstr ""
 
 msgctxt "ProfilePage"
 msgid "Picture"
+msgstr ""
+
+msgctxt "ChatContextMenu"
+msgid "Pin to top"
 msgstr ""
 
 msgctxt "AppearancePane"
@@ -1624,6 +1644,10 @@ msgctxt "DarkMatterLinux"
 msgid "This declines the invite from {}. It can't be restored unless they invite you again."
 msgstr ""
 
+msgctxt "DarkMatterLinux"
+msgid "This hides the message on this device only. Other people will still see it."
+msgstr ""
+
 msgctxt "GetStartedScreen"
 msgid "This is what lets other people start an encrypted chat with you."
 msgstr ""
@@ -1638,6 +1662,10 @@ msgstr ""
 
 msgctxt "MessageView"
 msgid "This message was deleted"
+msgstr ""
+
+msgctxt "DarkMatterLinux"
+msgid "This removes the message for everyone in the chat. This can't be undone."
 msgstr ""
 
 msgctxt "ChatRequestBanner"
@@ -1670,6 +1698,14 @@ msgstr ""
 
 msgctxt "LoginScreen"
 msgid "Unlocking…"
+msgstr ""
+
+msgctxt "ChatContextMenu"
+msgid "Unmute"
+msgstr ""
+
+msgctxt "ChatContextMenu"
+msgid "Unpin"
 msgstr ""
 
 msgctxt "PictureField"

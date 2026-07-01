@@ -33,6 +33,7 @@ import { LoginScreen } from "login/login-screen.slint";
 import { SplashScreen } from "splash.slint";
 import { EmojiPicker } from "emoji-picker.slint";
 import { MessageContextMenu } from "primitives/context-menu.slint";
+import { ChatContextMenu } from "primitives/chat-context-menu.slint";
 import { EmojiEntry, EmojiSheet, Linkout, ProfileSink, EffectCatalog, ErrorCopy, NativeDialogStrings } from "tokens.slint";
 import { EditVersion } from "tokens.slint";
 import { AuditLogEntry } from "tokens.slint";
@@ -286,6 +287,18 @@ export component DarkMatterLinux inherits Window {
     property <bool> ctx-menu-can-edit: false;
     property <length> ctx-menu-x;
     property <length> ctx-menu-y;
+    // Rail chat-row context menu (pin / mute). Rust fills the state on
+    // `request-chat-context` (it knows the pin + mute sets) and opens the menu;
+    // the items dispatch back by the captured row index.
+    in-out property <bool> chat-ctx-open: false;
+    in-out property <int> chat-ctx-idx: -1;
+    in-out property <length> chat-ctx-x;
+    in-out property <length> chat-ctx-y;
+    in-out property <bool> chat-ctx-pinned: false;
+    in-out property <bool> chat-ctx-muted: false;
+    callback request-chat-context(int, length, length);
+    callback toggle-pin-chat(int);
+    callback toggle-mute-chat-at(int);
     // Delete confirmation: deletes are destructive, so the context-menu items
     // arm this modal instead of firing immediately. `delete-confirm-everyone`
     // picks the wording + which callback the confirm dispatches; the target is
@@ -665,6 +678,7 @@ export component DarkMatterLinux inherits Window {
                             relays-total: root.network-total;
                             sync-secs: root.sync-secs;
                             chat-clicked(idx) => { root.chat-selected(idx); }
+                            chat-context-menu(idx, ax, ay) => { root.request-chat-context(idx, ax, ay); }
                             new-chat-clicked => { root.new-chat-requested(); }
                         }
                         main-pane := MainPane {
@@ -1080,6 +1094,27 @@ export component DarkMatterLinux inherits Window {
             root.show-delete-confirm = true;
         }
         dismissed => { root.ctx-menu-open = false; }
+    }
+
+    // Right-click rail chat-row context menu — pin/unpin and mute/unmute the
+    // row that was clicked (by captured index), independent of the open chat.
+    if root.chat-ctx-open : ChatContextMenu {
+        x: 0; y: 0;
+        width: root.width;
+        height: root.height;
+        anchor-x: root.chat-ctx-x;
+        anchor-y: root.chat-ctx-y;
+        pinned: root.chat-ctx-pinned;
+        muted: root.chat-ctx-muted;
+        toggle-pin => {
+            root.chat-ctx-open = false;
+            root.toggle-pin-chat(root.chat-ctx-idx);
+        }
+        toggle-mute => {
+            root.chat-ctx-open = false;
+            root.toggle-mute-chat-at(root.chat-ctx-idx);
+        }
+        dismissed => { root.chat-ctx-open = false; }
     }
 
     if root.show-delete-confirm : ConfirmModal {

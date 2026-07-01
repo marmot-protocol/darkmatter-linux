@@ -415,6 +415,15 @@ pub(crate) fn fetch_chat_list_snapshot(backend: &Backend) -> Option<ChatListSnap
         let pinned = records.remove(i);
         records.insert(0, pinned);
     }
+    // Order user-pinned chats above the rest, preserving each group's existing
+    // relative order (a stable sort). The "Saved Messages" self-chat is force-
+    // pinned at 0 by its sentinel name, so it never sorts below a user pin.
+    {
+        let pinned = pinned_state().lock().unwrap();
+        records.sort_by_key(|r| {
+            !(r.profile.name == SAVED_MESSAGES_NAME || pinned.contains(&r.group_id_hex))
+        });
+    }
     let latest: Vec<Option<AppMessageRecord>> = records
         .iter()
         .map(|r| backend.latest_message(&r.group_id_hex))
@@ -1020,6 +1029,129 @@ pub(crate) fn unread_state() -> &'static unread::UnreadState {
     })
 }
 
+/// Process-wide set of pinned chats (`group_id_hex`), lazily initialized from
+/// `Settings::pinned_chats`. A `OnceLock<Mutex<…>>` singleton like
+/// [`unread_state`], because the chat-list snapshot fetch reads it off the UI
+/// thread to order pinned chats above the rest, while the pin-toggle callback
+/// writes it on the UI thread — the same cross-thread shape as the unread set.
+pub(crate) fn pinned_state() -> &'static Mutex<std::collections::BTreeSet<String>> {
+    static PINNED: std::sync::OnceLock<Mutex<std::collections::BTreeSet<String>>> =
+        std::sync::OnceLock::new();
+    PINNED.get_or_init(|| Mutex::new(Settings::load().pinned_chats))
+}
+
+/// Whether a chat is pinned to the top of the rail.
+pub(crate) fn is_pinned(group_hex: &str) -> bool {
+    pinned_state().lock().unwrap().contains(group_hex)
+}
+
+/// Flip a chat's pinned state, returning the new value. Updates only the
+/// in-memory singleton; the caller persists to `Settings` (the disk write).
+pub(crate) fn toggle_pinned(group_hex: &str) -> bool {
+    let mut set = pinned_state().lock().unwrap();
+    if set.remove(group_hex) {
+        false
+    } else {
+        set.insert(group_hex.to_string());
+        true
+    }
+}
+
+/// Re-order the rail's chat rows to reflect the current pin set *without*
+/// rebuilding the per-chat message models — a full [`refresh_chats_from`] would
+/// `set_vec` empty message models over every non-default chat and blank the
+/// open conversation. Instead this shuffles the existing `ChatMeta` rows and
+/// their parallel `ModelRc<ChatMessage>` handles (loaded messages preserved)
+/// plus `group_ids`, refreshes each row's `pinned` flag, and keeps whatever
+/// chat was open selected across the move.
+///
+/// Only the self-chat lookup needs the backend, so that one read runs on the
+/// runtime; the permutation is (re)computed on the UI thread against the live
+/// `group_ids` + pin set, which sidesteps any watcher-append race.
+pub(crate) fn reorder_chats_by_pin_async(
+    ui: &DarkMatterLinux,
+    backend: &Arc<Backend>,
+    group_ids: &Arc<Mutex<Vec<String>>>,
+) {
+    let weak = ui.as_weak();
+    let b = backend.clone();
+    let group_ids = group_ids.clone();
+    backend.tokio_handle().spawn(async move {
+        let saved = b.find_self_chat();
+        let _ = slint::invoke_from_event_loop(move || {
+            let Some(ui) = weak.upgrade() else { return };
+            apply_pin_order(&ui, &group_ids, saved.as_deref());
+        });
+    });
+}
+
+/// UI-thread half of [`reorder_chats_by_pin_async`]: compute the pin-first
+/// permutation against the live models and apply it. The self-chat (if any)
+/// and every pinned chat sort above the rest, each group keeping its current
+/// relative order (a stable sort).
+pub(crate) fn apply_pin_order(
+    ui: &DarkMatterLinux,
+    group_ids: &Arc<Mutex<Vec<String>>>,
+    saved: Option<&str>,
+) {
+    let chats = ui.get_chats();
+    let chats_messages = ui.get_chats_messages();
+    let Some(chats_vm) = chats.as_any().downcast_ref::<VecModel<ChatMeta>>() else {
+        return;
+    };
+    let Some(msgs_vm) = chats_messages
+        .as_any()
+        .downcast_ref::<VecModel<ModelRc<ChatMessage>>>()
+    else {
+        return;
+    };
+    let mut ids = group_ids.lock().unwrap();
+    let n = ids.len();
+    if n == 0 || chats_vm.row_count() != n || msgs_vm.row_count() != n {
+        return;
+    }
+    let pinned = pinned_state().lock().unwrap();
+    let rank = |hex: &str| -> u8 {
+        if Some(hex) == saved || pinned.contains(hex) {
+            0
+        } else {
+            1
+        }
+    };
+    let mut order: Vec<usize> = (0..n).collect();
+    order.sort_by_key(|&i| rank(&ids[i]));
+    // Track the open chat by id so we can re-select it after the shuffle.
+    let active_hex = ids.get(ui.get_active_chat() as usize).cloned();
+    // Rebuild the parallel vecs in the new order, refreshing each row's pin
+    // flag (the toggled row's stored flag is otherwise stale).
+    let mut new_metas: Vec<ChatMeta> = Vec::with_capacity(n);
+    let mut new_inners: Vec<ModelRc<ChatMessage>> = Vec::with_capacity(n);
+    let mut new_ids: Vec<String> = Vec::with_capacity(n);
+    for &i in &order {
+        let Some(mut meta) = chats_vm.row_data(i) else {
+            return;
+        };
+        let Some(inner) = msgs_vm.row_data(i) else {
+            return;
+        };
+        meta.pinned = pinned.contains(&ids[i]);
+        new_metas.push(meta);
+        new_inners.push(inner);
+        new_ids.push(ids[i].clone());
+    }
+    let new_active = active_hex
+        .as_deref()
+        .and_then(|h| new_ids.iter().position(|g| g == h));
+    *ids = new_ids;
+    drop(pinned);
+    drop(ids);
+    chats_vm.set_vec(new_metas);
+    msgs_vm.set_vec(new_inners);
+    if let Some(pos) = new_active {
+        ui.set_active_chat(pos as i32);
+    }
+}
+
 /// Count a chat's unread messages relative to `marker`: incoming, visible chat
 /// messages recorded after the marker. `latest` is the chat's most recent
 /// message (already fetched by callers) — when it isn't newer than the marker
@@ -1261,5 +1393,6 @@ pub(crate) fn fallback_chat_meta(record: &AppGroupRecord) -> ChatMeta {
         picture: slint::Image::default(),
         has_picture: false,
         is_chat_request: record.pending_confirmation,
+        pinned: is_pinned(&record.group_id_hex),
     }
 }

@@ -7,12 +7,14 @@
 // list skin never touches chat-list.slint or the Rust glue. See ui/CONTRACT.md.
 import { Palette, Theme, ChatMeta } from "../tokens.slint";
 import { ChatListItem } from "chat-list-item.slint";
+import { PinIcon } from "../icons/pin-icon.slint";
 
 // IRC-style one-line channel row: `# name        (badge)`.
 component ChatListItemIrc inherits Rectangle {
     in property <ChatMeta> chat;
     in property <bool> selected: false;
     callback clicked;
+    callback context-menu(length, length);
 
     height: 26px;
     background: root.selected
@@ -24,6 +26,9 @@ component ChatListItemIrc inherits Rectangle {
         padding-right: 10px;
         spacing: 6px;
         alignment: start;
+        if root.chat.pinned : PinIcon {
+            fill: Palette.mint;
+        }
         Text {
             text: "#";
             color: Palette.mint-dim;
@@ -53,6 +58,13 @@ component ChatListItemIrc inherits Rectangle {
     }
     touch := TouchArea {
         clicked => { root.clicked(); }
+        pointer-event(e) => {
+            if (e.kind == PointerEventKind.down && e.button == PointerEventButton.right) {
+                root.context-menu(
+                    self.absolute-position.x + self.mouse-x,
+                    self.absolute-position.y + self.mouse-y);
+            }
+        }
     }
 }
 
@@ -60,6 +72,7 @@ export component ChatListEntry inherits VerticalLayout {
     in property <ChatMeta> chat;
     in property <bool> selected: false;
     callback clicked;
+    callback context-menu(length, length);
 
     if Theme.skin-list == 0 : ChatListItem {
         selected: root.selected;
@@ -69,16 +82,19 @@ export component ChatListEntry inherits VerticalLayout {
         badge: root.chat.badge;
         read: root.chat.read;
         sending: root.chat.sending;
+        pinned: root.chat.pinned;
         av-initials: root.chat.av-initials;
         av-a: root.chat.av-a;
         av-b: root.chat.av-b;
         picture: root.chat.picture;
         has-picture: root.chat.has-picture;
         clicked => { root.clicked(); }
+        context-menu(ax, ay) => { root.context-menu(ax, ay); }
     }
     if Theme.skin-list == 1 : ChatListItemIrc {
         chat: root.chat;
         selected: root.selected;
         clicked => { root.clicked(); }
+        context-menu(ax, ay) => { root.context-menu(ax, ay); }
     }
 }

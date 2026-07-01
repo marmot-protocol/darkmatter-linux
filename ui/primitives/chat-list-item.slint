@@ -1,10 +1,14 @@
 import { Palette, Theme } from "../tokens.slint";
 import { CheckMark } from "../icons/check-mark.slint";
+import { PinIcon } from "../icons/pin-icon.slint";
 import { Avatar } from "avatar.slint";
 import { UnreadBadge } from "unread-badge.slint";
 
 export component ChatListItem inherits Rectangle {
     callback clicked;
+    // Right-click on the row — anchor coords are window-absolute so the caller
+    // can open a context menu at the cursor.
+    callback context-menu(length, length);
 
     in property <string> name;
     in property <string> preview;
@@ -13,6 +17,7 @@ export component ChatListItem inherits Rectangle {
     in property <bool> selected: false;
     in property <bool> sending: false;
     in property <bool> read: false;
+    in property <bool> pinned: false;
     in property <color> av-a;
     in property <color> av-b;
     in property <string> av-initials;
@@ -83,6 +88,10 @@ export component ChatListItem inherits Rectangle {
                     horizontal-stretch: 1;
                     overflow: elide;
                 }
+                if root.pinned : PinIcon {
+                    fill: Theme.selected-inverts-text && root.selected ? Palette.bubble-out-fg : Palette.mint;
+                    y: 2px;
+                }
                 Text {
                     text: root.stamp;
                     color: Theme.selected-inverts-text && root.selected ? Palette.bubble-out-fg : Palette.text-lo;
@@ -124,5 +133,12 @@ export component ChatListItem inherits Rectangle {
 
     touch := TouchArea {
         clicked => { root.clicked(); }
+        pointer-event(e) => {
+            if (e.kind == PointerEventKind.down && e.button == PointerEventButton.right) {
+                root.context-menu(
+                    self.absolute-position.x + self.mouse-x,
+                    self.absolute-position.y + self.mouse-y);
+            }
+        }
     }
 }

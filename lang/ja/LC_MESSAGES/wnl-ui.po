@@ -695,13 +695,28 @@ msgctxt "ArchivedDetail"
 msgid "Delete"
 msgstr "削除"
 
+#, fuzzy
+msgctxt "DarkMatterLinux"
+msgid "Delete"
+msgstr "削除"
+
 msgctxt "MessageContextMenu"
 msgid "Delete for everyone"
 msgstr ""
 
 #, fuzzy
+msgctxt "DarkMatterLinux"
+msgid "Delete for everyone?"
+msgstr "日付形式"
+
+#, fuzzy
 msgctxt "MessageContextMenu"
 msgid "Delete for me"
+msgstr "日付形式"
+
+#, fuzzy
+msgctxt "DarkMatterLinux"
+msgid "Delete for me?"
 msgstr "日付形式"
 
 msgctxt "AdvancedPane"
@@ -1027,6 +1042,11 @@ msgctxt "AppearancePane"
 msgid "Mint"
 msgstr "ミント"
 
+#, fuzzy
+msgctxt "ChatContextMenu"
+msgid "Mute"
+msgstr "ミュート"
+
 msgctxt "ContactDetail"
 msgid "Mute"
 msgstr "ミュート"
@@ -1249,6 +1269,10 @@ msgstr "画像"
 msgctxt "ProfilePage"
 msgid "Picture"
 msgstr "画像"
+
+msgctxt "ChatContextMenu"
+msgid "Pin to top"
+msgstr "上部に固定"
 
 msgctxt "AppearancePane"
 msgid "Place your sent messages on the right side."
@@ -1699,6 +1723,10 @@ msgctxt "DarkMatterLinux"
 msgid "This declines the invite from {}. It can't be restored unless they invite you again."
 msgstr "{} からの招待を辞退します。相手がもう一度招待しない限り、元に戻すことはできません。"
 
+msgctxt "DarkMatterLinux"
+msgid "This hides the message on this device only. Other people will still see it."
+msgstr ""
+
 msgctxt "GetStartedScreen"
 msgid "This is what lets other people start an encrypted chat with you."
 msgstr "これにより、他の人があなたと暗号化されたチャットを始められます。"
@@ -1713,6 +1741,10 @@ msgstr ""
 
 msgctxt "MessageView"
 msgid "This message was deleted"
+msgstr ""
+
+msgctxt "DarkMatterLinux"
+msgid "This removes the message for everyone in the chat. This can't be undone."
 msgstr ""
 
 msgctxt "ChatRequestBanner"
@@ -1746,6 +1778,14 @@ msgstr "ロック解除"
 msgctxt "LoginScreen"
 msgid "Unlocking…"
 msgstr "ロック解除中…"
+
+msgctxt "ChatContextMenu"
+msgid "Unmute"
+msgstr "ミュート解除"
+
+msgctxt "ChatContextMenu"
+msgid "Unpin"
+msgstr "固定を解除"
 
 msgctxt "PictureField"
 msgid "Upload"
